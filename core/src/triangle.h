@@ -8,14 +8,10 @@ struct Triangle
 {
     Vec3f a, b, c;
     Material material;
-    Material3f material3f;
-    Material4f material4f;
 
     Triangle() {}
     Triangle(const Vec3f &A, const Vec3f &B, const Vec3f &C) : a(A), b(B), c(C) {}
     Triangle(const Vec3f &A, const Vec3f &B, const Vec3f &C, const Material &m) : a(A), b(B), c(C), material(m) {}
-    Triangle(const Vec3f &A, const Vec3f &B, const Vec3f &C, const Material3f &m) : a(A), b(B), c(C), material3f(m){}
-    Triangle(const Vec3f &A, const Vec3f &B, const Vec3f &C, const Material4f &m) : a(A), b(B), c(C), material4f(m){}
 
     bool rayCrossingTest(const Vec3f& orig, const Vec3f& dir, float& t) const
     {

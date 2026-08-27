@@ -9,14 +9,10 @@ struct Sphere
     Vec3f center;
     float radius;
     Material material;
-    Material3f material3f;
-    Material4f material4f;
 
     Sphere() {}
     Sphere(const Vec3f &c, const float &r) : center(c), radius(r) {}
-    Sphere(const Vec3f &c, const float &r, const Material &m) : center(c), radius(r), material(m) {}
-    Sphere(const Vec3f &c, const float &r, const Material3f &m) : center(c), radius(r), material3f(m){}
-    Sphere(const Vec3f &c, const float &r, const Material4f &m) : center(c), radius(r), material4f(m){}
+    Sphere(const Vec3f &c, const float &r, const Material &m) : center(c), radius(r), material(m){}
 
     bool rayCrossingTest(const Vec3f &orig, const Vec3f &dir, float &t0) const
     {
