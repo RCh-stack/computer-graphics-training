@@ -1,0 +1,26 @@
+:root 
+{
+    --bg-main: #030712;
+    --bg-panel: #111827;
+    --bg-card: #1f2937;
+    --border-color: #374151;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --accent: #e80c89;  
+}
+
+body.light-theme 
+{
+    --bg-main: #f8fafc;
+    --bg-panel: #ffffff;
+    --bg-card: #f1f5f9;
+    --border-color: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent: #e80c89;
+}
+        
+body 
+{ 
+    background-color: var(--bg-main); color: var(--text-main); 
+}

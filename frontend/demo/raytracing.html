@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VirtualLab — Демонстрация RayTracing C++ WebAssembly</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/frontend/style.css">
+</head>
+<body class="bg-gray-950 text-gray-100 h-screen overflow-hidden flex flex-col font-sans select-none">
+
+    <!-- ВЕРХНИЙ БАР DEMO.HTML -->
+    <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-4">
+            <!-- Кнопка "Назад в Hub" -->
+            <a href="index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] hover:bg-gray-800 border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold transition text-[var(--text-main)]">
+                <span>←</span>
+                <span>Модули</span>
+            </a>
+
+            <div class="h-4 w-px bg-[var(--border-color)]"></div>
+
+            <div class="flex items-center space-x-2">
+                <span class="w-3 h-3 rounded-full bg-[var(--accent)] animate-pulse"></span>
+                <h1 class="text-base font-extrabold tracking-wide text-[var(--text-main)]">RayLab <span class="text-xs font-normal text-indigo-400">Studio</span></h1>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
+                🌙 Тёмная
+            </button>
+            <div id="wasm-status" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Загрузка Wasm...
+            </div>
+            <div id="render-time" class="text-xs font-mono text-green-400 bg-gray-950 px-3 py-1 rounded-lg border border-gray-800">
+                Время рендера: -- ms
+            </div>
+            <button id="btn-force-render" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                Обновить кадр
+            </button>
+        </div>
+    </header>
+
+    <!-- ОСНОВНАЯ РАБОЧАЯ ОБЛАСТЬ -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- 2. ЛЕВАЯ ПАНЕЛЬ: ИЕРАРХИЯ СЦЕНЫ (OUTLINER) -->
+        <aside class="w-64 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex flex-col justify-between shrink-0">
+            <div class="p-3 space-y-4 overflow-y-auto">
+                <div class="space-y-2">
+                    <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">Добавить на сцену</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-add-sphere" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-pink-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                            <span>+ Сфера</span>
+                        </button>
+                        <button id="btn-add-light" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-amber-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                            <span>+ Источник</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
+                        <span>Объекты сцены</span>
+                        <span id="outliner-count" class="text-pink-500 font-mono">0</span>
+                    </div>
+                    <div id="outliner-list" class="space-y-1 max-h-[300px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="space-y-3 pt-3 border-t border-gray-800">
+                    <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">Камера и Фон</div>
+                    <div>
+                        <div class="flex justify-between text-xs font-mono text-[var(--text-main)] mb-1">
+                            <span>FOV (радианы):</span>
+                            <span id="val-fov" class="text-pink-500 font-bold">1.50</span>
+                        </div>
+                        <input type="range" id="param-fov" min="0.5" max="2.5" step="0.05" value="1.50" class="w-full accent-pink-500 cursor-pointer">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-mono text-[var(--text-main)] block mb-1">Цвет фона:</label>
+                        <div class="flex items-center space-x-3 bg-[var(--bg-panel)] p-1.5 rounded-xl border border-gray-800">
+                            <input type="color" id="param-bg-color" value="#33b2cc" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded">
+                            <span id="val-bg-color" class="text-xs font-mono text-[var(--text-main)] uppercase">#33b2cc</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 3. ЦЕНТРАЛЬНАЯ ОБЛАСТЬ: CANVAS VIEWPORT & ТЕОРИЯ -->
+        <main class="flex-1 bg-[var(--bg-main)] flex flex-col justify-between overflow-hidden relative p-4">
+            <div class="flex-1 flex items-center justify-center overflow-hidden">
+                <div class="relative border border-gray-800/80 rounded-2xl bg-black shadow-2xl overflow-hidden max-w-full max-h-full flex items-center justify-center">
+                    <canvas id="test-canvas" width="1168" height="638" class="max-w-full max-h-full object-contain block"></canvas>
+                </div>
+            </div>
+
+            <!-- 4. НИЖНЯЯ ПАНЕЛЬ: ПОШАГОВЫЙ СТЕППЕР -->
+            <div class="mt-4 bg-[var(--bg-panel)] border border-black rounded-2xl p-4 space-y-3 shrink-0">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span id="step-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-[var(--bg-card)] text-pink-500 border border-black">
+                            Шаг 0 из 5
+                        </span>
+                        <h2 id="step-title" class="text-sm font-bold text-[var(--text-main)]">0. BACKGROUND</h2>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-prev-step" class="bg-[var(--bg-panel)] hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold py-1.5 px-3 rounded-lg border border-black text-pink-500 transition">
+                            ← Назад
+                        </button>
+                        <button id="btn-next-step" class="bg-[var(--bg-panel)] hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold py-1.5 px-3 rounded-lg border border-black text-pink-500 transition">
+                            Вперед →
+                        </button>
+                    </div>
+                </div>
+
+                <div id="step-desc" class="text-xs text-[var(--text-main)] bg-[var(--bg-card)] p-3 rounded-xl border border-gray-800/80 leading-relaxed font-mono">
+                    Загрузка информации о шаге...
+                </div>
+            </div>
+        </main>
+
+        <!-- 5. ПРАВАЯ ПАНЕЛЬ: ИНСПЕКТОР СВОЙСТВ -->
+        <aside class="w-72 bg-[var(--bg-panel)] border-l border-gray-800 p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
+            <div id="inspector-container" class="space-y-4">
+                <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider pb-2 border-b border-gray-800">
+                    Свойства объекта
+                </div>
+                <div id="inspector-content" class="text-xs text-[var(--text-main)] text-center py-8">
+                    Выберите объект в списке слева для настройки его параметров.
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Модули Javascript -->
+    <script src="src/config.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/ui.js"></script>
+    <script src="src/app.js"></script>
+    <script src="/core/engine.js"></script>
+</body>
+</html>
