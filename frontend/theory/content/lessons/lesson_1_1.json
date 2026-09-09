@@ -1,0 +1,20 @@
+{
+  "id": "lesson_1_1",
+  "title": "Параметрическое уравнение луча",
+  "blocks": [
+    {
+      "type": "text",
+      "content": "content/pages/lesson_1_1_intro.html"
+    },
+    {
+      "type": "widget",
+      "widgetId": "RAY_SPHERE_2D",
+      "config": {
+        "t": 130,
+        "angle": 0,
+        "origin": { "x": 30, "y": 110 },
+        "sphere": { "x": 180, "y": 110, "r": 35 }
+      }
+    }
+  ]
+}

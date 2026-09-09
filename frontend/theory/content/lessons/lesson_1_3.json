@@ -1,0 +1,18 @@
+{
+  "id": "lesson_1_3",
+  "title": "Зеркальное отражение",
+  "blocks": [
+    {
+      "type": "text",
+      "content": "В трехмерной графике луч описывается функцией..."
+    },
+    {
+      "type": "widget",
+      "widgetId": "SPECULAR_REFLECTION_2D",
+      "config": {
+        "lightAngle": -45,
+        "viewAngle": 45
+      }
+    }
+  ]
+}

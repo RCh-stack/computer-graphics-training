@@ -1,0 +1,17 @@
+{
+  "id": "lesson_1_2",
+  "title": "Пересечение луча со сферой",
+  "blocks": [
+    {
+      "type": "text",
+      "content": "В трехмерной графике луч описывается функцией..."
+    },
+    {
+      "type": "widget",
+      "widgetId": "LAMBERT_DIFFUSE_2D",
+      "config": {
+        "lightAngle": 30
+      }
+    }
+  ]
+}
