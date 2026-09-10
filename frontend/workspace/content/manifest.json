@@ -1,0 +1,37 @@
+[
+  {
+    "id": "lab_vector_math",
+    "title": "Лаб #1: Векторные операции",
+    "category": "C++ Math",
+    "status": "completed",
+    "difficulty": "Легкая",
+    "description": "Реализация базовых операций векторной алгебры в geometry.h и вычисление нормалей поверхностей.",
+    "task": {
+      "title": "Векторные операции",
+      "instruction": "Реализуйте методы скалярного и векторного произведения в файле geometry.h.",
+      "requirements": ["Использовать C++20", "Время работы < 1ms"]
+    },
+    "template_code": "// Реализуйте векторное произведение\nVector3 cross(const Vector3& a, const Vector3& b) {\n    return Vector3(0, 0, 0);\n}",
+    "tests": [
+      { "name": "#1 Ортогональные векторы", "expected_time": "0.05 ms" }
+    ]
+  },
+  {
+    "id": "lab_triangle_hit",
+    "title": "Лаб #2: Пересечение с треугольником",
+    "category": "C++ / Wasm",
+    "status": "in_progress",
+    "difficulty": "Средняя",
+    "description": "Реализация метода Möller–Trumbore для полигональных сеток Triangle и загрузки сторонних моделей.",
+    "task": {
+      "title": "Пересечение с треугольником",
+      "instruction": "Допишите метод Triangle::hit для корректного обнаружения пересечения луча с плоской геометрией.",
+      "requirements": ["Алгоритм Möller–Trumbore.", "Учитывать интервал t_min / t_max.", "Время выполнения < 2ms."]
+    },
+    "template_code": "bool Triangle::hit(const Ray& r, float t_min, float t_max, HitRecord& rec) const {\n    Vector3 edge1 = v1 - v0;\n    Vector3 edge2 = v2 - v0;\n    return false;\n}",
+    "tests": [
+      { "name": "#1 Прямое попадание", "expected_time": "0.1 ms" },
+      { "name": "#2 Параллельный луч", "expected_time": "0.05 ms" }
+    ]
+  }
+]
