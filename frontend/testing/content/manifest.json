@@ -1,0 +1,36 @@
+[
+  {
+    "id": "test_math_vectors",
+    "title": "Тест #1: Векторная алгебра и оптика",
+    "category": "C++ Math",
+    "difficulty": "Легкая",
+    "time_limit_sec": 600,
+    "passing_score_percent": 70,
+    "description": "Проверка базовых математических концепций: скалярное/векторное произведение, нормали и отражение лучей.",
+    "is_unlocked": true,
+    "questions": [
+      {
+        "id": "q1",
+        "type": "single_choice",
+        "category": "Векторы",
+        "question": "Чему равно скалярное произведение двух перпендикулярных единичных векторов $\\vec{a} \\cdot \\vec{b}$?",
+        "options": [
+          { "id": "opt_a", "text": "1" },
+          { "id": "opt_b", "text": "0" },
+          { "id": "opt_c", "text": "-1" }
+        ],
+        "correct_option": "opt_b",
+        "explanation": "Так как cos(90°) = 0, скалярное произведение перпендикулярных векторов всегда равно 0."
+      },
+      {
+        "id": "q2",
+        "type": "numeric_input",
+        "category": "Геометрия луча",
+        "question": "Рассчитайте дискриминант D = b² - 4ac для пересечения луча со сферой, если a = 1, b = -6, c = 5.",
+        "expected_value": 16.0,
+        "tolerance": 0.01,
+        "explanation": "D = (-6)² - 4·1·5 = 36 - 20 = 16."
+      }
+    ]
+  }
+]
