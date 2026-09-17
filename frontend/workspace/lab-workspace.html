@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VirtualLab — Рабочая область лабораторной</title>
+    <title>VirtualLab — Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/frontend/style.css">
 </head>
@@ -12,7 +12,7 @@
     <!-- ВЕРХНИЙ БАР -->
     <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-4">
-            <a href="index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] hover:bg-gray-800 border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold transition text-[var(--text-main)]">
+            <a href="index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold transition text-[var(--text-main)]">
                 <span>←</span>
                 <span>Лабораторные</span>
             </a>
@@ -32,13 +32,10 @@
             <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
                 🌙 Тёмная
             </button>
-            <div id="wasm-status" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                Wasm ready
-            </div>
             <button id="btn-run" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center space-x-1 shadow-md">
-                <span>▶ Тесты</span>
+                <span>▶ Run</span>
             </button>
-            <button id="btn-submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-md">
+            <button id="btn-submit" class="bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-md">
                 Отправить решение
             </button>
         </div>
@@ -88,25 +85,13 @@
             <div id="monaco-editor-container" class="flex-1 w-full h-full bg-[#1e1e1e]"></div>
         </main>
 
-        <!-- 3. ПРАВАЯ ПАНЕЛЬ: РЕНДЕР И ТЕСТЫ -->
+        <!-- 3. ПРАВАЯ ПАНЕЛЬ: ТЕСТЫ -->
         <aside class="w-80 bg-[var(--bg-panel)] border-l border-[var(--border-color)] flex flex-col shrink-0 overflow-hidden">
-            
-            <!-- Окно Canvas -->
-            <div class="h-1/2 border-b border-[var(--border-color)] p-3 flex flex-col space-y-2">
+            <!-- UNIT TESTS -->
+            <div class="h-1/2 p-3 flex flex-col space-y-2 overflow-hidden">
                 <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider flex justify-between items-center">
-                    <span>Визуализация</span>
-                    <span class="text-[10px] font-mono text-pink-400">Viewport</span>
-                </div>
-                <div class="flex-1 bg-black rounded-xl border border-[var(--border-color)] overflow-hidden relative flex items-center justify-center">
-                    <canvas id="lab-canvas" class="w-full h-full object-contain"></canvas>
-                </div>
-            </div>
-
-            <!-- Табло Юнит-Тестов -->
-            <div class="h-1/2 p-3 flex flex-col space-y-2 bg-[var(--bg-card)] overflow-hidden">
-                <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider flex justify-between items-center">
-                    <span>Юнит-тесты</span>
-                    <span id="tests-status-count" class="text-[10px] font-mono text-gray-400">0 / 0 Passed</span>
+                    <span>Unit-тесты</span>
+                    <span id="tests-status-count"></span>
                 </div>
 
                 <!-- ДИНАМИЧЕСКИЙ СПИСОК ТЕСТОВ -->
@@ -118,7 +103,6 @@
         </aside>
     </div>
 
-    <!-- СКРИПТЫ: Сначала переключение темы, затем загрузчик данных -->
     <script src="src/ui.js"></script>
     <script src="src/loader.js"></script>
     <script src="src/runner.js"></script>

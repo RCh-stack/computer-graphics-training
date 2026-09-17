@@ -26,14 +26,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function createLabCardHTML(lab) {
-    // Настройка внешнего вида в зависимости от статуса
     let badgeHTML = '';
     let btnHTML = '';
     let cardBorder = 'border-[var(--border-color)]';
 
     if (lab.status === 'completed') {
         badgeHTML = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Выполнено</span>`;
-        btnHTML = `<a href="lab-workspace.html?id=${lab.id}" class="bg-[var(--bg-card)] hover:bg-gray-800 border border-[var(--border-color)] text-[var(--text-main)] text-xs font-bold px-4 py-2 rounded-xl transition">Открыть</a>`;
+        btnHTML = `<a href="lab-workspace.html?id=${lab.id}" class="bg-[var(--bg-card)] hover:bg-gray-200 border border-[var(--border-color)] text-[var(--text-main)] text-xs font-bold px-4 py-2 rounded-xl transition">Открыть</a>`;
     } else if (lab.status === 'in_progress') {
         cardBorder = 'border-2 border-indigo-500/50';
         badgeHTML = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">В процессе</span>`;

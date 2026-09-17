@@ -1,14 +1,18 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
+const labRoutes = require('./src/routers/labs');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
 
 app.use(cors());
 
 app.use(express.json());
 
-// Запуск сервера
 app.listen(PORT, () => {
     console.log(`server start http://127.0.0.1:${PORT}`);
 });
+
+app.use('/api/v1/labs', labRoutes);

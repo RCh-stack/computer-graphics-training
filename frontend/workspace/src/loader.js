@@ -1,4 +1,3 @@
-// Глобальная ссылка на редактор Monaco для доступа из других модулей/кнопок
 window.windowEditor = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -42,6 +41,11 @@ function renderWorkspaceUI(lab) {
         reqList.innerHTML = lab.task.requirements.map(req => `<li>${req}</li>`).join('');
     }
 
+    const testsStatusCount = document.getElementById('tests-status-count');
+    if(testsStatusCount) {
+        testsStatusCount.innerHTML = `<span id="tests-status-count" class="text-[10px] font-mono text-gray-400">0 / ${lab.tests.length} Passed</span>`;
+    }
+
     const testsContainer = document.getElementById('tests-container');
     if (testsContainer && lab.tests) {
         testsContainer.innerHTML = lab.tests.map(test => `
@@ -50,7 +54,7 @@ function renderWorkspaceUI(lab) {
                     <span class="text-gray-400 font-bold">•</span>
                     <span class="font-medium">${test.name}</span>
                 </div>
-                <span class="font-mono text-[10px] text-[var(--text-muted)]">${test.expected_time}</span>
+                <span class="font-mono text-[10px] text-[var(--text-muted)]">${test.timeout_ms}</span>
             </div>
         `).join('');
     }
@@ -70,16 +74,14 @@ function initMonacoEditor(codeTemplate) {
         const container = document.getElementById('monaco-editor-container');
         if (!container) return;
 
-        // Если редактор уже был инициализирован, убираем старый экземпляр
         if (window.windowEditor) {
             window.windowEditor.dispose();
         }
 
-        // Создаем редактор с кодом из JSON
         window.windowEditor = monaco.editor.create(container, {
             value: codeTemplate,
             language: 'cpp',
-            theme: 'vs-dark',
+            theme: 'vs-light',
             readOnly: false,
             domReadOnly: false,
             automaticLayout: true,
@@ -95,11 +97,3 @@ function initMonacoEditor(codeTemplate) {
         });
     });
 }
-
-document.getElementById('btn-run')?.addEventListener('click', () => {
-    if (window.windowEditor) {
-        const code = window.windowEditor.getValue();
-        console.log('--- Считанный код студента ---');
-        console.log(code);
-    }
-});
