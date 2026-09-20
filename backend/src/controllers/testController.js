@@ -1,99 +1,157 @@
-const path = require('path');
-const fs = require('fs');
+const { Client } = require('pg');
 
-const MANIFEST_PATH = path.join(__dirname, '../../../frontend/testing/content/manifest.json');
-
-function loadManifest() {
-    if (!fs.existsSync(MANIFEST_PATH)) {
-        throw new Error('Файл manifest.json не найден');
-    }
-    const rawData = fs.readFileSync(MANIFEST_PATH, 'utf-8');
-    return JSON.parse(rawData);
+function getDbClient() {
+    return new Client({ connectionString: process.env.DATABASE_URL });
 }
 
 /**
- * GET /api/v1/tests/manifest
+ * GET /api/v1/tests
  */
-exports.getManifest = (req, res) => {
-    try {
-        const manifest = loadManifest();
-        
-        // Очищаем вопросы от правильных ответов и пояснений
-        const sanitizedManifest = manifest.map(test => ({
-            ...test,
-            questions: test.questions.map(t => {
-                const { correct_option, expected_value, explanation, ...publicQuestion } = t;
-                return publicQuestion;
-            })
-        }));
+async function getAllTests(req, res) {
+    const client = getDbClient();
 
-        return res.json(sanitizedManifest);
+    try {
+        await client.connect();
+
+        const result = await client.query(
+            `SELECT t.id, t.title, t.description, t."time_limit", t."is_unlocked",
+            COUNT(qq.id)::int AS "questions_count"
+            FROM "tests" t
+            LEFT JOIN "test_questions" qq ON t.id = qq."test_id"
+            GROUP BY t.id;`
+        );
+
+        return res.json({ tests: result.rows });
     } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
+        console.error('Ошибка получения списка тестов:', error);
+        return res.status(500).json({ error: 'Ошибка сервера при получении списка тестов' });
+    } finally {
+        await client.end();
     }
-};
+}
 
 /**
  * GET /api/v1/tests/:id
  */
-exports.getTestById = (req, res) => {
+async function getTestById(req, res) {
+    const { id } = req.params;
+    const client = getDbClient();
+
     try {
-        const { id } = req.params;
-        const manifest = loadManifest();
-        const test = manifest.find(t => t.id === id);
+        await client.connect();
+
+        const testResult = await client.query(
+            `SELECT id, title, description, "time_limit", "is_unlocked"
+            FROM "tests"
+            WHERE id = $1 LIMIT 1;`,
+            [id]
+        );
+
+        const test = testResult.rows[0];
 
         if (!test) {
-            return res.status(404).json({ status: 'error', message: 'Тест не найден' });
+            return res.status(404).json({ error: 'Тест не найден' });
         }
 
-        // Удаляем верные ответы перед отправкой клиенту
-        const publicTest = {
-            ...test,
-            questions: test.questions.map(t => {
-                const { correct_option, expected_value, explanation, ...publicQuestion } = t;
-                return publicQuestion;
-            })
-        };
+        const questionsResult = await client.query(
+            `SELECT id, "question_text", "options_json", explanation
+            FROM "test_questions"
+            WHERE "test_id" = $1;`,
+            [id]
+        );
 
-        return res.json(publicTest);
+        const questions = questionsResult.rows.map((q) => {
+            let options = q.optionsJson;
+            if (typeof options === 'string') {
+                try {
+                    options = JSON.parse(options);
+                } catch (e) {
+                    options = [];
+                }
+            }
+            return {
+                id: q.id,
+                question_text: q.question_text,
+                options: options,
+                explanation: q.explanation,
+            };
+        });
+
+        return res.json({
+            test: {
+                ...test,
+                questions,
+            },
+        });
     } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
+        console.error(`Ошибка получения теста ${id}:`, error);
+        return res.status(500).json({ error: 'Ошибка сервера при получении теста' });
+    } finally {
+        await client.end();
     }
 };
 
 /**
  * POST /api/v1/tests/:id/verify
  */
-exports.verifyTest = (req, res) => {
-    try {
-        const { id } = req.params;
-        const { answers = {} } = req.body; // Структура: { "q1": "opt_b", "q2": 16.0 }
+async function verifyTest(req, res) {
+    const { id } = req.params;
+    const { answers = {} } = req.body; // Формат: { "q1": "opt_b", "q2": 16.0 }
+    const userId = req.user ? req.user.id : null; 
 
-        const manifest = loadManifest();
-        const test = manifest.find(t => t.id === id);
+    const client = getDbClient();
+
+    try {
+        await client.connect();
+
+        const testResult = await client.query(
+            `SELECT id, title FROM "tests" WHERE id = $1 LIMIT 1;`,
+            [id]
+        );
+
+        const test = testResult.rows[0];
 
         if (!test) {
             return res.status(404).json({ status: 'error', message: 'Тест не найден' });
         }
 
+        const questionsResult = await client.query(
+            `SELECT id, "question_text", "options_json", "correct_answer", explanation
+            FROM "test_questions"
+            WHERE "test_id" = $1;`,
+            [id]
+        );
+
+        const questions = questionsResult.rows;
+
+        if (questions.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Вопросы к тесту не найдены' });
+        }
+
         let correctCount = 0;
         const detailedResults = [];
 
-        test.questions.forEach(t => {
-            const userAnswer = answers[t.id];
+        questions.forEach((q) => {
+            const userAnswerRaw = answers[q.id];
+            const userAnswerStr = userAnswerRaw !== undefined && userAnswerRaw !== null 
+                ? String(userAnswerRaw).trim() 
+                : '';
+            const correctAnswerStr = String(q.correct_answer || '').trim();
+
             let isCorrect = false;
 
-            // 1. Проверка вопросов с выбором варианта (single_choice / code_analysis / image_choice)
-            if (t.correct_option !== undefined) {
-                isCorrect = userAnswer === t.correct_option;
-            } 
-            // 2. Проверка числовых ответов с учетом погрешности (numeric_input)
-            else if (t.expected_value !== undefined) {
-                const numAnswer = parseFloat(userAnswer);
-                const tolerance = t.tolerance || 0.001;
-                if (!isNaN(numAnswer)) {
-                    isCorrect = Math.abs(numAnswer - t.expected_value) <= tolerance;
-                }
+            const numUser = parseFloat(userAnswerStr);
+            const numCorrect = parseFloat(correctAnswerStr);
+
+            const isNumericComparison = !isNaN(numUser) && !isNaN(numCorrect);
+
+            if (isNumericComparison) {
+                // Допустимая погрешность 0.001 для числовых ответов
+                const tolerance = 0.001;
+                isCorrect = Math.abs(numUser - numCorrect) <= tolerance;
+            } else {
+                // Строковое сравнение для вариантов ответов (выбор из списка)
+                isCorrect = userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase();
             }
 
             if (isCorrect) {
@@ -101,28 +159,58 @@ exports.verifyTest = (req, res) => {
             }
 
             detailedResults.push({
-                question_id: t.id,
+                question_id: q.id,
                 is_correct: isCorrect,
-                user_answer: userAnswer !== undefined ? userAnswer : null,
-                correct_option: t.correct_option,
-                expected_value: t.expected_value,
-                explanation: t.explanation || 'Пояснение отсутствует.'
+                user_answer: userAnswerRaw !== undefined ? userAnswerRaw : null,
+                correct_answer: q.correct_answer,
+                explanation: q.explanation || 'Пояснение отсутствует.',
             });
         });
 
-        const totalCount = test.questions.length;
+        const totalCount = questions.length;
         const scorePercent = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+    
+        const PASSING_THRESHOLD = 60; // Проходной порог по умолчанию (60%)
+        const isPassed = scorePercent >= PASSING_THRESHOLD;
+
+        if (userId) {
+            await client.query(
+                `INSERT INTO "test_submissions" (id, "user_id", "test_id", score_percent, "user_answers", "completed_at")
+                 VALUES (gen_random_uuid()::text, $1, $2, $3, $4, NOW());`,
+                [userId, id, scorePercent, JSON.stringify(answers)]
+            );
+        }
 
         return res.json({
             test_id: id,
             score_percent: scorePercent,
             correct_count: correctCount,
             total_count: totalCount,
-            passed: scorePercent >= test.passing_score_percent,
-            details: detailedResults
+            passed: isPassed,
+            details: detailedResults,
         });
+    } catch (error) {
+        console.error('Verify Test Error:', error);
+        return res.status(500).json({ status: 'error', message: error.message });
+    } finally {
+        await client.end();
+    }
+};
 
+/**
+ * POST /api/v1/tests/:id/submit
+ */
+async function submitTest(req, res) {
+    try {
+        return res.status(200).json({ status: 'success', message: 'Тест отправлен' });
     } catch (error) {
         return res.status(500).json({ status: 'error', message: error.message });
     }
+}
+
+module.exports = {
+    getAllTests,
+    getTestById,
+    verifyTest,
+    submitTest
 };
