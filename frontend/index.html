@@ -15,18 +15,54 @@
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
 
     <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
-        <div class="max-w-7xl x-auto px-4 py-3 flex justify-between items-center mx-auto">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <!-- Логотип -->
             <div class="flex items-center space-x-3 cursor-pointer navigation-link" data-target="dashboard">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
                 <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></span>
             </div>
 
-            <nav class="hidden md:flex space-x-1">
-                <button class="navigation-link px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-300 transition" data-target="">Профиль</button>
-                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-3 py-1.5 rounded-xl text-xs font-semibold hover:opacity-80 transition">
-                    🌙 Тёмная
+            <!-- Правый блок: Профиль и Выпадающее меню -->
+            <div class="relative">
+                <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-gray-800/20 border border-transparent hover:border-gray-700 transition">
+                    <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center border border-pink-500/30" id="user-avatar">
+                        U
+                    </div>
+                    <div class="hidden sm:block text-left">
+                        <div id="user-name" class="text-sm font-semibold leading-tight text-[var(--text-main)]">Студент</div>
+                        <div id="user-role" class="text-[11px] text-gray-400 capitalize">Пользователь</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-xs text-gray-400 ml-1"></i>
                 </button>
-            </nav>
+
+                <!-- Выпадающее меню (Dropdown) -->
+                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-700/50">
+                    
+                    <!-- Данные пользователя -->
+                    <div class="px-4 py-2.5">
+                        <p id="dropdown-user-email" class="text-xs text-gray-400 truncate">student@edu.ru</p>
+                    </div>
+
+                    <!-- Пункты меню -->
+                    <div class="py-1">
+                        <a href="profile.html" class="flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
+                            <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
+                            <span>Моя статистика</span>
+                        </a>
+                        <button id="theme-toggle" class="w-full flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
+                            Светлая
+                        </button>
+                    </div>
+
+                    <!-- Выход -->
+                    <div class="py-1">
+                        <button id="logout-btn" class="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition">
+                            <i class="fa-solid fa-right-from-bracket w-5 text-red-400"></i>
+                            <span>Выйти из аккаунта</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -92,6 +128,8 @@
         </section>
     </main>
 
+    <script src="src/auth.js"></script>
     <script src="src/ui.js"></script>
+    <script src="src/theme.js"></script>
 </body>
 </html>

@@ -12,19 +12,6 @@ function launchModule(url) {
      window.location.href = url;
 }
 
-const themeBtn = document.getElementById('theme-toggle');
-if (localStorage.getItem('theme') === 'light') {
-    document.body.classList.add('light-theme');
-    themeBtn.innerText = '☀️ Светлая';
-}
-
-themeBtn.addEventListener('click', () => {
-    document.body.classList.toggle('light-theme');
-    const isLight = document.body.classList.contains('light-theme');
-    themeBtn.innerText = isLight ? '☀️ Светлая' : '🌙 Тёмная';
-    localStorage.setItem('theme', isLight ? 'light' : 'dark');
-});
-
 function updateStepUI() {
     const step = STEPS[currentStepIndex];
     stepBadge.innerText = `Шаг ${step.id} из ${STEPS.length - 1}`;

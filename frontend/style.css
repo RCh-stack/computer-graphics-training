@@ -1,16 +1,4 @@
-:root 
-{
-    --bg-main: #030712;
-    --bg-panel: #111827;
-    --bg-card: #1f2937;
-    --border-color: #374151;
-    --text-main: #f3f4f6;
-    --text-muted: #9ca3af;
-    --accent: #e80c89;  
-}
-
-body.light-theme 
-{
+:root {
     --bg-main: #f8fafc;
     --bg-panel: #ffffff;
     --bg-card: #f1f5f9;
@@ -19,8 +7,20 @@ body.light-theme
     --text-muted: #64748b;
     --accent: #e80c89;
 }
-        
-body 
-{ 
-    background-color: var(--bg-main); color: var(--text-main); 
+
+html.dark-theme,
+body.dark-theme {
+    --bg-main: #030712;
+    --bg-panel: #111827;
+    --bg-card: #1f2937;
+    --border-color: #374151;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --accent: #e80c89;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    transition: background-color 0.2s ease, color 0.2s ease;
 }

@@ -1,20 +1,28 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors = require('cors');
+
+const {
+  corsMiddleware,
+  apiLimiter,
+  authLimiter,
+  helmetMiddleware,
+} = require('./config/security');
+
+const app = express();
+const PORT = process.env.PORT;
+
+app.use(helmetMiddleware);
+app.use(corsMiddleware);
+app.use('/api/v1', apiLimiter);
+app.use(express.json({ limit: '10kb' }));
 
 const authRoutes = require('./src/routers/auth');
 const labRoutes = require('./src/routers/labs');
 const testRoutes = require('./src/routers/tests');
 const progressRoutes = require('./src/routers/progress');
 
-const app = express();
-const PORT = process.env.PORT;
-
-app.use(cors());
-app.use(express.json());
-
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/labs', labRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/progress', progressRoutes);

@@ -30,6 +30,12 @@
                 <span id="test-timer">--:--</span>
             </div>
 
+            <div class="flex items-center space-x-4">
+                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-3 py-1.5 rounded-xl text-xs font-semibold hover:opacity-80 transition">
+                    Светлая
+                </button>
+            </div>
+
             <button id="btn-finish-test" class="bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition shadow-md">
                 Завершить тест
             </button>
@@ -107,7 +113,7 @@
         </aside>
     </div>
 
-    <script src="src/ui.js"></script>
     <script src="src/runner.js"></script>
+    <script src="../src/theme.js"></script>
 </body>
 </html>
