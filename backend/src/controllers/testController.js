@@ -8,20 +8,38 @@ function getDbClient() {
  * GET /api/v1/tests
  */
 async function getAllTests(req, res) {
+    const userId = req.user ? req.user.id : null;
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        const result = await client.query(
-            `SELECT t.id, t.title, t.description, t."time_limit", t."is_unlocked",
-            COUNT(qq.id)::int AS "questions_count"
+        const query = `
+            SELECT 
+                t.id, 
+                t.title, 
+                t.description, 
+                t.difficulty, 
+                t.time_limit, 
+                t.is_unlocked,
+                COUNT(tq.id)::int AS questions_count,
+                ts.score_percent AS score,
+                (ts.completed_at IS NOT NULL) AS is_completed
             FROM "tests" t
-            LEFT JOIN "test_questions" qq ON t.id = qq."test_id"
-            GROUP BY t.id;`
-        );
+            LEFT JOIN "test_questions" tq 
+                   ON t.id = tq.test_id
+            LEFT JOIN "test_submissions" ts 
+                   ON t.id = ts.test_id AND ts.user_id = $1
+            GROUP BY t.id, ts.score_percent, ts.completed_at
+            ORDER BY t.id ASC
+        `;
 
-        return res.json({ tests: result.rows });
+        const result = await client.query(query, [userId]);
+
+        return res.json({ 
+            status: 'success', 
+            tests: result.rows 
+        });
     } catch (error) {
         console.error('Ошибка получения списка тестов:', error);
         return res.status(500).json({ error: 'Ошибка сервера при получении списка тестов' });
@@ -41,7 +59,7 @@ async function getTestById(req, res) {
         await client.connect();
 
         const testResult = await client.query(
-            `SELECT id, title, description, "time_limit", "is_unlocked"
+            `SELECT id, title, description, difficulty, "time_limit", "is_unlocked"
             FROM "tests"
             WHERE id = $1 LIMIT 1;`,
             [id]
@@ -60,29 +78,22 @@ async function getTestById(req, res) {
             [id]
         );
 
-        const questions = questionsResult.rows.map((q) => {
-            let options = q.optionsJson;
-            if (typeof options === 'string') {
-                try {
-                    options = JSON.parse(options);
-                } catch (e) {
-                    options = [];
-                }
-            }
+        test.questions = questionsResult.rows.map(q => {
+            const optionsData = typeof q.options_json === 'string' 
+                ? JSON.parse(q.options_json) 
+                : (q.options_json || {});
+
             return {
                 id: q.id,
                 question_text: q.question_text,
-                options: options,
-                explanation: q.explanation,
+                type: optionsData.type || 'single_choice',
+                options: optionsData.options || [],
+                code_snippet: optionsData.code_snippet || null,
+                media_url: optionsData.media_url || null
             };
         });
 
-        return res.json({
-            test: {
-                ...test,
-                questions,
-            },
-        });
+        return res.json({ status: 'success', test });
     } catch (error) {
         console.error(`Ошибка получения теста ${id}:`, error);
         return res.status(500).json({ error: 'Ошибка сервера при получении теста' });
@@ -92,31 +103,24 @@ async function getTestById(req, res) {
 };
 
 /**
- * POST /api/v1/tests/:id/verify
+ * POST /api/v1/tests/:id/submit
  */
-async function verifyTest(req, res) {
+async function submitTest(req, res) {
     const { id } = req.params;
-    const { answers = {} } = req.body; // Формат: { "q1": "opt_b", "q2": 16.0 }
+    const { answers = {} } = req.body;
     const userId = req.user ? req.user.id : null; 
+
+    if (!userId) {
+        return res.status(401).json({ status: 'error', message: 'Необходима авторизация' });
+    }
 
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        const testResult = await client.query(
-            `SELECT id, title FROM "tests" WHERE id = $1 LIMIT 1;`,
-            [id]
-        );
-
-        const test = testResult.rows[0];
-
-        if (!test) {
-            return res.status(404).json({ status: 'error', message: 'Тест не найден' });
-        }
-
         const questionsResult = await client.query(
-            `SELECT id, "question_text", "options_json", "correct_answer", explanation
+            `SELECT id, "correct_answer", "options_json", explanation
             FROM "test_questions"
             WHERE "test_id" = $1;`,
             [id]
@@ -129,65 +133,49 @@ async function verifyTest(req, res) {
         }
 
         let correctCount = 0;
-        const detailedResults = [];
 
-        questions.forEach((q) => {
-            const userAnswerRaw = answers[q.id];
-            const userAnswerStr = userAnswerRaw !== undefined && userAnswerRaw !== null 
-                ? String(userAnswerRaw).trim() 
-                : '';
-            const correctAnswerStr = String(q.correct_answer || '').trim();
-
-            let isCorrect = false;
-
-            const numUser = parseFloat(userAnswerStr);
-            const numCorrect = parseFloat(correctAnswerStr);
-
-            const isNumericComparison = !isNaN(numUser) && !isNaN(numCorrect);
-
-            if (isNumericComparison) {
-                // Допустимая погрешность 0.001 для числовых ответов
-                const tolerance = 0.001;
-                isCorrect = Math.abs(numUser - numCorrect) <= tolerance;
-            } else {
-                // Строковое сравнение для вариантов ответов (выбор из списка)
-                isCorrect = userAnswerStr.toLowerCase() === correctAnswerStr.toLowerCase();
+        questions.forEach(q => {
+            const userAnswer = answers[q.id];
+            const optionsData = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : (q.options_json || {});
+            
+            if (userAnswer !== undefined && userAnswer !== null) {
+                if (optionsData.type === 'numeric_input') {
+                    const expected = parseFloat(q.correct_answer);
+                    const actual = parseFloat(userAnswer);
+                    const tolerance = optionsData.tolerance || 0.01;
+                    
+                    if (!isNaN(actual) && Math.abs(expected - actual) <= tolerance) {
+                        correctCount++;
+                    }
+                } else {
+                    // Обычное сравнение строк/идентификаторов
+                    if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
+                        correctCount++;
+                    }
+                }
             }
-
-            if (isCorrect) {
-                correctCount++;
-            }
-
-            detailedResults.push({
-                question_id: q.id,
-                is_correct: isCorrect,
-                user_answer: userAnswerRaw !== undefined ? userAnswerRaw : null,
-                correct_answer: q.correct_answer,
-                explanation: q.explanation || 'Пояснение отсутствует.',
-            });
         });
 
-        const totalCount = questions.length;
-        const scorePercent = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-    
-        const PASSING_THRESHOLD = 60; // Проходной порог по умолчанию (60%)
-        const isPassed = scorePercent >= PASSING_THRESHOLD;
+        const totalQuestions = questions.length;
+        const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
-        if (userId) {
-            await client.query(
-                `INSERT INTO "test_submissions" (id, "user_id", "test_id", score_percent, "user_answers", "completed_at")
-                 VALUES (gen_random_uuid()::text, $1, $2, $3, $4, NOW());`,
-                [userId, id, scorePercent, JSON.stringify(answers)]
-            );
-        }
+        const upsertQuery = `
+            INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, completed_at)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
+            ON CONFLICT (user_id, test_id) 
+            DO UPDATE SET score_percent = EXCLUDED.score_percent, 
+                          user_answers = EXCLUDED.user_answers, 
+                          completed_at = EXCLUDED.completed_at
+            RETURNING score_percent;
+        `;
+    
+        await client.query(upsertQuery, [userId, id, scorePercent, JSON.stringify(answers)]);
 
         return res.json({
-            test_id: id,
+            status: 'success',
             score_percent: scorePercent,
             correct_count: correctCount,
-            total_count: totalCount,
-            passed: isPassed,
-            details: detailedResults,
+            total_count: totalQuestions
         });
     } catch (error) {
         console.error('Verify Test Error:', error);
@@ -197,20 +185,8 @@ async function verifyTest(req, res) {
     }
 };
 
-/**
- * POST /api/v1/tests/:id/submit
- */
-async function submitTest(req, res) {
-    try {
-        return res.status(200).json({ status: 'success', message: 'Тест отправлен' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
-    }
-}
-
 module.exports = {
     getAllTests,
     getTestById,
-    verifyTest,
     submitTest
 };

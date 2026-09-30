@@ -2,10 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initTestWorkspace();
 });
 
-// Состояние текущего тестирования
 let currentTest = null;
 let currentQuestionIndex = 0;
-let userAnswers = {}; // Структура: { "q1": "opt_a", "q2": 16 }
+let userAnswers = {};
 let timerInterval = null;
 let timeRemaining = 0;
 
@@ -20,16 +19,24 @@ async function initTestWorkspace() {
     }
 
     try {
-        // Загружаем данные теста с бэкенда
-        const response = await fetch(`http://127.0.0.1:3000/api/v1/tests/${testId}`);
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch(`/api/v1/tests/${testId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+
         if (!response.ok) throw new Error('Ошибка загрузки теста');
         
-        currentTest = await response.json();
+        const data = await response.json();
+        currentTest = data.test;
         
         document.getElementById('test-title').textContent = currentTest.title;
-        timeRemaining = currentTest.time_limit_sec;
+        timeRemaining = currentTest.time_limit * 60;
 
-        // Инициализация компонентов
         startTimer();
         renderQuestionsGrid();
         renderCurrentQuestion();
@@ -42,9 +49,6 @@ async function initTestWorkspace() {
     }
 }
 
-/**
- * Запуск и отрисовка таймера
- */
 function startTimer() {
     updateTimerDisplay();
     timerInterval = setInterval(() => {
@@ -66,9 +70,6 @@ function updateTimerDisplay() {
     document.getElementById('test-timer').textContent = formatted;
 }
 
-/**
- * Рендеринг правой панели (Карты вопросов)
- */
 function renderQuestionsGrid() {
     const gridContainer = document.getElementById('questions-navigation-grid');
     gridContainer.innerHTML = '';
@@ -102,21 +103,14 @@ function renderQuestionsGrid() {
     });
 }
 
-/**
- * Рендеринг текущего вопроса
- */
 function renderCurrentQuestion() {
     const q = currentTest.questions[currentQuestionIndex];
     
-    // Метаданные
     document.getElementById('question-number-badge').textContent = `Вопрос ${currentQuestionIndex + 1} из ${currentTest.questions.length}`;
-    document.getElementById('question-category').textContent = `Категория: ${q.category || 'Общая'}`;
     
-    // Текст вопроса
     const qTextElem = document.getElementById('question-text');
-    qTextElem.innerHTML = q.question;
+    qTextElem.innerHTML = q.question_text;
     
-    // Рендеринг математических формул через KaTeX (если подключен)
     if (window.renderMathInElement) {
         renderMathInElement(qTextElem, {
             delimiters: [
@@ -126,7 +120,6 @@ function renderCurrentQuestion() {
         });
     }
 
-    // Мedia / Code контейнер
     const mediaContainer = document.getElementById('question-media-container');
     mediaContainer.innerHTML = '';
     
@@ -144,10 +137,8 @@ function renderCurrentQuestion() {
         mediaContainer.classList.add('hidden');
     }
 
-    // Варианты ответа
     renderInteractiveOptions(q);
 
-    // Управление кнопками Назад/Вперед
     document.getElementById('btn-prev-q').disabled = currentQuestionIndex === 0;
     const nextBtn = document.getElementById('btn-next-q');
     
@@ -162,16 +153,12 @@ function renderCurrentQuestion() {
     }
 }
 
-/**
- * Отрисовка интерактивной части ответа
- */
 function renderInteractiveOptions(question) {
     const optionsContainer = document.getElementById('options-container');
     optionsContainer.innerHTML = '';
 
     const currentAnswer = userAnswers[question.id];
 
-    // 1. Поле ввода для численных ответов
     if (question.type === 'numeric_input') {
         const wrapper = document.createElement('div');
         wrapper.className = 'space-y-2';
@@ -201,7 +188,6 @@ function renderInteractiveOptions(question) {
         return;
     }
 
-    // 2. Радиокнопки для выбора вариантов (single_choice / code_analysis / image_choice)
     if (question.options && Array.isArray(question.options)) {
         question.options.forEach(opt => {
             const isSelected = currentAnswer === opt.id;
@@ -236,9 +222,6 @@ function renderInteractiveOptions(question) {
     }
 }
 
-/**
- * Обработка кнопок навигации и завершения
- */
 function setupNavigationListeners() {
     document.getElementById('btn-prev-q').addEventListener('click', () => {
         if (currentQuestionIndex > 0) {
@@ -267,31 +250,25 @@ function setupNavigationListeners() {
     });
 }
 
-/**
- * Отправка ответов на сервер и подсчет результатов
- */
 async function submitTest() {
     clearInterval(timerInterval);
 
     try {
-        const response = await fetch(`http://127.0.0.1:3000/api/v1/tests/${currentTest.id}/verify`, {
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch(`/api/v1/tests/${currentTest.id}/submit`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
             body: JSON.stringify({ answers: userAnswers })
         });
 
+        if (!response.ok) throw new Error('Не удалось завершить тестирование');
+
         const result = await response.json();
-
-        // Сохраняем прогресс в localStorage
-        const progress = JSON.parse(localStorage.getItem('tests_progress') || '{}');
-        progress[currentTest.id] = {
-            score: result.score_percent,
-            passed: result.score_percent >= currentTest.passing_score_percent,
-            timestamp: new Date().toISOString()
-        };
-        localStorage.setItem('tests_progress', JSON.stringify(progress));
-
-        // Вывод краткого результата и возврат на дашборд
+        
         alert(`Тестирование завершено!\nВаш результат: ${result.score_percent}%\nУспешно отвечено: ${result.correct_count} из ${result.total_count}`);
         window.location.href = 'index.html';
 

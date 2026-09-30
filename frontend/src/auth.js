@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmailEl = document.getElementById('dropdown-user-email');
     const userAvatarEl = document.getElementById('user-avatar');
 
-    const displayName = user.name || user.email.split('@')[0];
+    const displayName = user.firstName || user.email.split('@')[0];
     userNameEl.textContent = displayName;
     userRoleEl.textContent = user.role || 'Студент';
     userEmailEl.textContent = user.email;

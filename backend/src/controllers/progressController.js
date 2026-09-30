@@ -91,7 +91,7 @@ async function getDetailedHistory(req, res, next) {
         SELECT 
             ls.id,
             ls."lab_id",
-            l.titl AS "lab_title",
+            l.title AS "lab_title",
             ls.grade,
             ls."submitted_at"
         FROM "lab_submissions" ls

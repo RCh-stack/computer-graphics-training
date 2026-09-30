@@ -10,6 +10,7 @@ const {
 } = require('./config/security');
 
 const app = express();
+const URL = process.env.URL;
 const PORT = process.env.PORT;
 
 app.use(helmetMiddleware);
@@ -32,5 +33,5 @@ app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
-    console.log(`server start http://127.0.0.1:${PORT}`);
+    console.log(`server start ${URL}:${PORT}`);
 });

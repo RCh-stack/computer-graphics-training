@@ -6,23 +6,26 @@ let allTests = [];
 
 async function initDashboard() {
     try {
-        // 1. Загрузка манифеста тестов
-        const response = await fetch('content/manifest.json'); // или путь к JSON файлу напрямую
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch(`/api/v1/tests/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+
         if (!response.ok) throw new Error('Не удалось загрузить тесты');
-        
-        allTests = await response.json();
 
-        // 2. Считывание сохраненного прогресса из localStorage
-        const userProgress = JSON.parse(localStorage.getItem('tests_progress') || '{}');
+        const data = await response.json();
+        const rawTests = data.tests || [];
 
-        // 3. Обновление статусов блокировки и результатов
-        processTestStatuses(allTests, userProgress);
+        allTests = processTestStatuses(rawTests);
 
-        // 4. Отрисовка статистики и карточек
-        renderStats(allTests, userProgress);
+        renderStats(allTests);
         renderTestCards(allTests);
 
-        // 5. Инициализация фильтров
         setupFilterListeners();
 
     } catch (error) {
@@ -31,54 +34,42 @@ async function initDashboard() {
     }
 }
 
-/**
- * Проверяет зависимости (prerequisites) и проставление пройденных баллов
- */
-function processTestStatuses(tests, progress) {
-    tests.forEach(test => {
-        const testResult = progress[test.id];
+function processTestStatuses(tests) {
+    return tests.map(test => {
+        const score = test.score !== null ? Number(test.score) : 0;
+        const completed = Boolean(test.is_completed);
+        const passed = score >= 70;
 
-        if (testResult) {
-            test.completed = true;
-            test.score = testResult.score; // процент выполнения
-            test.passed = test.score >= test.passing_score_percent;
-        } else {
-            test.completed = false;
-            test.score = 0;
-            test.passed = false;
-        }
-
-        // Проверка условия разблокировки по пререквизитам
-        if (test.prerequisite_test_id) {
-            const prereqResult = progress[test.prerequisite_test_id];
-            const isPrereqPassed = prereqResult && (prereqResult.score >= 70); // базовый порог
-            test.is_unlocked = Boolean(isPrereqPassed);
-        }
+        return {
+            id: test.id,
+            title: test.title,
+            description: test.description || 'Описание отсутствует',
+            difficulty: test.difficulty || 'Не указана',
+            time_limit: test.time_limit || 10,
+            questions_count: test.questions_count || 0,
+            is_unlocked: test.is_unlocked ?? true,
+            score: score,
+            completed: completed,
+            passed: passed
+        };
     });
 }
 
-/**
- * Вычисление и вывод сводных показателей в верхние блоки
- */
-function renderStats(tests, progress) {
+function renderStats(tests) {
     const totalCount = tests.length;
-    const completedtests = tests.filter(q => q.completed && q.passed);
+    const completedTests = tests.filter(q => q.completed && q.passed);
     
     let avgScore = 0;
-    const completedKeys = Object.keys(progress);
-    if (completedKeys.length > 0) {
-        const totalScoreSum = completedKeys.reduce((acc, key) => acc + (progress[key].score || 0), 0);
-        avgScore = Math.round(totalScoreSum / completedKeys.length);
+    if (completedTests.length > 0) {
+        const totalScoreSum = completedTests.reduce((acc, test) => acc + test.score, 0);
+        avgScore = Math.round(totalScoreSum / completedTests.length);
     }
 
     document.getElementById('stat-total-tests').textContent = totalCount;
-    document.getElementById('stat-passed-tests').textContent = completedtests.length;
+    document.getElementById('stat-passed-tests').textContent = completedTests.length;
     document.getElementById('stat-avg-score').textContent = `${avgScore}%`;
 }
 
-/**
- * Отрисовка карточек тестов в сетку
- */
 function renderTestCards(testsToRender) {
     const container = document.getElementById('tests-grid');
     container.innerHTML = '';
@@ -100,10 +91,8 @@ function renderTestCards(testsToRender) {
                 : 'border-[var(--border-color)] opacity-60 bg-gray-900/20'
         }`;
 
-        // Метка сложности
         const difficultyColor = test.difficulty === 'Легкая' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
 
-        // Статус прохождения
         let statusBadge = '';
         if (!test.is_unlocked) {
             statusBadge = `<span class="text-xs px-2.5 py-1 rounded-md bg-gray-800 text-gray-400 border border-gray-700">🔒 Заблокирован</span>`;
@@ -114,8 +103,6 @@ function renderTestCards(testsToRender) {
         } else {
             statusBadge = `<span class="text-xs px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">Доступен</span>`;
         }
-
-        const minutes = Math.floor(test.time_limit_sec / 60);
 
         card.innerHTML = `
             <div class="space-y-3">
@@ -134,8 +121,8 @@ function renderTestCards(testsToRender) {
 
             <div class="pt-4 mt-4 border-t border-[var(--border-color)] flex items-center justify-between">
                 <div class="text-xs text-[var(--text-muted)] font-mono flex space-x-3">
-                    <span>⏱️ ${minutes} мин</span>
-                    <span>❓ ${test.questions.length} вопр.</span>
+                    <span>⏱️ ${test.time_limit} мин</span>
+                    <span>❓ ${test.questions_count} вопр.</span>
                 </div>
 
                 <button 
@@ -155,16 +142,10 @@ function renderTestCards(testsToRender) {
     });
 }
 
-/**
- * Переход на страницу прохождения с ID выбранного теста
- */
 window.startTest = function(testId) {
     window.location.href = `test-workspace.html?id=${testId}`;
 };
 
-/**
- * Настройка кнопок фильтрации (Все / Доступные / Пройденные)
- */
 function setupFilterListeners() {
     const filterBtns = document.querySelectorAll('.test-filter-btn');
 

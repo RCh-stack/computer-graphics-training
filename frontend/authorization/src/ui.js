@@ -10,7 +10,7 @@ loginForm.addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value.trim();
 
     try {
-        const response = await fetch('http://127.0.0.1:3000/api/v1/auth/login', {
+        const response = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })

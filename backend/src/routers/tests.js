@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getAllTests, getTestById, verifyTest, submitTest } = require('../controllers/testController');
+const { getAllTests, getTestById, submitTest } = require('../controllers/testController');
 const { authenticateToken } = require('../services/jwt');
 
-router.get('/', getAllTests)
+router.get('/', authenticateToken, getAllTests)
 
-router.get('/:id', getTestById);
-
-router.post('/:id/verify', authenticateToken, verifyTest);
+router.get('/:id', authenticateToken, getTestById);
 
 router.post('/:id/submit', authenticateToken, submitTest)
 
