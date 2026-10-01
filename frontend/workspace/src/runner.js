@@ -19,13 +19,16 @@ async function runCode() {
     const btnRun = document.getElementById('btn-run');
     const wasmBadge = document.getElementById('wasm-status');
 
-    setUIStateLoading(true, btnRun, wasmBadge);
+    setRunBtnLoading(true, btnRun, wasmBadge);
 
     try {
+        const token = localStorage.getItem('authToken');
+
         const response = await fetch('/api/v1/labs/run', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
             },
             body: JSON.stringify({
                 lab_id: labId,
@@ -39,36 +42,106 @@ async function runCode() {
         }
 
         const result = await response.json();
+
+        await showLabResultModal({
+            isSubmit: false,
+            isPassed: result.all_passed,
+            tests: result.tests,
+            compileError: result.compile_output
+        });
+
         handleExecutionResult(result);
+
     } catch (error) {
         console.error('Ошибка при отправке кода:', error);
         showErrorInUI('Не удалось связаться с сервером проверки.');
     } finally {
-        setUIStateLoading(false, btnRun, wasmBadge);
+        setRunBtnLoading(false, btnRun, wasmBadge);
     }
 }
 
 async function submitCode() {
-    
+    if (!window.windowEditor) {
+        alert('Редактор кода не инициализирован!');
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const labId = urlParams.get('id');
+
+    if (!labId) {
+        alert('Не удалось определить ID лабораторной работы!');
+        return;
+    }
+
+    const code = window.windowEditor.getValue();   
+    const btnSubmit = document.getElementById('btn-submit');
+    const wasmBadge = document.getElementById('wasm-status');
+
+    setSubmitBtnLoading(true, btnSubmit, wasmBadge);
+
+    try {
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch('/api/v1/labs/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+                lab_id: labId,
+                compiler: "g++-15",
+                student_code: code
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
+        }
+
+        const result = await response.json();
+        const submission = result.submission;
+
+        await showLabResultModal({
+            isSubmit: true,
+            isPassed: submission.all_passed,
+            tests: submission.tests,
+            compileError: submission.compile_output
+        });
+
+        if(submission.all_passed)
+            window.location.href = 'index.html';
+
+    } catch (error) {
+        console.error('Ошибка при отправке кода:', error);
+        showErrorInUI('Не удалось связаться с сервером проверки.');
+    } finally {
+        setSubmitBtnLoading(false, btnSubmit, wasmBadge);
+    }
 }
 
-function setUIStateLoading(isLoading, btnRun, wasmBadge) {
+function setRunBtnLoading(isLoading, btnRun) {
     if (isLoading) {
         btnRun.disabled = true;
         btnRun.classList.add('opacity-50', 'cursor-not-allowed');
         btnRun.innerHTML = `<span>⏳ Build...</span>`;
-        if (wasmBadge) {
-            wasmBadge.textContent = 'Компиляция C++...';
-            wasmBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse';
-        }
     } else {
         btnRun.disabled = false;
         btnRun.classList.remove('opacity-50', 'cursor-not-allowed');
         btnRun.innerHTML = `<span>▶ Run</span>`;
-        if (wasmBadge) {
-            wasmBadge.textContent = 'Ready';
-            wasmBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-        }
+    }
+}
+
+function setSubmitBtnLoading(isLoading, btnSubmit) {
+    if (isLoading) {
+        btnSubmit.disabled = true;
+        btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+        btnSubmit.innerHTML = `<span>⏳ Submit...</span>`;
+    } else {
+        btnSubmit.disabled = false;
+        btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnSubmit.innerHTML = `<span>Отправить решение</span>`;
     }
 }
 

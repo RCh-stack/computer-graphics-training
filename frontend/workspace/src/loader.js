@@ -11,15 +11,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        const response = await fetch('content/manifest.json');
-        const labs = await response.json();
-        const currentLab = labs.find(item => item.id === labId);
+        const token = localStorage.getItem('authToken');
 
-        if (!currentLab) {
-            alert('Запрошенная лабораторная работа не найдена!');
-            window.location.href = 'labs.html';
-            return;
-        }
+        const response = await fetch(`/api/v1/labs/${labId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+
+        if (!response.ok) throw new Error('Не удалось загрузить лабораторные работы');
+
+        const result = await response.json();
+        const currentLab = result.lab;
 
         renderWorkspaceUI(currentLab);
 
@@ -32,23 +37,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function renderWorkspaceUI(lab) {
     document.getElementById('header-title').textContent = lab.title;
-    document.getElementById('lab-badge-category').textContent = lab.category;
-    document.getElementById('lab-instruction-title').textContent = lab.task.title;
-    document.getElementById('lab-instruction-text').textContent = lab.task.instruction;
+    document.getElementById('lab-badge-category').textContent = "Math";
+    document.getElementById('lab-instruction-title').textContent = lab.task_json.title;
+    document.getElementById('lab-instruction-text').textContent = lab.task_json.instruction;
 
     const reqList = document.getElementById('lab-requirements-list');
-    if (reqList && lab.task.requirements) {
-        reqList.innerHTML = lab.task.requirements.map(req => `<li>${req}</li>`).join('');
+    if (reqList && lab.task_json.requirements) {
+        reqList.innerHTML = lab.task_json.requirements.map(req => `<li>${req}</li>`).join('');
     }
 
     const testsStatusCount = document.getElementById('tests-status-count');
     if(testsStatusCount) {
-        testsStatusCount.innerHTML = `<span id="tests-status-count" class="text-[10px] font-mono text-gray-400">0 / ${lab.tests.length} Passed</span>`;
+        testsStatusCount.innerHTML = `<span id="tests-status-count" class="text-[10px] font-mono text-gray-400">0 / ${lab.test_cases.length} Passed</span>`;
     }
 
     const testsContainer = document.getElementById('tests-container');
-    if (testsContainer && lab.tests) {
-        testsContainer.innerHTML = lab.tests.map(test => `
+    if (testsContainer && lab.test_cases) {
+        testsContainer.innerHTML = lab.test_cases.map(test => `
             <div class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-2.5 flex items-center justify-between text-xs">
                 <div class="flex items-center space-x-2">
                     <span class="text-gray-400 font-bold">•</span>

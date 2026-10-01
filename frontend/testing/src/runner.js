@@ -269,7 +269,13 @@ async function submitTest() {
 
         const result = await response.json();
         
-        alert(`Тестирование завершено!\nВаш результат: ${result.score_percent}%\nУспешно отвечено: ${result.correct_count} из ${result.total_count}`);
+        await showTestResultModal({
+            score: result.score_percent,
+            correctCount: result.correct_count,
+            totalCount: result.total_count,
+            passed: result.score_percent >= 60
+        });
+
         window.location.href = 'index.html';
 
     } catch (error) {
@@ -277,6 +283,7 @@ async function submitTest() {
         alert('Произошла ошибка при отправке ответов.');
     }
 }
+
 
 function escapeHtml(text) {
     return text
