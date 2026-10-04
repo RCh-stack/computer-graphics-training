@@ -19,11 +19,13 @@ app.use('/api/v1', apiLimiter);
 app.use(express.json({ limit: '10kb' }));
 
 const authRoutes = require('./src/routers/auth');
+const ebookRoutes = require('./src/routers/ebook');
 const labRoutes = require('./src/routers/labs');
 const testRoutes = require('./src/routers/tests');
 const progressRoutes = require('./src/routers/progress');
 
 app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/v1/ebook', ebookRoutes);
 app.use('/api/v1/labs', labRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/progress', progressRoutes);
