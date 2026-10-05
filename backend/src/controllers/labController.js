@@ -25,6 +25,7 @@ async function getAllLabs(req, res) {
             FROM "labs" l
             LEFT JOIN "lab_submissions" ls 
                    ON l.id = ls.lab_id AND ls.user_id = $1
+            ORDER BY l.order ASC
         `;
 
         const result = await client.query(query, [userId]);

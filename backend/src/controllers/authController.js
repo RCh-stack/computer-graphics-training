@@ -61,37 +61,52 @@ async function login(req, res) {
             },
         });
     } catch (error) {
-        console.error('Ошибка логина:', error);
+        console.error('Ошибка авторизации:', error);
         return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     } finally {
         await client.end();
     }
 }
 
-/**
- * GET /api/v1/auth/me
+/*
+ * POST /api/v1/auth/registration
  */
-async function getMe(req, res) {
+async function registration(req, res) {
+
+    const { email, password, firstName, lastName } = req.body;
+
+    if (!email) return res.status(400).json({ error: 'Не указан email' });
+
+    if (!password) return res.status(400).json({ error: 'Пароль не может быть пустым' });
+
+    if (!firstName || lastName) return res.status(400).json({ error: 'Не указаны фамилия и/или имя' });
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
     const client = getDbClient();
 
     try {
         await client.connect();
 
         const result = await client.query(
-            `SELECT id, email, "first_name", "last_name", role, "group_id" 
-            FROM users WHERE id = $1 LIMIT 1;`,
-            [req.user.id]
+            `INSERT INTO "users" (id, email, passwordHash, firstName, lastName, role, "created_at") 
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, "", NOW());`,
+            [email, passwordHash, firstName, lastName]
         );
 
-        const user = result.rows[0];
 
-        if (!user) {
-            return res.status(404).json({ error: 'Пользователь не найден' });
-        }
 
-        return res.json({ user });
+        return res.json({
+            message: 'Успешная регистрация',
+            user: {
+                email: email,
+                firstName: firstName,
+                lastName: lastName
+            },
+        });
     } catch (error) {
-        console.error('Ошибка получения профиля:', error);
+        console.error('Ошибка регистрации:', error);
         return res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     } finally {
         await client.end();
@@ -100,5 +115,5 @@ async function getMe(req, res) {
 
 module.exports = {
     login,
-    getMe,
+    registration
 };

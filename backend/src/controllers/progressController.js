@@ -20,26 +20,28 @@ async function getStudentSummary(req, res, next) {
     try {
         await client.connect();
 
-        // 1. Получаем общую статистику по лабораторным работам
         const labsStatQuery = `
         SELECT 
+            COUNT(l.id)::int AS "labs_total",
             COUNT(ls.id)::int AS "labs_submitted",
             COALESCE(AVG(ls.grade), 0)::float AS "average_lab_grade",
             COUNT(CASE WHEN ls.grade >= 60 THEN 1 END)::int AS "labs_passed"
-        FROM "lab_submissions" ls
-        WHERE ls."user_id" = $1;
+        FROM "labs" l
+            LEFT JOIN "lab_submissions" ls 
+                ON l.id = ls.lab_id AND ls.user_id = $1
         `;
 
         const labsStatRes = await client.query(labsStatQuery, [userId]);
 
-        // 2. Получаем общую статистику по пройденным тестам
         const testsStatQuery = `
-        SELECT 
-            COUNT(qs.id)::int AS "tests_attempted",
-            COALESCE(AVG(qs."score_percent"), 0)::float AS "average_test_score",
-            COUNT(CASE WHEN qs."score_percent" >= 60 THEN 1 END)::int AS "tests_passed"
-        FROM "test_submissions" qs
-        WHERE qs."user_id" = $1;
+        SELECT
+            COUNT(t.id)::int AS "tests_total",
+            COUNT(ts.id)::int AS "tests_attempted",
+            COALESCE(AVG(ts."score_percent"), 0)::float AS "average_test_score",
+            COUNT(CASE WHEN ts."score_percent" >= 60 THEN 1 END)::int AS "tests_passed"
+        FROM "tests" t
+            LEFT JOIN "test_submissions" ts
+                ON t.id = ts.test_id AND ts.user_id = $1
         `;
         const testsStatRes = await client.query(testsStatQuery, [userId]);
 
@@ -50,11 +52,13 @@ async function getStudentSummary(req, res, next) {
             status: 'success',
             data: {
                 labs: {
-                    submitted: labsStat.labsSubmitted || 0,
-                    passed: labsStat.labsPassed || 0,
-                    averageGrade: Math.round(labsStat.averageLabGrade || 0),
+                    total: labsStat.labs_total || 0,
+                    submitted: labsStat.labs_submitted || 0,
+                    passed: labsStat.labs_passed || 0,
+                    averageGrade: Math.round(labsStat.average_lab_grade || 0),
                 },
                 tests: {
+                    total: testsStat.tests_total || 0,
                     attempted: testsStat.tests_attempted || 0,
                     passed: testsStat.tests_passed || 0,
                     averageScore: Math.round(testsStat.average_test_score || 0),

@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { login, getMe } = require('../controllers/authController');
-const { authenticateToken } = require('../services/jwt');
+const { login, registration } = require('../controllers/authController');
 
-// Публичный роут
 router.post('/login', login);
 
-// Защищенный роут
-router.get('/me', authenticateToken, getMe);
+router.post('/registration', registration);
 
 module.exports = router;
