@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userRaw = localStorage.getItem('user');
 
     if (!token || !userRaw) {
-        window.location.href = 'authorization/index.html';
+        window.location.href = '/frontend/authorization/index.html';
         return;
     }
 
@@ -35,6 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logout-btn').addEventListener('click', () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        window.location.href = 'authorization/index.html';
+        window.location.href = '/frontend/authorization/index.html';
     });
 });

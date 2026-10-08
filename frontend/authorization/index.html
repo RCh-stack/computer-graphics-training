@@ -6,6 +6,7 @@
     <title>Авторизация | VirtualLab Edu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen flex items-center justify-center p-4">
@@ -18,45 +19,148 @@
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-3xl"></i>
             </div>
             <h1 class="text-2xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></h1>
-            <p class="text-sm text-gray-400">Вход в систему обучения Ray и Path Tracing </p>
+            <p id="form-subtitle" class="text-sm text-gray-400">Вход в систему обучения Ray и Path Tracing</p>
         </div>
 
-        <!-- Уведомление об ошибке -->
-        <div id="error-alert" class="hidden bg-red-500/10 border border-red-500 text-red-400 text-sm rounded-xl p-3 flex items-center space-x-2">
-            <i class="fa-solid fa-circle-exclamation text-red-400"></i>
-            <span id="error-message">Неверный логин или пароль</span>
+        <!-- Уведомление об ошибках/информации -->
+        <div id="alert-box" class="hidden text-sm rounded-xl p-3 flex items-center space-x-2">
+            <i id="alert-icon" class="fa-solid fa-circle-exclamation"></i>
+            <span id="alert-message"></span>
         </div>
 
-        <!-- Форма авторизации -->
-        <form id="login-form" class="space-y-4">
+        <!-- 1. ФОРМА АВТОРИЗАЦИИ -->
+        <form id="login-form" class="auth-form space-y-4">
             <div>
-                <label for="email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email / Логин</label>
+                <label for="login-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email / Логин</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-envelope"></i>
                     </span>
-                    <input type="email" id="email" required placeholder="student@edu.ru" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm text-[var(--text-main)] transition">
+                    <input type="email" id="login-email" required placeholder="student@edu.ru" 
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
             <div>
-                <label for="password" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Пароль</label>
+                <div class="flex justify-between items-center mb-1">
+                    <label for="login-password" class="block text-xs font-semibold uppercase text-gray-400">Пароль</label>
+                    <button type="button" onclick="showForm('reset')" class="text-xs text-pink-400 hover:underline">Забыли пароль?</button>
+                </div>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-lock"></i>
                     </span>
-                    <input type="password" id="password" required placeholder="••••••••" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm text-[var(--text-main)] transition">
+                    <input type="password" id="login-password" required placeholder="••••••••" 
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
-            <button type="submit" id="submit-btn" 
-                    class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-pink-600/20 transition duration-200 flex items-center justify-center space-x-2">
+            <button type="submit" 
+                    class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-pink-600/20 transition flex items-center justify-center space-x-2">
                 <span>Войти в систему</span>
                 <i class="fa-solid fa-arrow-right text-sm"></i>
             </button>
+
+            <div class="text-center pt-2 text-xs text-gray-400">
+                Нет аккаунта? <button type="button" onclick="showForm('register')" class="text-pink-400 font-semibold hover:underline">Зарегистрироваться</button>
+            </div>
         </form>
+
+        <!-- 2. ФОРМА РЕГИСТРАЦИИ -->
+        <form id="register-form" class="auth-form hidden space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="reg-first-name" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Имя</label>
+                    <input type="text" id="reg-first-name" required placeholder="Иван" 
+                           class="w-full px-3 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                </div>
+                <div>
+                    <label for="reg-last-name" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Фамилия</label>
+                    <input type="text" id="reg-last-name" required placeholder="Иванов" 
+                           class="w-full px-3 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                </div>
+            </div>
+
+            <div>
+                <label for="reg-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                        <i class="fa-solid fa-envelope"></i>
+                    </span>
+                    <input type="email" id="reg-email" required placeholder="student@edu.ru" 
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                </div>
+            </div>
+
+            <div>
+                <label for="reg-password" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Пароль</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="reg-password" required minlength="6" placeholder="Минимум 6 символов" 
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                </div>
+            </div>
+
+            <button type="submit" 
+                    class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg shadow-pink-600/20 transition flex items-center justify-center space-x-2">
+                <span>Отправить заявку</span>
+                <i class="fa-solid fa-user-plus text-sm"></i>
+            </button>
+
+            <div class="text-center pt-2 text-xs text-gray-400">
+                Уже зарегистрированы? <button type="button" onclick="showForm('login')" class="text-pink-400 font-semibold hover:underline">Войти</button>
+            </div>
+        </form>
+
+        <!-- 3. ФОРМА ВОССТАНОВЛЕНИЯ ПАРОЛЯ -->
+        <form id="reset-form" class="auth-form hidden space-y-4">
+            
+            <!-- Шаг 1: Запрос кода -->
+            <div id="reset-step-1" class="space-y-4">
+                <div>
+                    <label for="reset-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Ваш Email</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input type="email" id="reset-email" required placeholder="student@edu.ru" 
+                               class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                    </div>
+                </div>
+
+                <button type="button" onclick="requestResetCode()" 
+                        class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg transition">
+                    Получить код подтверждения
+                </button>
+            </div>
+
+            <!-- Шаг 2: Ввод кода и нового пароля -->
+            <div id="reset-step-2" class="hidden space-y-4">
+                <div>
+                    <label for="reset-code" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Код подтверждения (6 цифр)</label>
+                    <input type="text" id="reset-code" maxlength="6" placeholder="123456" 
+                           class="w-full px-4 py-2.5 text-center font-mono text-lg tracking-widest bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 transition">
+                </div>
+
+                <div>
+                    <label for="reset-new-password" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Новый пароль</label>
+                    <input type="password" id="reset-new-password" minlength="6" placeholder="••••••••" 
+                           class="w-full px-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                </div>
+
+                <button type="submit" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-lg transition">
+                    Сохранить новый пароль
+                </button>
+            </div>
+
+            <div class="text-center pt-2 text-xs text-gray-400">
+                Вспомнили пароль? <button type="button" onclick="showForm('login')" class="text-pink-400 font-semibold hover:underline">Вернуться ко входу</button>
+            </div>
+        </form>
+
     </div>
 
     <script src="src/ui.js"></script>

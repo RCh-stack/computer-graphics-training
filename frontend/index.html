@@ -49,6 +49,7 @@
                             <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
                             <span>Профиль</span>
                         </a>
+
                         <button id="theme-toggle" class="w-full flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
                             Светлая
                         </button>
@@ -78,7 +79,7 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-4 gap-6 pt-6">
                 
                 <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
                     <div>
@@ -124,6 +125,17 @@
                     <button onclick="launchModule('demo/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-pink-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Запустить демо</button>
                 </div>
 
+                <div id="admin-panel" class="hidden bg-[var(--bg-panel)] border border-red-500/40 rounded-xl p-6 hover:border-red-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-red-500/5">
+                    <div>
+                        <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
+                            <i class="fa-solid fa-user-shield text-red-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Администрирование</h3>
+                        <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление группами, активация студентов, проверка результатов и выдача прав.</p>
+                    </div>
+                    <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
+                </div>
+
             </div>
         </section>
     </main>
@@ -131,5 +143,6 @@
     <script src="src/auth.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/theme.js"></script>
+    <script src="admin/src/ui.js"></script>
 </body>
 </html>

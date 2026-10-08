@@ -24,6 +24,7 @@ const ebookRoutes = require('./src/routers/ebook');
 const labRoutes = require('./src/routers/labs');
 const testRoutes = require('./src/routers/tests');
 const progressRoutes = require('./src/routers/progress');
+const adminRoutes = require('./src/routers/admin');
 
 app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/users', userRoutes);
@@ -31,6 +32,7 @@ app.use('/api/v1/ebook', ebookRoutes);
 app.use('/api/v1/labs', labRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/progress', progressRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 const { notFoundHandler, globalErrorHandler } = require('./src/services/errorHandler.js');
 app.use(notFoundHandler);

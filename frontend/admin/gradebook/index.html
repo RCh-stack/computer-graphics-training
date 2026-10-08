@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Электронный журнал | VirtualLab Edu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="../../index.html" class="flex items-center space-x-3 cursor-pointer">
+                <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Журнал</span></span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="../users/index.html" class="text-xs text-pink-400 hover:underline"><i class="fa-solid fa-users"></i> Пользователи</a>
+                <a href="../../index.html" class="text-xs text-[var(--text-main)] hover:text-black transition"><i class="fa-solid fa-arrow-left"></i> Главная</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/60 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold">Электронный журнал успеваемости</h1>
+                <p class="text-xs text-[var(--text-main)] mt-1">Сводная ведомость выполнения лабораторных работ и тестирования</p>
+            </div>
+
+            <!-- Фильтр группы -->
+            <div class="flex items-center gap-3">
+                <label class="text-xs font-semibold text-[var(--text-main)]">Группа:</label>
+                <select id="gradebook-group-select" class="bg-[var(--bg-card)] border border-gray-500 text-xs rounded-xl px-4 py-2 focus:outline-none focus:border-pink-500">
+                    <!-- Загружаются динамически -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Таблица Журнала -->
+        <div class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead id="gradebook-thead" class="bg-gray-800/40 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700">
+                    <!-- Динамическая шапка с колонками Лаб и Тестов -->
+                </thead>
+                <tbody id="gradebook-tbody" class="divide-y divide-gray-700/50 text-[var(--text-main)]">
+                    <!-- Записи журнала -->
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script src="src/ui.js"></script>
+</body>
+</html>

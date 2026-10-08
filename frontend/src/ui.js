@@ -1,5 +1,5 @@
 function launchModule(url) {
-     window.location.href = url;
+    window.location.href = url;
  }
 
 document.addEventListener('DOMContentLoaded', () => {
