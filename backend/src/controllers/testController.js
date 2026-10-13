@@ -31,7 +31,7 @@ async function getAllTests(req, res) {
             LEFT JOIN "test_submissions" ts 
                    ON t.id = ts.test_id AND ts.user_id = $1
             GROUP BY t.id, ts.score_percent, ts.completed_at
-            ORDER BY t.id ASC
+            ORDER BY t.order ASC
         `;
 
         const result = await client.query(query, [userId]);

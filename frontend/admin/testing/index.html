@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление тестами | VirtualLab Edu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="../../index.html" class="flex items-center space-x-3">
+                <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/20 text-pink-400">Admin</span></span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="../../index.html" class="text-xs text-[var(--text-main)] hover:text-black transition"><i class="fa-solid fa-arrow-left"></i> На главную</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/60 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold">Конструктор тестов</h1>
+                <p class="text-xs text-[var(--text-main)] mt-1">Создание, редактирование вопросов и настройка условий прохождения</p>
+            </div>
+            <button id="btn-create-test" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-pink-600/20">
+                <i class="fa-solid fa-plus"></i> Создать тест
+            </button>
+        </div>
+
+        <!-- Сетка тестов -->
+        <div id="tests-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Карточки подгружаются через JS -->
+        </div>
+    </main>
+
+    <script src="src/loader.js"></script>
+</body>
+</html>

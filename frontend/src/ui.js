@@ -1,6 +1,12 @@
 function launchModule(url) {
     window.location.href = url;
- }
+}
+
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('.navigation-link');

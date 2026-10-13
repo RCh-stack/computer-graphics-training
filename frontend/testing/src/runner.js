@@ -123,12 +123,12 @@ function renderCurrentQuestion() {
     const mediaContainer = document.getElementById('question-media-container');
     mediaContainer.innerHTML = '';
     
-    if (q.type === 'code_analysis' && q.code_snippet) {
+    if (q.code_snippet) {
         mediaContainer.classList.remove('hidden');
         mediaContainer.innerHTML = `
             <pre class="bg-gray-950 p-4 rounded-xl border border-[var(--border-color)] text-xs font-mono text-gray-200 overflow-x-auto"><code>${escapeHtml(q.code_snippet)}</code></pre>
         `;
-    } else if (q.type === 'image_choice' && q.media_url) {
+    } else if (q.media_url) {
         mediaContainer.classList.remove('hidden');
         mediaContainer.innerHTML = `
             <img src="${q.media_url}" alt="Вопрос" class="max-h-64 rounded-xl border border-[var(--border-color)] object-contain my-2">
@@ -169,7 +169,7 @@ function renderInteractiveOptions(question) {
                 step="any"
                 id="numeric-answer-input"
                 value="${currentAnswer !== undefined ? currentAnswer : ''}"
-                placeholder="Например: 16.0"
+                placeholder="Например: 10.0"
                 class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
             >
         `;
@@ -180,6 +180,35 @@ function renderInteractiveOptions(question) {
             const val = e.target.value.trim();
             if (val !== '') {
                 userAnswers[question.id] = parseFloat(val);
+            } else {
+                delete userAnswers[question.id];
+            }
+            renderQuestionsGrid();
+        });
+        return;
+    }
+
+    if (question.type === 'text_input') {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-2';
+        wrapper.innerHTML = `
+            <label class="block text-xs font-mono text-[var(--text-muted)]">Введите ответ строкой:</label>
+            <input 
+                type="text" 
+                step="any"
+                id="text-answer-input"
+                value="${currentAnswer !== undefined ? currentAnswer : ''}"
+                placeholder="Например: ray tracing"
+                class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
+            >
+        `;
+        optionsContainer.appendChild(wrapper);
+
+        const input = wrapper.querySelector('#text-answer-input');
+        input.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val !== '') {
+                userAnswers[question.id] = val;
             } else {
                 delete userAnswers[question.id];
             }
