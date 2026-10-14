@@ -31,7 +31,14 @@ function createLabCardHTML(lab) {
     let btnHTML = '';
     let cardBorder = 'border-[var(--border-color)]';
 
-    const difficultyColor = lab.difficulty === 'Легкая' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    let difficultyColor = '';
+
+    if(lab.difficulty === 'Легкий')
+        difficultyColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    else if(lab.difficulty === 'Средний')
+        difficultyColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    else
+        difficultyColor = 'text-red-400 bg-red-500/10 border-red-500/20';
 
     if (!lab.is_unlocked) {
         badgeHTML = `<span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono tracking-wider bg-gray-500/10 text-gray-400 border border-gray-500/20">🔒 Заблокировано</span>`;

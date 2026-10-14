@@ -4,6 +4,8 @@ node_modules/
 
 docker-compose.yml
 
+server.json
+
 prisma/
 
 progressApi.test.js

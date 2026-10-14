@@ -5,7 +5,9 @@ const {
     getPendingStudents, getStudents, approveStudent, changeUserRole, 
     getGroups, createGroup, getGradebook, getTeachers } = require('../controllers/adminController');
 
-const { getAllTests, getTestById, createTest, updateTest, deleteTest } = require('../controllers/AdminControllers/testController')
+const { getAllTests, getTestById, createTest, updateTest, deleteTest } = require('../controllers/AdminControllers/testController');
+
+const { getAllLabs, getLabById, createLab, updateLab, deleteLab } = require('../controllers/AdminControllers/labController');
 
 const { authenticateToken } = require('../services/jwt');
 
@@ -27,5 +29,13 @@ router.get('/tests/:id', authenticateToken, getTestById);
 router.post('/tests', authenticateToken, createTest);
 router.put('/tests/:id', authenticateToken, updateTest);
 router.delete('/tests/:id', authenticateToken, deleteTest);
+
+// labs
+
+router.get('/labs', authenticateToken, getAllLabs);
+router.get('/labs/:id', authenticateToken, getLabById);
+router.post('/labs', authenticateToken, createLab);
+router.put('/labs/:id', authenticateToken, updateLab);
+router.delete('/labs/:id', authenticateToken, deleteLab);
 
 module.exports = router;

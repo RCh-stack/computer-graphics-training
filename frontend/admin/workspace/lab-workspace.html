@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конструктор лабораторной работы | VirtualLab Edu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
+
+    <!-- Верхняя панель управления -->
+    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xs text-emerald-400 hover:underline flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> К списку лабораторных
+            </a>
+            <button id="btn-save-lab" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i> Сохранить работу
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 1. ЛЕВАЯ КОЛОНКА: Параметры, задание и требования (task_json) -->
+            <aside class="lg:col-span-4 space-y-4">
+                
+                <!-- Основные параметры -->
+                <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-3">
+                    <h3 class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider border-b border-gray-700/60 pb-2">
+                        Параметры работы
+                    </h3>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Название работы</label>
+                        <input type="text" id="lab-title" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Сложность</label>
+                            <select id="lab-difficulty" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+                                <option value="Легкий">Легкий</option>
+                                <option value="Средний">Средний</option>
+                                <option value="Сложный">Сложный</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Порядковый №</label>
+                            <input type="number" id="lab-order" min="0" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <input type="checkbox" id="lab-is-unlocked" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                        <label for="lab-is-unlocked" class="text-xs text-[var(--text-main)] cursor-pointer">Открыта для студентов</label>
+                    </div>
+                </div>
+
+                <!-- Метаданные задания (task_json) -->
+                <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-3">
+                    <h3 class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider border-b border-gray-700/60 pb-2">
+                        <i class="fa-solid fa-list-check text-emerald-400 mr-1"></i> Задание (task_json)
+                    </h3>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Заголовок задания</label>
+                        <input type="text" id="task-title" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Инструкция</label>
+                        <textarea id="task-instruction" rows="2" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500"></textarea>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[11px] font-semibold uppercase text-[var(--text-main)]">Требования к выполнению</label>
+                            <button type="button" id="btn-add-req" class="text-xs text-emerald-400 hover:underline font-semibold">+ Добавить</button>
+                        </div>
+                        <div id="requirements-list" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                            <!-- Требования -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Описание работы -->
+                <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-2">
+                    <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)]">Описание работы</label>
+                    <textarea id="lab-description" rows="3" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-emerald-500" placeholder="Подробная теория или алгоритм решения..."></textarea>
+                </div>
+
+            </aside>
+
+            <!-- 2. ЦЕНТРАЛЬНАЯ КОЛОНКА: Стартовый редактор кода (template_code) -->
+            <section class="lg:col-span-5 space-y-4">
+                <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-3 h-full flex flex-col">
+                    <div class="flex justify-between items-center border-b border-gray-700/60 pb-2">
+                        <h3 class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+                            <i class="fa-solid fa-code text-emerald-400 mr-1"></i> Стартовый шаблон (template_code)
+                        </h3>
+                        <span class="text-[10px] font-mono text-[var(--text-main)]">C++ / Header</span>
+                    </div>
+                    <div class="flex-1 min-h-[500px]">
+                        <textarea id="lab-template-code" class="w-full h-full font-mono text-xs p-4 bg-gray-900 border border-gray-700 rounded-xl text-emerald-400 focus:outline-none focus:border-emerald-500 leading-relaxed resize-none" spellcheck="false" placeholder="// Введите исходный код шаблона..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. ПРАВАЯ КОЛОНКА: Менеджер тест-кейсов (test_cases) с пошаговой навигацией -->
+            <aside class="lg:col-span-3 space-y-4">
+                <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-4">
+                    
+                    <div class="flex justify-between items-center border-b border-gray-700/60 pb-2">
+                        <span class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">Тест-кейсы</span>
+                        <span id="testcases-counter" class="text-xs font-mono text-emerald-400 font-bold">0</span>
+                    </div>
+
+                    <!-- Полоска выбора тест-кейса (1, 2, 3...) -->
+                    <div id="testcase-nav-list" class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Кнопки #1, #2... -->
+                    </div>
+
+                    <button id="btn-add-testcase" type="button" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Добавить тест-кейс
+                    </button>
+
+                    <!-- Заглушка, если нет тест-кейсов -->
+                    <div id="tc-empty-state" class="hidden p-6 text-center text-[var(--text-main)] text-xs border border-dashed border-gray-700 rounded-xl">
+                        Тест-кейсы отсутствуют. Нажмите «Добавить тест-кейс».
+                    </div>
+
+                    <!-- Форма редактирования активного тест-кейса -->
+                    <div id="tc-editor-card" class="space-y-3 pt-2 border-t border-gray-700/60">
+                        <div class="flex justify-between items-center">
+                            <span id="active-tc-header" class="text-xs font-bold font-mono text-emerald-400">Тест #1</span>
+                            <button id="btn-delete-active-tc" type="button" class="text-[11px] text-red-400 hover:underline">
+                                <i class="fa-solid fa-trash mr-1"></i> Удалить
+                            </button>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Название тест-кейса</label>
+                            <input type="text" id="tc-name" class="w-full px-2.5 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Входные данные (stdin)</label>
+                            <textarea id="tc-input" rows="2" class="w-full px-2.5 py-1.5 font-mono bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500" placeholder="Параметры..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Ожидаемый вывод (stdout)</label>
+                            <textarea id="tc-output" rows="2" class="w-full px-2.5 py-1.5 font-mono bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500" placeholder="Результат..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Таймаут (мс)</label>
+                            <input type="number" id="tc-timeout" min="100" step="100" class="w-full px-2.5 py-1.5 font-mono bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <script src="src/workspace.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

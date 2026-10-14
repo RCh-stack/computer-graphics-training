@@ -136,6 +136,17 @@
                     <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
                 </div>
 
+                <div id="admin-workspace-panel" class="hidden bg-[var(--bg-panel)] border border-emerald-500 rounded-xl p-6 hover:border-emerald-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-amber-500/5">
+                    <div>
+                        <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/20">
+                            <i class="fa-solid fa-clipboard text-emerald-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Лабораторные работы</h3>
+                        <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой лабораторных работ, создание и редактирование практических работ.</p>
+                    </div>
+                    <button onclick="launchModule('./admin/workspace/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-emerald-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление задачами</button>
+                </div>
+
                 <div id="admin-testing-panel" class="hidden bg-[var(--bg-panel)] border border-amber-500 rounded-xl p-6 hover:border-amber-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-amber-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/20">

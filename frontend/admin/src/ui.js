@@ -22,6 +22,17 @@ function checkTeacherAccess() {
                 }
             }
 
+            const workspaceCard = document.getElementById('admin-workspace-panel');
+            if (workspaceCard) {
+                workspaceCard.classList.remove('hidden');
+                
+                const grid = document.getElementById('modules-grid');
+                if (grid) {
+                    grid.classList.remove('lg:grid-cols-4');
+                    grid.classList.add('lg:grid-cols-5');
+                }
+            }
+
             const testingCard = document.getElementById('admin-testing-panel');
             if (testingCard) {
                 testingCard.classList.remove('hidden');
