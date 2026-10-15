@@ -71,7 +71,8 @@ async function handleLogin(e) {
                 showAlert(data.message || 'Неверный логин или пароль');
             }
         }
-    } catch (err) {
+    } catch (error) {
+        console.error('Ошибка подключения к серверу: ', error)
         showAlert('Ошибка подключения к серверу');
     }
 }
@@ -103,7 +104,8 @@ async function handleRegister(e) {
         } else {
             showAlert(data.message || 'Ошибка регистрации');
         }
-    } catch (err) {
+    } catch (error) {
+        console.error('Ошибка подключения к серверу: ', error)
         showAlert('Ошибка подключения к серверу');
     }
 }
@@ -131,7 +133,8 @@ async function requestResetCode() {
         } else {
             showAlert(data.message || 'Пользователь с таким email не найден');
         }
-    } catch (err) {
+    } catch (error) {
+        console.error('Ошибка отправки кода: ', error)
         showAlert('Ошибка отправки кода');
     }
 }
@@ -162,7 +165,8 @@ async function handleResetPassword(e) {
         } else {
             showAlert(data.message || 'Неверный код подтверждения');
         }
-    } catch (err) {
+    } catch (error) {
+        console.error('Ошибка обновления пароля: ', error);
         showAlert('Ошибка обновления пароля');
     }
 }

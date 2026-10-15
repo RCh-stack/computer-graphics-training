@@ -66,7 +66,7 @@ async function loadTestDetails() {
             questionsState = (questions || []).map(q => {
                 let optionsData = q.options_json;
                 if (typeof optionsData === 'string') {
-                    try { optionsData = JSON.parse(optionsData); } catch(e) { optionsData = {}; }
+                    try { optionsData = JSON.parse(optionsData); } catch { optionsData = {}; }
                 }
 
                 let qType = 'text_input';

@@ -135,7 +135,8 @@ async function requestResetCode(req, res) {
         console.log(`🔑 Код восстановления для ${email}: ${resetCode}`);
 
         return res.json({ status: 'success', message: 'Код сброса отправлен' });
-    } catch (err) {
+    } catch (error) {
+        console.error("Ошибка генерации кода: ", error);
         return res.status(500).json({ status: 'error', message: 'Ошибка генерации кода' });
     } finally {
         await client.end();
@@ -169,7 +170,8 @@ async function resetPassword(req, res) {
         );
 
         return res.json({ status: 'success', message: 'Пароль успешно обновлен' });
-    } catch (err) {
+    } catch (error) {
+        console.error("Ошибка обновления пароля: ", error);
         return res.status(500).json({ status: 'error', message: 'Ошибка обновления пароля' });
     } finally {
         await client.end();

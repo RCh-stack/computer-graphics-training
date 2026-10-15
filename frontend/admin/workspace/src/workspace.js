@@ -64,7 +64,7 @@ async function loadLabDetails() {
 
             let taskJson = lab.task_json;
             if (typeof taskJson === 'string') {
-                try { taskJson = JSON.parse(taskJson); } catch (e) { taskJson = {}; }
+                try { taskJson = JSON.parse(taskJson); } catch { taskJson = {}; }
             }
             taskJson = taskJson || {};
 
@@ -74,7 +74,7 @@ async function loadLabDetails() {
 
             let testCases = lab.test_cases;
             if (typeof testCases === 'string') {
-                try { testCases = JSON.parse(testCases); } catch (e) { testCases = []; }
+                try { testCases = JSON.parse(testCases); } catch { testCases = []; }
             }
             labState.testCases = Array.isArray(testCases) ? testCases : [];
 

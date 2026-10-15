@@ -3,7 +3,7 @@ async function executeLabTests({ studentCode, testCases, compiler = 'g++-15' }) 
     if (typeof tests === 'string') {
         try {
             tests = JSON.parse(tests);
-        } catch (e) {
+        } catch {
             tests = [];
         }
     }

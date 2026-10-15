@@ -54,7 +54,7 @@ async function getStudents(req, res) {
         `;
 
         const params = [];
-        if (groupId && groupId != 'all') {
+        if (groupId && groupId !== 'all') {
             params.push(groupId);
             query += ` AND u.group_id = $${params.length}`;
         }

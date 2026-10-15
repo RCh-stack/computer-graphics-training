@@ -95,7 +95,7 @@ async function loadLesson(lessonId) {
     }
 }
 
-async function renderLessonContent(lesson, container) {
+function renderLessonContent(lesson, container) {
     if (!container) return;
     container.innerHTML = '';
 

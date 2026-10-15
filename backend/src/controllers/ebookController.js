@@ -95,7 +95,7 @@ async function getLessonById(req, res) {
 
         let htmlContent = '';
         if (article.content_path) {
-            let cleanPath = article.content_path.replace(/^(\.\/|\/)+/, '');
+            const cleanPath = article.content_path.replace(/^(\.\/|\/)+/, '');
 
             const projectRoot = path.resolve(__dirname, '../../..');
 
@@ -104,7 +104,6 @@ async function getLessonById(req, res) {
             try {
                 htmlContent = await fs.readFile(absolutePath, 'utf8');
             } catch (err) {
-                //console.warn(`Файл контента не найден по пути: ${absolutePath}`);
                 console.error(err);
                 htmlContent = '<div class="alert alert-warning">Содержимое страницы временно недоступно.</div>';
             }
