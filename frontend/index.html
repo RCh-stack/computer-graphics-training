@@ -125,15 +125,15 @@
                     <button onclick="launchModule('demo/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-pink-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Запустить демо</button>
                 </div>
 
-                <div id="admin-panel" class="hidden bg-[var(--bg-panel)] border border-red-500/40 rounded-xl p-6 hover:border-red-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-red-500/5">
+                <div id="admin-theory-panel" class="hidden bg-[var(--bg-panel)] border border-indigo-500/40 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-indigo-500/5">
                     <div>
-                        <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
-                            <i class="fa-solid fa-user-shield text-red-400 text-xl"></i>
+                        <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
+                            <i class="fa-solid fa-user-shield text-blue-400 text-xl"></i>
                         </div>
-                        <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Администрирование</h3>
-                        <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление группами, активация студентов, проверка результатов и выдача прав.</p>
+                        <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Теоретический блок</h3>
+                        <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление теоретическим материалом.</p>
                     </div>
-                    <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
+                    <button onclick="launchModule('./admin/theory/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-blue-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление учебником</button>
                 </div>
 
                 <div id="admin-workspace-panel" class="hidden bg-[var(--bg-panel)] border border-emerald-500 rounded-xl p-6 hover:border-emerald-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-amber-500/5">
@@ -156,6 +156,17 @@
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой тестирования, создание и редактирование тестов.</p>
                     </div>
                     <button onclick="launchModule('./admin/testing/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-amber-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление тестами</button>
+                </div>
+
+                <div id="admin-panel" class="hidden bg-[var(--bg-panel)] border border-red-500/40 rounded-xl p-6 hover:border-red-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-red-500/5">
+                    <div>
+                        <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
+                            <i class="fa-solid fa-user-shield text-red-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Администрирование</h3>
+                        <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление группами, активация студентов, проверка результатов и выдача прав.</p>
+                    </div>
+                    <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
                 </div>
 
             </div>

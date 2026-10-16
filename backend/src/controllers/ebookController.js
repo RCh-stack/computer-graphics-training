@@ -55,8 +55,8 @@ async function getAllLessons(req, res) {
 
         return res.json({ status: 'success', chapters });
     } catch (error) {
-        console.error('Ошибка получения оглавления учебника:', error);
-        return res.status(500).json({ status: 'error', message: 'Ошибка сервера при получении манифеста' });
+        console.error('Ошибка получения оглавления:', error);
+        return res.status(500).json({ status: 'error', message: 'Ошибка сервера при оглавления' });
     } finally {
         await client.end();
     }
@@ -90,7 +90,7 @@ async function getLessonById(req, res) {
         const article = result.rows[0];
 
         if (!article) {
-            return res.status(404).json({ status: 'error', message: 'Урок не найден' });
+            return res.status(404).json({ status: 'error', message: 'Страница не найдена' });
         }
 
         let htmlContent = '';
@@ -99,12 +99,12 @@ async function getLessonById(req, res) {
 
             const projectRoot = path.resolve(__dirname, '../../..');
 
-            const absolutePath = path.join(projectRoot, 'frontend', cleanPath);
+            const absolutePath = path.join(projectRoot, 'backend', cleanPath);
             
             try {
                 htmlContent = await fs.readFile(absolutePath, 'utf8');
-            } catch (err) {
-                console.error(err);
+            } catch (error) {
+                console.error(error);
                 htmlContent = '<div class="alert alert-warning">Содержимое страницы временно недоступно.</div>';
             }
         }
@@ -121,8 +121,8 @@ async function getLessonById(req, res) {
         });
 
     } catch (error) {
-        console.error(`Ошибка получения урока ${id}:`, error);
-        return res.status(500).json({ status: 'error', message: 'Ошибка сервера при получении урока' });
+        console.error(`Ошибка получения страницы ${id}:`, error);
+        return res.status(500).json({ status: 'error', message: 'Ошибка сервера при получении страницы' });
     } finally {
         await client.end();
     }

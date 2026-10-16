@@ -9,6 +9,10 @@ const { getAllTests, getTestById, createTest, updateTest, deleteTest } = require
 
 const { getAllLabs, getLabById, createLab, updateLab, deleteLab } = require('../controllers/AdminControllers/labController');
 
+const { 
+    getChapters, createChapter, updateChapter, deleteChapter, 
+    getLessonById, createLesson, updateLesson, deleteLesson} = require('../controllers/AdminControllers/ebookController');
+
 const { authenticateToken } = require('../services/jwt');
 
 // users
@@ -37,5 +41,15 @@ router.get('/labs/:id', authenticateToken, getLabById);
 router.post('/labs', authenticateToken, createLab);
 router.put('/labs/:id', authenticateToken, updateLab);
 router.delete('/labs/:id', authenticateToken, deleteLab);
+
+// ebook
+router.get('/ebook/chapters', authenticateToken, getChapters);
+router.post('/ebook/chapters', authenticateToken, createChapter);
+router.put('/ebook/chapters/:id', authenticateToken, updateChapter);
+router.delete('/ebook/chapters/:id', authenticateToken, deleteChapter);
+router.get('/ebook/lessons/:id', authenticateToken, getLessonById);
+router.post('/ebook/lessons', authenticateToken, createLesson);
+router.put('/ebook/lessons/:id', authenticateToken, updateLesson);
+router.delete('/ebook/lessons/:id', authenticateToken, deleteLesson);
 
 module.exports = router;

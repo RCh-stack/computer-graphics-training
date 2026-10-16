@@ -11,3 +11,5 @@ prisma/
 eslint.config.js
 
 progressApi.test.js
+
+uploads

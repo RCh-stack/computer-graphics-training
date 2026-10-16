@@ -24,3 +24,25 @@ body {
     color: var(--text-main);
     transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+.ql-toolbar.ql-snow {
+            border-color: #374151 !important;
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            background-color: #1f2937;
+        }
+        .ql-container.ql-snow {
+            border-color: #374151 !important;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+            background-color: #111827;
+            color: #f3f4f6;
+            min-height: 480px;
+            font-size: 14px;
+        }
+        .ql-snow .ql-stroke { stroke: #9ca3af !important; }
+        .ql-snow .ql-fill { fill: #9ca3af !important; }
+        .ql-snow .ql-picker { color: #9ca3af !important; }
+        .ql-editor strong { color: #f3f4f6; }
+        .ql-editor code, .ql-editor pre { background-color: #1f2937 !important; color: #f472b6 !important; 
+}

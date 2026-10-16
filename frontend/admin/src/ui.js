@@ -11,9 +11,9 @@ function checkTeacherAccess() {
             if (adminMenuLink) 
                 adminMenuLink.classList.remove('hidden');
 
-            const teacherCard = document.getElementById('admin-panel');
-            if (teacherCard) {
-                teacherCard.classList.remove('hidden');
+            const theoryCard = document.getElementById('admin-theory-panel');
+            if (theoryCard) {
+                theoryCard.classList.remove('hidden');
                 
                 const grid = document.getElementById('modules-grid');
                 if (grid) {
@@ -36,6 +36,17 @@ function checkTeacherAccess() {
             const testingCard = document.getElementById('admin-testing-panel');
             if (testingCard) {
                 testingCard.classList.remove('hidden');
+                
+                const grid = document.getElementById('modules-grid');
+                if (grid) {
+                    grid.classList.remove('lg:grid-cols-4');
+                    grid.classList.add('lg:grid-cols-5');
+                }
+            }
+
+            const teacherCard = document.getElementById('admin-panel');
+            if (teacherCard) {
+                teacherCard.classList.remove('hidden');
                 
                 const grid = document.getElementById('modules-grid');
                 if (grid) {

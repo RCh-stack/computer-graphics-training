@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление учебником | VirtualLab Edu</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
+
+    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="../../index.html" class="flex items-center space-x-3">
+                <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Admin</span></span>
+            </a>
+            <div class="flex items-center gap-4">
+                <a href="../../index.html" class="text-xs text-[var(--text-main)] hover:text-black transition"><i class="fa-solid fa-arrow-left"></i> На главную</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/60 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold">Электронный учебник</h1>
+                <p class="text-xs text-[var(--text-main)] mt-1">Управление разделами, статьями и интерактивными наглядными виджетами</p>
+            </div>
+            <button id="btn-create-chapter" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
+                <i class="fa-solid fa-plus"></i> Создать главу
+            </button>
+        </div>
+
+        <!-- Дерево Глав и Статей -->
+        <div id="chapters-tree-container" class="space-y-4">
+            <!-- Динамический контент -->
+        </div>
+    </main>
+
+    <script src="src/loader.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>
