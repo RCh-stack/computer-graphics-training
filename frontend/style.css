@@ -25,6 +25,18 @@ body {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+.module-card {
+    background-color: var(--bg-panel);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease-in-out;
+}
+
 .ql-toolbar.ql-snow {
             border-color: #374151 !important;
             border-top-left-radius: 0.75rem;

@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обучающая система: Ray Tracing и Path Tracing</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .page { display: none; }
-        .page.active { display: block; }
-    </style>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
@@ -77,11 +72,19 @@
                 <p class="text-[var(--text-main)] text-lg">
                     Добро пожаловать в учебно-демонстрационную систему. Выберите модуль для начала работы.
                 </p>
+
+                <div id="view-mode-selector" class="hidden inline-flex p-1 bg-[var(--bg-card)] border border-gray-700 rounded-xl space-x-1 mt-4 shadow-sm">
+                    <button id="btn-mode-student" type="button" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-pink-600 text-white shadow-md">
+                        <i class="fa-solid fa-graduation-cap mr-1.5"></i> Обучение
+                    </button>
+                    <button id="btn-mode-admin" type="button" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition text-gray-400 hover:text-[var(--text-main)]">
+                        <i class="fa-solid fa-sliders mr-1.5"></i> Управление
+                    </button>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-4 gap-6 pt-6">
-                
-                <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+            <div id="student-modules-grid" class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-4 gap-6 pt-6">              
+                <div class="module-card group border-indigo-500/40 hover:border-indigo-500 hover:-translate-y-1 shadow-lg shadow-indigo-500/5">  
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-book-open text-blue-400 text-xl"></i>
@@ -92,7 +95,7 @@
                     <button onclick="launchModule('theory/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-blue-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Читать теорию</button>
                 </div>
 
-                <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-xl p-6 hover:border-emerald-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                <div class="module-card group border-emerald-500/40 hover:border-emerald-500 hover:-translate-y-1 shadow-lg shadow-emerald-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-flask text-emerald-400 text-xl"></i>
@@ -103,7 +106,7 @@
                     <button onclick="launchModule('workspace/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-emerald-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Открыть задачи</button>
                 </div>
 
-                <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-xl p-6 hover:border-amber-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                <div class="module-card group border-amber-500/40 hover:border-amber-500 hover:-translate-y-1 shadow-lg shadow-amber-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-list-check text-amber-400 text-xl"></i>
@@ -114,7 +117,7 @@
                     <button onclick="launchModule('testing/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-amber-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition" data-target="testing">Пройти тест</button>
                 </div>
 
-                <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-xl p-6 hover:border-pink-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                <div class="module-card group border-pink-500/40 hover:border-pink-500 hover:-translate-y-1 shadow-lg shadow-pink-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-pink-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-display text-pink-400 text-xl"></i>
@@ -124,11 +127,13 @@
                     </div>
                     <button onclick="launchModule('demo/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-pink-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Запустить демо</button>
                 </div>
+            </div>    
 
-                <div id="admin-theory-panel" class="hidden bg-[var(--bg-panel)] border border-indigo-500/40 rounded-xl p-6 hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-indigo-500/5">
+            <div id="admin-modules-grid" class="hidden grid grid-cols-1 md:grid-cols-5 lg:grid-cols-4 gap-6 pt-6">
+                <div class="module-card group border-indigo-500/40 hover:border-indigo-500 hover:-translate-y-1 shadow-lg shadow-indigo-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
-                            <i class="fa-solid fa-user-shield text-blue-400 text-xl"></i>
+                            <i class="fa-solid fa-book-open text-blue-400 text-xl"></i>
                         </div>
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Теоретический блок</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление теоретическим материалом.</p>
@@ -136,10 +141,10 @@
                     <button onclick="launchModule('./admin/theory/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-blue-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление учебником</button>
                 </div>
 
-                <div id="admin-workspace-panel" class="hidden bg-[var(--bg-panel)] border border-emerald-500 rounded-xl p-6 hover:border-emerald-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-amber-500/5">
+                <div class="module-card group border-emerald-500/40 hover:border-emerald-500 hover:-translate-y-1 shadow-lg shadow-amber-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/20">
-                            <i class="fa-solid fa-clipboard text-emerald-400 text-xl"></i>
+                            <i class="fa-solid fa-flask text-emerald-400 text-xl"></i>
                         </div>
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Лабораторные работы</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой лабораторных работ, создание и редактирование практических работ.</p>
@@ -147,10 +152,10 @@
                     <button onclick="launchModule('./admin/workspace/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-emerald-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление задачами</button>
                 </div>
 
-                <div id="admin-testing-panel" class="hidden bg-[var(--bg-panel)] border border-amber-500 rounded-xl p-6 hover:border-amber-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-amber-500/5">
+                <div class="module-card group border-amber-500/40 hover:border-amber-500 hover:-translate-y-1 shadow-lg shadow-amber-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/20">
-                            <i class="fa-solid fa-clipboard text-amber-400 text-xl"></i>
+                            <i class="fa-solid fa-list-check text-amber-400 text-xl"></i>
                         </div>
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Тестирование</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой тестирования, создание и редактирование тестов.</p>
@@ -158,7 +163,7 @@
                     <button onclick="launchModule('./admin/testing/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-amber-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление тестами</button>
                 </div>
 
-                <div id="admin-panel" class="hidden bg-[var(--bg-panel)] border border-red-500/40 rounded-xl p-6 hover:border-red-500 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between shadow-lg shadow-red-500/5">
+                <div class="module-card group border-red-500/40 hover:border-red-500 hover:-translate-y-1 shadow-lg shadow-red-500/5">
                     <div>
                         <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
                             <i class="fa-solid fa-user-shield text-red-400 text-xl"></i>
@@ -168,7 +173,6 @@
                     </div>
                     <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
                 </div>
-
             </div>
         </section>
     </main>
@@ -176,6 +180,6 @@
     <script src="src/auth.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/theme.js"></script>
-    <script src="admin/src/ui.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </body>
 </html>

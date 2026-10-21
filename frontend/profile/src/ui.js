@@ -13,9 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('bg-indigo-600/20', 'text-indigo-400', 'font-semibold');
-        el.classList.add('text-[var(--text-muted)]');
+
+    const activeClasses = ['bg-pink-500/10', 'text-pink-400', 'font-semibold', 'border-pink-500/20', 'active'];
+    const inactiveClasses = ['hover:border-gray-700', 'hover:bg-gray-800/30', 'text-gray-400', 'font-medium', 'border-transparent'];
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove(...activeClasses);
+        btn.classList.add(...inactiveClasses);
     });
 
     const activeTab = document.getElementById(tabId);
@@ -23,8 +27,8 @@ function switchTab(tabId) {
 
     const activeBtn = document.getElementById(`btn-${tabId}`);
     if (activeBtn) {
-        activeBtn.classList.add('bg-indigo-600/20', 'text-indigo-400', 'font-semibold');
-        activeBtn.classList.remove('text-[var(--text-muted)]');
+        activeBtn.classList.remove(...inactiveClasses);
+        activeBtn.classList.add(...activeClasses);
     }
 }
 
