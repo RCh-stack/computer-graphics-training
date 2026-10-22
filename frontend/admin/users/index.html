@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Управление пользователями | VirtualLab Edu</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../../style.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
@@ -31,7 +29,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold">Управление студентами и группами</h1>
-                <p class="text-xs text-gray-400 mt-1">Одобрение регистраций, привязка к учебным группам и управление ролями</p>
+                <p class="text-xs text-[var(--text-main)] mt-1">Одобрение регистраций, привязка к учебным группам и управление ролями</p>
             </div>
             <button id="btn-create-group" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-pink-600/20">
                 <i class="fa-solid fa-plus"></i> Создать группу
@@ -44,10 +42,10 @@
                 <span>Заявки на получение доступа</span>
                 <span id="pending-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-400">0</span>
             </button>
-            <button id="tab-btn-groups" class="py-3 font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
+            <button id="tab-btn-groups" class="py-3 font-medium text-[var(--text-main)] hover:text-white transition flex items-center gap-2">
                 <span>Группы и Студенты</span>
             </button>
-            <button id="tab-btn-teachers" class="py-3 font-medium text-gray-400 hover:text-white transition flex items-center gap-2">
+            <button id="tab-btn-teachers" class="py-3 font-medium text-[var(--text-main)] hover:text-white transition flex items-center gap-2">
                 <span>Преподаватели</span>
             </button>
         </div>
@@ -65,9 +63,7 @@
                             <th class="py-3.5 px-4 text-right">Действия</th>
                         </tr>
                     </thead>
-                    <tbody id="pending-table-body" class="divide-y divide-gray-700/50">
-                        <!-- Динамически подгружаются заявки -->
-                    </tbody>
+                    <tbody id="pending-table-body" class="divide-y divide-gray-700/50"></tbody>
                 </table>
             </div>
         </section>
@@ -86,7 +82,7 @@
             <!-- Список студентов выбранной группы -->
             <div class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-hidden">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-gray-800/40 text-[var(--text-main)]uppercase tracking-wider font-semibold border-b border-gray-700">
+                    <thead class="bg-gray-800/40 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700">
                         <tr>
                             <th class="py-3.5 px-4">ФИО Пользователя</th>
                             <th class="py-3.5 px-4">Группа</th>
@@ -95,9 +91,7 @@
                             <th class="py-3.5 px-4 text-right">Управление доступом</th>
                         </tr>
                     </thead>
-                    <tbody id="students-table-body" class="divide-y divide-gray-700/50">
-                        <!-- Записи студентов -->
-                    </tbody>
+                    <tbody id="students-table-body" class="divide-y divide-gray-700/50"></tbody>
                 </table>
             </div>
         </section>
@@ -114,9 +108,7 @@
                             <th class="py-3.5 px-4 text-right">Действия</th>
                         </tr>
                     </thead>
-                    <tbody id="teachers-table-body" class="divide-y divide-gray-700/50">
-                        <!-- Динамически подгружаются преподаватели -->
-                    </tbody>
+                    <tbody id="teachers-table-body" class="divide-y divide-gray-700/50"></tbody>
                 </table>
             </div>
         </section>
@@ -124,5 +116,7 @@
     </main>
 
     <script src="src/ui.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

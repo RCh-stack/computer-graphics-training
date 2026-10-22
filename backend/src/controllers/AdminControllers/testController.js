@@ -14,12 +14,12 @@ async function getAllTests(req, res) {
         await client.connect();
 
         const result = await client.query(`
-            SELECT t.id, t.title, t.description, t.difficulty, t.time_limit, t.is_unlocked,
+            SELECT t.id, t.title, t.description, t.difficulty, t.order, t.time_limit, t.is_unlocked,
                    COUNT(q.id)::int as questions_count
             FROM "tests" t
             LEFT JOIN "test_questions" q ON t.id = q.test_id
             GROUP BY t.id
-            ORDER BY t.title ASC;
+            ORDER BY t.order ASC;
         `);
 
         return res.json({ status: 'success', tests: result.rows });

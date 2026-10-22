@@ -9,6 +9,8 @@ const { getAllTests, getTestById, createTest, updateTest, deleteTest } = require
 
 const { getAllLabs, getLabById, createLab, updateLab, deleteLab } = require('../controllers/AdminControllers/labController');
 
+const { getLabSubmissions, reviewLabSubmission, getTestSubmissions } = require('../controllers/AdminControllers/submissionController');
+
 const { 
     getChapters, createChapter, updateChapter, deleteChapter, 
     getLessonById, createLesson, updateLesson, deleteLesson} = require('../controllers/AdminControllers/ebookController');
@@ -42,7 +44,14 @@ router.post('/labs', authenticateToken, createLab);
 router.put('/labs/:id', authenticateToken, updateLab);
 router.delete('/labs/:id', authenticateToken, deleteLab);
 
+// submissions
+
+router.get('/submissions/labs', authenticateToken, getLabSubmissions);
+router.put('/submissions/labs/:id/review', authenticateToken, reviewLabSubmission);
+router.get('/submissions/tests', authenticateToken, getTestSubmissions);
+
 // ebook
+
 router.get('/ebook/chapters', authenticateToken, getChapters);
 router.post('/ebook/chapters', authenticateToken, createChapter);
 router.put('/ebook/chapters/:id', authenticateToken, updateChapter);

@@ -109,7 +109,7 @@ async function loadPendingStudents() {
 
         return `
             <tr class="hover:bg-gray-800/30 transition">
-                <td class="py-3.5 px-4 font-semibold text-gray-200">
+                <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">
                     ${student.first_name || ''} ${student.last_name || ''}
                 </td>
                 <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${student.email}</td>
@@ -239,10 +239,10 @@ async function loadGroupStudents(groupId = 'all') {
 
         const roleBadge = isTeacher 
             ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20"><i class="fa-solid fa-user-shield mr-1"></i> Преподаватель</span>`
-            : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
+            : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-800 text-[var(--text-muted)] border border-gray-700"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
 
         return `
-            <tr class="hover:bg-gray-800/30 transition">
+            <tr class="hover:bg-gray-600/30 transition">
                 <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">${fullName}</td>
                 <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-gray-400 border border-gray-400 text-xs">${s.group_name || '—'}</span></td>
                 <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${s.email}</td>

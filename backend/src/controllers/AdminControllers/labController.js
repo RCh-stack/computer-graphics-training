@@ -131,5 +131,5 @@ module.exports = {
     getLabById, 
     createLab, 
     updateLab, 
-    deleteLab 
+    deleteLab
 };
