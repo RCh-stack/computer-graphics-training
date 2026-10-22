@@ -2,6 +2,7 @@ const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../services/jwt');
+const { sendResetCodeEmail } = require('../utils/mailer');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -113,31 +114,49 @@ async function register(req, res) {
  */
 async function requestResetCode(req, res) {
     const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ status: 'error', message: 'Укажите e-mail' });
+    }
+
     const client = getDbClient();
 
     try {
         await client.connect();
-        const userRes = await client.query('SELECT id FROM "users" WHERE email = $1;', [email]);
-        
+
+        const userRes = await client.query('SELECT id, email FROM "users" WHERE email = $1;', [email]);
         if (userRes.rows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Email не найден' });
+            return res.json({ 
+                status: 'success', 
+                message: 'Если такой e-mail зарегистрирован, на него отправлен код восстановления' 
+            });
         }
 
+        const user = userRes.rows[0];
+
         const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 минут доступности кода
+        
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-        await client.query(
-            'UPDATE "users" SET reset_code = $1, reset_code_expires = $2 WHERE email = $3;',
-            [resetCode, expiresAt, email]
-        );
+        await client.query(`
+            UPDATE "users" 
+            SET "reset_code" = $1, "reset_code_expires" = $2 
+            WHERE id = $3;
+        `, [resetCode, expiresAt, user.id]);
 
-        // dev - в консоль, prod - nodemailer
-        console.log(`🔑 Код восстановления для ${email}: ${resetCode}`);
+        await sendResetCodeEmail(user.email, resetCode);
 
-        return res.json({ status: 'success', message: 'Код сброса отправлен' });
+        return res.json({ 
+            status: 'success', 
+            message: 'Код подтверждения успешно отправлен на ваш e-mail' 
+        });
+
     } catch (error) {
-        console.error("Ошибка генерации кода: ", error);
-        return res.status(500).json({ status: 'error', message: 'Ошибка генерации кода' });
+        console.error('Ошибка отправки кода восстановления:', error);
+        return res.status(500).json({ 
+            status: 'error', 
+            message: 'Не удалось отправить письмо с кодом. Попробуйте позже.' 
+        });
     } finally {
         await client.end();
     }
