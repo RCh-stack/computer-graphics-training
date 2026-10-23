@@ -47,7 +47,7 @@ async function getStudents(req, res) {
         await client.connect();
 
         let query = `
-            SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.created_at, g.name as group_name
+            SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.created_at, g.id as group_id, g.name as group_name
             FROM "users" u
             LEFT JOIN "groups" g ON u.group_id = g.id
             WHERE u.is_approved = true AND u.role = 'STUDENT'
@@ -215,6 +215,41 @@ async function createGroup(req, res) {
 }
 
 /*
+ * PUT /api/v1/admin/users/group
+ */
+async function updateUserGroup(req, res) {
+    const { userId, groupId } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({ status: 'error', message: 'Не указан ID пользователя' });
+    }
+
+    const client = getDbClient();
+
+    try {
+        await client.connect();
+
+        const targetGroupId = groupId && groupId !== 'unassigned' && groupId !== '' ? groupId : null;
+        
+        await client.query(`
+            UPDATE "users"
+            SET group_id = $1
+            WHERE id = $2;
+        `, [targetGroupId, userId]);
+
+        return res.json({
+            status: 'success',
+            message: 'Академическая группа успешно обновлена'
+        });
+    } catch (error) {
+        console.error('Ошибка изменения группы пользователя:', error);
+        return res.status(500).json({ status: 'error', message: error.message });
+    } finally {
+        await client.end();
+    }
+}
+
+/*
  * GET /api/v1/admin/users/gradebook
  */
 async function getGradebook(req, res) {
@@ -300,5 +335,6 @@ module.exports = {
     changeUserRole,
     getGroups, 
     createGroup,
+    updateUserGroup,
     getGradebook
 };

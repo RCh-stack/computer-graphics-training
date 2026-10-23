@@ -3,13 +3,13 @@ const router = express.Router();
 
 const { 
     getPendingStudents, getStudents, approveStudent, changeUserRole, 
-    getGroups, createGroup, getGradebook, getTeachers } = require('../controllers/adminController');
+    getGroups, createGroup, getGradebook, getTeachers, updateUserGroup } = require('../controllers/adminController');
 
 const { getAllTests, getTestById, createTest, updateTest, deleteTest } = require('../controllers/AdminControllers/testController');
 
 const { getAllLabs, getLabById, createLab, updateLab, deleteLab } = require('../controllers/AdminControllers/labController');
 
-const { getLabSubmissions, reviewLabSubmission, getTestSubmissions } = require('../controllers/AdminControllers/submissionController');
+const { getLabSubmissions, reviewLabSubmission, getTestSubmissions, getTheoryGradebook } = require('../controllers/AdminControllers/submissionController');
 
 const { 
     getChapters, createChapter, updateChapter, deleteChapter, 
@@ -26,6 +26,7 @@ router.put('/users/approve', authenticateToken, approveStudent);
 router.put('/users/role', authenticateToken, changeUserRole);
 router.get('/users/groups', authenticateToken, getGroups);
 router.post('/users/groups', authenticateToken, createGroup);
+router.put('/users/group', authenticateToken, updateUserGroup);
 router.get('/users/gradebook', authenticateToken, getGradebook);
 
 // tests
@@ -49,6 +50,7 @@ router.delete('/labs/:id', authenticateToken, deleteLab);
 router.get('/submissions/labs', authenticateToken, getLabSubmissions);
 router.put('/submissions/labs/:id/review', authenticateToken, reviewLabSubmission);
 router.get('/submissions/tests', authenticateToken, getTestSubmissions);
+router.get('/submissions/ebook', authenticateToken, getTheoryGradebook);
 
 // ebook
 

@@ -206,8 +206,95 @@ async function getTestSubmissions(req, res) {
     }
 }
 
+/*
+ * GET /api/v1/admin/submissions/ebook
+ */
+async function getTheoryGradebook(req, res) {
+    const { groupId } = req.query;
+    const client = getDbClient();
+
+    try {
+        await client.connect();
+
+        const chaptersRes = await client.query(`
+            SELECT c.id, c.title, c."order", COUNT(a.id)::int as total_articles
+            FROM "theory_chapters" c
+            LEFT JOIN "theory_articles" a ON a.chapter_id = c.id
+            GROUP BY c.id
+            ORDER BY c."order" ASC;
+        `);
+        const chapters = chaptersRes.rows;
+
+        let userQuery = `
+            SELECT u.id, u.first_name, u.last_name, u.email, g.name as group_name
+            FROM "users" u
+            LEFT JOIN "groups" g ON u.group_id = g.id
+            WHERE u.role = 'STUDENT'
+        `;
+        const params = [];
+        if (groupId) {
+            params.push(groupId);
+            userQuery += ` AND u.group_id = $${params.length}`;
+        }
+        userQuery += ` ORDER BY u.last_name, u.first_name;`;
+
+        const usersRes = await client.query(userQuery, params);
+        const students = usersRes.rows;
+
+        const progressRes = await client.query(`
+            SELECT tp.user_id, a.chapter_id, COUNT(tp.id)::int as completed_articles
+            FROM "theory_progress" tp
+            JOIN "theory_articles" a ON tp.article_id = a.id
+            WHERE tp.completed = TRUE
+            GROUP BY tp.user_id, a.chapter_id;
+        `);
+
+        const progressMap = new Map();
+        progressRes.rows.forEach(row => {
+            progressMap.set(`${row.user_id}_${row.chapter_id}`, row.completed_articles);
+        });
+
+        const rows = students.map(st => {
+            const chapterProgress = {};
+
+            chapters.forEach(ch => {
+                const completed = progressMap.get(`${st.id}_${ch.id}`) || 0;
+                const total = ch.total_articles || 0;
+                const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+                
+                chapterProgress[ch.id] = {
+                    completed,
+                    total,
+                    percent
+                };
+            });
+
+            return {
+                userId: st.id,
+                name: `${st.first_name || ''} ${st.last_name || ''}`.trim() || st.email,
+                email: st.email,
+                groupName: st.group_name || '—',
+                chapters: chapterProgress
+            };
+        });
+
+        return res.json({
+            status: 'success',
+            chapters,
+            rows
+        });
+
+    } catch (error) {
+        console.error('Ошибка получения прогресса теории:', error);
+        return res.status(500).json({ status: 'error', message: error.message });
+    } finally {
+        await client.end();
+    }
+}
+
 module.exports = { 
     getLabSubmissions,
     reviewLabSubmission,
-    getTestSubmissions
+    getTestSubmissions,
+    getTheoryGradebook
 };

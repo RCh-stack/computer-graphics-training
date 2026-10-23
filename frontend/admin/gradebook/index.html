@@ -34,15 +34,30 @@
 
             <!-- Фильтр группы -->
             <div class="flex items-center gap-3">
-                <label class="text-xs font-semibold text-[var(--text-main)]">Группа:</label>
+                <!-- Поиск по ФИО -->
+                <input id="gradebook-search-input" type="text" placeholder="Поиск студента..." 
+                    class="bg-[var(--bg-card)] border border-gray-700 text-xs rounded-xl px-3 py-2 text-[var(--text-main)] focus:outline-none focus:border-pink-500 w-48">
+
+                <!-- Фильтр группы -->
                 <select id="gradebook-group-select" class="bg-[var(--bg-card)] border border-gray-700 text-xs rounded-xl px-4 py-2 focus:outline-none focus:border-pink-500">
                     <option value="">Все группы</option>
                 </select>
+
+                <!-- Кнопка выгрузки -->
+                <button id="btn-export-excel" type="button" 
+                    class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl text-xs font-semibold border border-emerald-500/30 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Экспорт (.xlsx)</span>
+                </button>
             </div>
         </div>
 
-        <!-- Разделение списка по лабораторным работам и тестированиям -->
+        <!-- Разделение списка по категориям-->
         <div class="flex border-b border-gray-700 space-x-2">
+            <button id="tab-btn-theory" type="button" class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-main)] hover:text-[var(--text-main)] flex items-center gap-2">
+                <i class="fa-solid fa-book-open"></i>
+                <span>Теория</span>
+            </button>
             <button id="tab-btn-labs" type="button" class="px-4 py-2.5 text-xs font-bold border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2">
                 <i class="fa-solid fa-flask"></i>
                 <span>Лабораторные работы</span>
@@ -51,6 +66,14 @@
                 <i class="fa-solid fa-list-check"></i>
                 <span>Тестирование</span>
             </button>
+        </div>
+
+         <!-- Таблица прогресса по теоретическому материалу -->
+        <div id="section-theory-gradebook" class="hidden bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-x-auto shadow-lg">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead id="theory-thead" class="bg-gray-800/60 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700"></thead>
+                <tbody id="theory-tbody" class="divide-y divide-gray-700/50 text-[var(--text-main)]"></tbody>
+            </table>          
         </div>
 
         <!-- Таблица выполненных лабораторных работ -->
@@ -192,5 +215,6 @@
     <script src="src/submissions.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
 </html>

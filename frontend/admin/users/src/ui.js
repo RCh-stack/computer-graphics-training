@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
 let cachedGroups = [];
 
 function initEvents() {
-    
     document.getElementById('tab-btn-pending')?.addEventListener('click', () => switchAdminTab('pending'));
     document.getElementById('tab-btn-groups')?.addEventListener('click', () => switchAdminTab('groups'));
     document.getElementById('tab-btn-teachers')?.addEventListener('click', () => switchAdminTab('teachers'));
@@ -32,6 +31,12 @@ function initEvents() {
             const { userId, userRole, userName } = roleBtn.dataset;
             changeUserRole(userId, userRole, userName);
         }
+
+        const groupBtn = e.target.closest('.btn-change-group');
+        if (groupBtn) {
+            const { userId, groupId, userName } = groupBtn.dataset;
+            changeUserGroup(userId, groupId, userName);
+        }
     });
 
     document.getElementById('teachers-table-body')?.addEventListener('click', (e) => {
@@ -44,7 +49,6 @@ function initEvents() {
 }
 
 function switchAdminTab(tabName) {
-
     document.getElementById('tab-pending').classList.add('hidden');
     document.getElementById('tab-groups').classList.add('hidden');
     document.getElementById('tab-teachers').classList.add('hidden');
@@ -69,7 +73,6 @@ function switchAdminTab(tabName) {
 }
 
 async function loadPendingStudents() {
-
     const token = localStorage.getItem('authToken');
 
     const response = await fetch(`/api/v1/admin/users/pending-students`, {
@@ -131,7 +134,6 @@ async function loadPendingStudents() {
 }
 
 async function approveStudent(userId) {
-
     const select = document.getElementById(`group-select-${userId}`);
     const groupId = select ? select.value : null;
 
@@ -153,7 +155,6 @@ async function approveStudent(userId) {
 }
 
 async function openCreateGroupModal() {
-    
     const { value: groupName } = await Swal.fire({
         title: 'Новая академическая группа',
         input: 'text',
@@ -188,7 +189,6 @@ async function openCreateGroupModal() {
 }
 
 async function loadGroups() {
-
     const token = localStorage.getItem('authToken');
 
     const response = await fetch(`/api/v1/admin/users/groups`, {
@@ -203,16 +203,17 @@ async function loadGroups() {
 
     const data = await response.json();
     if (data.status === 'success') {
+        cachedGroups = data.groups || [];
+
         const select = document.getElementById('group-select');
         if (!select) return;
 
         select.innerHTML = `<option value="all">Все группы</option><option value="unassigned">Без группы</option>` +
-            data.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+            cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
     }
 }
 
 async function loadGroupStudents(groupId = 'all') {
-
     const token = localStorage.getItem('authToken');
 
     const response = await fetch(`/api/v1/admin/users/students?groupId=${groupId}`, {
@@ -244,12 +245,20 @@ async function loadGroupStudents(groupId = 'all') {
         return `
             <tr class="hover:bg-gray-600/30 transition">
                 <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">${fullName}</td>
-                <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded bg-gray-400 border border-gray-400 text-xs">${s.group_name || '—'}</span></td>
+                <td class="py-3.5 px-4">
+                    <span class="px-2 py-0.5 rounded bg-gray-800 border border-gray-700 text-xs font-semibold text-pink-400">
+                        ${s.group_name || '—'}
+                    </span>
+                </td>
                 <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${s.email}</td>
                 <td class="py-3.5 px-4 text-center">${roleBadge}</td>
-                <td class="py-3.5 px-4 text-right">
+                <td class="py-3.5 px-4 text-right space-x-3">
+                    <button data-user-id="${s.id}" data-group-id="${s.group_id || ''}" data-user-name="${fullName}" 
+                            class="btn-change-group text-xs text-indigo-600 hover:text-indigo-500 hover:underline transition font-medium">
+                        Изменить группу
+                    </button>
                     <button data-user-id="${s.id}" data-user-role="${s.role}" data-user-name="${fullName}" 
-                            class="btn-change-role text-xs text-pink-400 hover:text-pink-300 hover:underline transition font-medium">
+                            class="btn-change-role text-xs text-pink-600 hover:text-pink-500 hover:underline transition font-medium">
                         Изменить роль
                     </button>
                 </td>
@@ -258,8 +267,53 @@ async function loadGroupStudents(groupId = 'all') {
     }).join('');
 }
 
+async function changeUserGroup(userId, currentGroupId, userName) {
+    if (cachedGroups.length === 0) {
+        await loadGroups();
+    }
+
+    const optionsHtml = `<option value="">Без группы</option>` +
+        cachedGroups.map(g => `<option value="${g.id}" ${String(g.id) === String(currentGroupId) ? 'selected' : ''}>${g.name}</option>`).join('');
+
+    const { value: selectedGroupId, isConfirmed } = await Swal.fire({
+        title: 'Смена академической группы',
+        html: `
+            <p class="text-xs text-gray-400 mb-3">Выберите новую группу для студента <b>${userName}</b>:</p>
+            <select id="swal-group-select" class="swal2-input text-xs w-full focus:outline-none" style="display: flex; height: 2.5rem; margin: 0 auto;">
+                ${optionsHtml}
+            </select>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Сохранить',
+        cancelButtonText: 'Отмена',
+        confirmButtonColor: '#ec4899',
+        preConfirm: () => {
+            return document.getElementById('swal-group-select').value;
+        }
+    });
+
+    if (isConfirmed) {
+        const token = localStorage.getItem('authToken');
+
+        const response = await fetch(`/api/v1/admin/users/group`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({ userId, groupId: selectedGroupId })
+        });
+
+        if (response.ok) {
+            Swal.fire({ title: 'Успешно!', text: 'Академическая группа пользователя обновлена', icon: 'success', confirmButtonColor: '#10b981', timer: 1500 });
+            
+            const currentGroupFilter = document.getElementById('group-select')?.value || 'all';
+            loadGroupStudents(currentGroupFilter);
+        }
+    }
+}
+
 async function loadTeachers() {
-    
     const token = localStorage.getItem('authToken');
 
     const response = await fetch(`/api/v1/admin/users/teachers`, {
@@ -306,7 +360,6 @@ async function loadTeachers() {
 }
 
 async function changeUserRole(userId, currentRole, userName) {
-
     const newRole = currentRole === 'TEACHER' ? 'STUDENT' : 'TEACHER';
     const roleTitle = newRole === 'TEACHER' ? 'Преподаватель' : 'Студент';
 
