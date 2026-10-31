@@ -59,7 +59,7 @@ function renderTestDetailsList(tests) {
     if (!container) return;
 
     if (tests.length === 0) {
-        container.innerHTML = `<div class="p-3 text-center text-[11px] text-[var(--text-main)] bg-gray-400 rounded-xl">Детализация юнит-тестов отсутствует</div>`;
+        container.innerHTML = `<div class="p-3 text-center text-[11px] text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация юнит-тестов отсутствует</div>`;
         return;
     }
 
@@ -155,13 +155,17 @@ function openTestReviewModal(sub) {
     document.getElementById('test-review-score').innerText = `${sub.score_percent || 0}%`;
     document.getElementById('test-review-date').innerText = new Date(sub.completed_at).toLocaleString('ru-RU');
 
-    let userAnswersMeta = sub.user_answers;
-    if (typeof userAnswersMeta === 'string') {
-        try { userAnswersMeta = JSON.parse(userAnswersMeta); } catch { userAnswersMeta = {}; }
-    }
-    const durationSec = userAnswersMeta.timeSpentSeconds || userAnswersMeta.duration || 0;
-    const mins = Math.floor(durationSec / 60);
-    const secs = durationSec % 60;
+    const startDate = new Date(sub.started_in);
+    const endDate = new Date(sub.completed_at);
+
+    const diffMs = endDate.getTime() - startDate.getTime();
+    if (isNaN(diffMs) || diffMs < 0)
+       document.getElementById('test-review-duration').innerText = '0м 0с';
+
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+
     document.getElementById('test-review-duration').innerText = `${mins}м ${secs}с`;
 
     const questionsList = sub.questionsBreakdown || [];
@@ -175,7 +179,7 @@ function renderQuestionsBreakdown(questions) {
     if (!container) return;
 
     if (questions.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-xs text-[var(--text-main)] bg-gray-400 rounded-xl">Детализация вопросов недоступна</div>`;
+        container.innerHTML = `<div class="p-4 text-center text-xs text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация вопросов недоступна</div>`;
         return;
     }
 
@@ -186,13 +190,13 @@ function renderQuestionsBreakdown(questions) {
             : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Ошибка</span>`;
 
         return `
-            <div class="p-3.5 bg-gray-400/40 border border-gray-400 rounded-xl space-y-2 text-xs">
+            <div class="p-3.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl space-y-2 text-xs">
                 <div class="flex justify-between items-start gap-2">
                     <span class="font-bold text-[var(--text-main)]">№${idx + 1}. ${q.questionText || 'Вопрос'}</span>
                     ${statusBadge}
                 </div>
 
-                <div class="space-y-1 pt-1 border-t border-gray-400/40 text-[11px]">
+                <div class="space-y-1 pt-1 border-t border-[var(--border-color)] text-[11px]">
                     <div class="${isCorrect ? 'text-emerald-600' : 'text-red-600'} font-medium">
                         <span class="text-[var(--text-main)]">Ответ студента:</span> ${q.userAnswer}
                     </div>

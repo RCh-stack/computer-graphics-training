@@ -72,9 +72,10 @@ async function getTestById(req, res) {
         }
 
         const questionsResult = await client.query(
-            `SELECT id, "question_text", "options_json", explanation
+            `SELECT id, "order", "question_text", "options_json", explanation
             FROM "test_questions"
-            WHERE "test_id" = $1;`,
+            WHERE "test_id" = $1
+            ORDER BY "order" ASC;`,
             [id]
         );
 
@@ -85,6 +86,7 @@ async function getTestById(req, res) {
 
             return {
                 id: q.id,
+                order: q.order,
                 question_text: q.question_text,
                 type: optionsData.type || 'single_choice',
                 options: optionsData.options || [],
@@ -107,7 +109,7 @@ async function getTestById(req, res) {
  */
 async function submitTest(req, res) {
     const { id } = req.params;
-    const { answers = {} } = req.body;
+    const { startedIn, answers = {} } = req.body;
     const userId = req.user ? req.user.id : null; 
 
     if (!userId) {
@@ -120,9 +122,10 @@ async function submitTest(req, res) {
         await client.connect();
 
         const questionsResult = await client.query(
-            `SELECT id, "correct_answer", "options_json", explanation
+            `SELECT id, "order", "correct_answer", "options_json", explanation
             FROM "test_questions"
-            WHERE "test_id" = $1;`,
+            WHERE "test_id" = $1
+            ORDER BY "order" ASC;`,
             [id]
         );
 
@@ -148,7 +151,6 @@ async function submitTest(req, res) {
                         correctCount++;
                     }
                 } else {
-                    // Обычное сравнение строк/идентификаторов
                     if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
                         correctCount++;
                     }
@@ -160,16 +162,17 @@ async function submitTest(req, res) {
         const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
         const upsertQuery = `
-            INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, completed_at)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
+            INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, started_in, completed_at)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
             ON CONFLICT (user_id, test_id) 
             DO UPDATE SET score_percent = EXCLUDED.score_percent, 
-                          user_answers = EXCLUDED.user_answers, 
+                          user_answers = EXCLUDED.user_answers,
+                          started_in = EXCLUDED.started_in,
                           completed_at = EXCLUDED.completed_at
             RETURNING score_percent;
         `;
     
-        await client.query(upsertQuery, [userId, id, scorePercent, JSON.stringify(answers)]);
+        await client.query(upsertQuery, [userId, id, scorePercent, JSON.stringify(answers), startedIn]);
 
         return res.json({
             status: 'success',
@@ -185,8 +188,99 @@ async function submitTest(req, res) {
     }
 };
 
+/**
+ * GET /api/v1/tests/:id/result
+ */
+async function getTestResult(req, res) { 
+    const { id } = req.params;
+    const userId = req.user ? req.user.id : null;
+
+    if (!userId) {
+        return res.status(401).json({ status: 'error', message: 'Необходима авторизация' });
+    }
+
+    const client = getDbClient();
+
+    try {
+        await client.connect();
+
+        const subRes = await client.query(`
+            SELECT id, score_percent, user_answers, completed_at
+            FROM "test_submissions"
+            WHERE user_id = $1 AND test_id = $2
+            ORDER BY completed_at DESC
+            LIMIT 1;
+        `, [userId, id]);
+
+        if (subRes.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Вы еще не проходили этот тест' });
+        }
+
+        const submission = subRes.rows[0];
+
+        const qRes = await client.query(`
+            SELECT id, "order", question_text, options_json, correct_answer, explanation
+            FROM "test_questions"
+            WHERE test_id = $1
+            ORDER BY "order" ASC;
+        `, [id]);
+
+        let userAnsObj = submission.user_answers;
+        if (typeof userAnsObj === 'string') {
+            try { userAnsObj = JSON.parse(userAnsObj); } catch { userAnsObj = {}; }
+        }
+
+        const breakdown = qRes.rows.map((q, idx) => {
+            let rawUserAnswer = '';
+
+            if (Array.isArray(userAnsObj)) {
+                const found = userAnsObj.find(item => item.questionId === q.id || item.id === q.id);
+                rawUserAnswer = found ? (found.answer || found.userAnswer) : '';
+            } else if (typeof userAnsObj === 'object' && userAnsObj !== null) {
+                rawUserAnswer = userAnsObj[q.id] || userAnsObj.answers?.[q.id] || '';
+            }
+
+            const isSkipped = !rawUserAnswer || rawUserAnswer === '';
+            const isCorrect = !isSkipped && String(rawUserAnswer).trim().toLowerCase() === String(q.correct_answer).trim().toLowerCase();
+
+            let options = q.options_json;
+            if (typeof options === 'string') {
+                try { options = JSON.parse(options); } catch { options = null; }
+            }
+            const optionsList = Array.isArray(options) ? options : (options?.options || []);
+
+            return {
+                number: q.order,
+                questionId: q.id,
+                questionText: q.question_text,
+                options: optionsList,
+                correctAnswer: q.correct_answer,
+                userAnswer: rawUserAnswer,
+                status: isSkipped ? 'skipped' : (isCorrect ? 'correct' : 'incorrect'),
+                explanation: q.explanation || 'Поясняющая информация к данному вопросу отсутствует.'
+            };
+        });
+
+        return res.json({
+            status: 'success',
+            result: {
+                submissionId: submission.id,
+                scorePercent: submission.score_percent,
+                completedAt: submission.completed_at,
+                questions: breakdown
+            }
+        });
+    } catch (error) {
+        console.error('Ошибка получения результатов теста:', error);
+        return res.status(500).json({ status: 'error', message: error.message });
+    } finally {
+        await client.end();
+    }
+}
+
 module.exports = {
     getAllTests,
     getTestById,
-    submitTest
+    submitTest,
+    getTestResult
 };

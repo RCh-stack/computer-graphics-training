@@ -26,6 +26,8 @@ async function loadTests() {
         const data = await res.json();
         const grid = document.getElementById('tests-grid');
 
+        if (!grid) return;
+
         if (!data.tests || data.tests.length === 0) {
             grid.innerHTML = `<div class="col-span-full py-12 text-center text-[var(--text-main)]">Тесты пока не созданы. Нажмите "Создать тест" для начала.</div>`;
             return;
@@ -63,8 +65,8 @@ async function loadTests() {
                 </div>
             `;
         }).join('');
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        console.error(error);
     }
 }
 
@@ -75,7 +77,7 @@ async function createNewTest() {
         title: 'Новый тест',
         input: 'text',
         inputLabel: 'Введите название теста',
-        placeholder: 'Например: Тест #1: Векторный анализ',
+        placeholder: 'Например: Тест №1: Векторный анализ',
         showCancelButton: true,
         confirmButtonText: 'Создать',
         cancelButtonText: 'Отмена',
@@ -92,6 +94,9 @@ async function createNewTest() {
         const data = await res.json();
         if (data.status === 'success') {
             window.location.href = `test-workspace.html?id=${data.testId}`;
+        }
+        else {
+            Swal.fire('Ошибка', 'Не удалось создать тест', 'error');
         }
     }
 }

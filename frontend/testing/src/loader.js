@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     initDashboard();
+    initModalCloseEvents();
 });
 
 let allTests = [];
+let currentTestQuestionsData = [];
+let activeQuestionIndex = 0;
 
 async function initDashboard() {
     try {
@@ -25,7 +28,6 @@ async function initDashboard() {
 
         renderStats(allTests);
         renderTestCards(allTests);
-
         setupFilterListeners();
 
     } catch (error) {
@@ -91,7 +93,13 @@ function renderTestCards(testsToRender) {
                 : 'border-[var(--border-color)] opacity-60 bg-gray-900/20'
         }`;
 
-        const difficultyColor = test.difficulty === 'Легкая' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        let difficultyColor = '';
+        if (test.difficulty === 'Легкий')
+            difficultyColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        else if (test.difficulty === 'Средний')
+            difficultyColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        else
+            difficultyColor = 'text-red-400 bg-red-500/10 border-red-500/20';
 
         let statusBadge = '';
         if (!test.is_unlocked) {
@@ -119,22 +127,34 @@ function renderTestCards(testsToRender) {
                 </div>
             </div>
 
-            <div class="pt-4 mt-4 border-t border-[var(--border-color)] flex items-center justify-between">
+            <div class="pt-4 mt-4 border-t border-[var(--border-color)] flex items-center justify-between gap-2">
                 <div class="text-xs text-[var(--text-muted)] font-mono flex space-x-3">
                     <span>⏱️ ${test.time_limit} мин</span>
                     <span>❓ ${test.questions_count} вопр.</span>
                 </div>
 
-                <button 
-                    onclick="startTest('${test.id}')"
-                    ${!test.is_unlocked ? 'disabled' : ''}
-                    class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
-                        test.is_unlocked 
-                            ? 'bg-pink-600 hover:bg-pink-500 text-white shadow-md cursor-pointer' 
-                            : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                    }">
-                    ${test.completed ? 'Пересдать' : 'Начать'}
-                </button>
+                <div class="flex items-center gap-2">
+                    <button 
+                        onclick="startTest('${test.id}')"
+                        ${!test.is_unlocked ? 'disabled' : ''}
+                        class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+                            test.is_unlocked 
+                                ? 'bg-pink-600 hover:bg-pink-500 text-white shadow-md cursor-pointer' 
+                                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                        }">
+                        ${test.completed ? 'Пересдать' : 'Начать'}
+                    </button>
+
+                    ${test.completed ? `
+                        <button 
+                            onclick="openTestAnalysis('${test.id}', '${test.title}')" 
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-[var(--bg-card)] hover:bg-gray-300/30 text-[var(--text-main)] border border-[var(--border-color)] flex items-center gap-1.5 cursor-pointer"
+                            title="Разбор ошибок">
+                            <i class="fa-solid fa-chart-pie text-pink-400"></i>
+                            <span>Анализ</span>
+                        </button>
+                    ` : ''}
+                </div>
             </div>
         `;
 
@@ -184,4 +204,184 @@ function showErrorState() {
             Ошибка при загрузке списка тестов. Проверьте подключение к серверу.
         </div>
     `;
+}
+
+async function openTestAnalysis(testId, testTitle) {
+    currentTestQuestionsData = [];
+    activeQuestionIndex = 0;
+
+    const palette = document.getElementById('questions-palette');
+    const optionsContainer = document.getElementById('analysis-options-container');
+    const explanationText = document.getElementById('analysis-explanation-text');
+    const questionTitle = document.getElementById('analysis-question-title');
+    const statusBadge = document.getElementById('analysis-status-badge');
+
+    if (palette) palette.innerHTML = '';
+    if (optionsContainer) optionsContainer.innerHTML = '';
+    if (explanationText) explanationText.innerText = 'Загрузка данных...';
+    if (questionTitle) questionTitle.innerText = 'Загрузка вопроса...';
+    if (statusBadge) {
+        statusBadge.innerText = '—';
+        statusBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-gray-700 bg-gray-800 text-gray-400';
+    }
+
+    document.getElementById('analysis-test-title').innerText = testTitle;
+    document.getElementById('analysis-score').innerText = '0%';
+    document.getElementById('test-analysis-modal')?.classList.remove('hidden');
+
+    const token = localStorage.getItem('authToken');
+
+    try {
+        const response = await fetch(`/api/v1/tests/${testId}/result`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        const data = await response.json();
+
+        if (data.status === 'success' && data.result) {
+            const { scorePercent, questions } = data.result;
+
+            currentTestQuestionsData = questions || [];
+            document.getElementById('analysis-score').innerText = `${scorePercent}%`;
+
+            if (currentTestQuestionsData.length === 0) {
+                if (questionTitle) questionTitle.innerText = 'В данном тестировании отсутствуют вопросы';
+                if (explanationText) explanationText.innerText = 'Для данного теста нет сохраненных вопросов.';
+                return;
+            }
+
+            renderQuestionsPalette();
+            selectQuestionForAnalysis(0);
+        } else {
+            if (questionTitle) questionTitle.innerText = 'Результаты недоступны';
+            if (explanationText) explanationText.innerText = data.message || 'Ошибка получения результатов теста.';
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки разбора теста:', error);
+        if (questionTitle) questionTitle.innerText = 'Ошибка загрузки';
+        if (explanationText) explanationText.innerText = 'Не удалось загрузить данные с сервера.';
+    }
+}
+
+function renderQuestionsPalette() {
+    const palette = document.getElementById('questions-palette');
+    if (!palette) return;
+
+    if (currentTestQuestionsData.length === 0) {
+        palette.innerHTML = `<span class="text-xs text-gray-500 col-span-full">Нет вопросов</span>`;
+        return;
+    }
+
+    palette.innerHTML = currentTestQuestionsData.map((q, idx) => {
+        let styleClass = 'bg-[var(--bg-card)] text-[var(--text-main)] border-[var(--border-color)] hover:border-pink-500';
+
+        if (q.status === 'correct') {
+            styleClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30';
+        } else if (q.status === 'incorrect') {
+            styleClass = 'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30';
+        }
+
+        return `
+            <button type="button" 
+                onclick="selectQuestionForAnalysis(${idx})" 
+                id="btn-palette-q-${idx}" 
+                class="w-9 h-9 rounded-xl font-mono text-xs font-bold border transition flex items-center justify-center cursor-pointer ${styleClass}">
+                ${idx + 1}
+            </button>
+        `;
+    }).join('');
+}
+
+function selectQuestionForAnalysis(index) {
+    if (!currentTestQuestionsData[index]) return;
+
+    activeQuestionIndex = index;
+    const q = currentTestQuestionsData[index];
+
+    document.querySelectorAll('#questions-palette button').forEach((btn, i) => {
+        if (i === index) {
+            btn.classList.add('ring-2', 'ring-pink-500', 'scale-105');
+        } else {
+            btn.classList.remove('ring-2', 'ring-pink-500', 'scale-105');
+        }
+    });
+
+    document.getElementById('analysis-question-title').innerText = `Вопрос №${q.number}: ${q.questionText}`;
+
+    const badgeEl = document.getElementById('analysis-status-badge');
+    if (q.status === 'correct') {
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        badgeEl.innerText = '✓ Верно';
+    } else if (q.status === 'incorrect') {
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20';
+        badgeEl.innerText = '✕ Ошибка';
+    } else {
+        badgeEl.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-color)]';
+        badgeEl.innerText = '— Пропущен';
+    }
+
+    document.getElementById('analysis-explanation-text').innerText = q.explanation || 'Пояснение к данному вопросу отсутствует.';
+
+    renderOptionsAnalysis(q);
+}
+
+function renderOptionsAnalysis(q) {
+    const container = document.getElementById('analysis-options-container');
+    if (!container) return;
+
+    if (!q.options || q.options.length === 0) {
+        container.innerHTML = `
+            <div class="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] space-y-2 text-xs">
+                <div><span class="text-[var(--text-muted)]">Ваш ответ:</span> <span class="font-bold text-[var(--text-main)]">${q.userAnswer || '—'}</span></div>
+                <div><span class="text-[var(--text-muted)]">Правильный ответ:</span> <span class="font-bold text-emerald-400">${q.correctAnswer}</span></div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = q.options.map(opt => {
+        const optId = typeof opt === 'object' ? opt.id : opt;
+        const optText = typeof opt === 'object' ? opt.text : opt;
+
+        const isUserSelected = String(optId) === String(q.userAnswer) || String(optText) === String(q.userAnswer);
+        const isCorrectOpt = String(optId) === String(q.correctAnswer) || String(optText) === String(q.correctAnswer);
+
+        let optionStyle = 'bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-main)]';
+        let badgeHtml = '';
+
+        if (isCorrectOpt) {
+            optionStyle = 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold';
+            badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Правильный ответ</span>`;
+        }
+        
+        if (isUserSelected && !isCorrectOpt) {
+            optionStyle = 'bg-red-500/10 border-red-500/40 text-red-400 font-semibold';
+            badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">Ваш выбор</span>`;
+        } else if (isUserSelected && isCorrectOpt) {
+            badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Ваш выбор (Верно)</span>`;
+        }
+
+        return `
+            <div class="p-3 rounded-xl border ${optionStyle} text-xs flex justify-between items-center transition">
+                <span>${optText}</span>
+                ${badgeHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+function initModalCloseEvents() {
+    const modal = document.getElementById('test-analysis-modal');
+    const closeBtn = document.getElementById('btn-close-analysis');
+
+    const closeModal = () => modal?.classList.add('hidden');
+
+    closeBtn?.addEventListener('click', closeModal);
+
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
 }

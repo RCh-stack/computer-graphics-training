@@ -7,13 +7,14 @@ let currentQuestionIndex = 0;
 let userAnswers = {};
 let timerInterval = null;
 let timeRemaining = 0;
+let testStartTime = null;
 
 async function initTestWorkspace() {
     const urlParams = new URLSearchParams(window.location.search);
     const testId = urlParams.get('id');
 
     if (!testId) {
-        alert('Не указан идентификатор теста');
+        Swal.fire({ title: 'Ошибка', text: 'Не указан идентификатор теста', icon: 'error', confirmButtonText: 'ОК' });
         window.location.href = 'index.html';
         return;
     }
@@ -36,6 +37,7 @@ async function initTestWorkspace() {
         
         document.getElementById('test-title').textContent = currentTest.title;
         timeRemaining = currentTest.time_limit * 60;
+        testStartTime = new Date(Date.now()).toISOString();
 
         startTimer();
         renderQuestionsGrid();
@@ -44,7 +46,7 @@ async function initTestWorkspace() {
 
     } catch (error) {
         console.error('Ошибка инициализации workspace:', error);
-        alert('Не удалось загрузить данные теста');
+        Swal.fire({ title: 'Ошибка', text: 'Не удалось загрузить данные теста', icon: 'error', confirmButtonText: 'ОК' });
         window.location.href = 'index.html';
     }
 }
@@ -57,8 +59,15 @@ function startTimer() {
 
         if (timeRemaining <= 0) {
             clearInterval(timerInterval);
-            alert('Время отведенное на тест истекло! Ответы отправляются автоматически.');
-            submitTest();
+            Swal.fire({ 
+                title: 'Время истекло!', 
+                text: 'Отведенное время закончилось. Ваши ответы будут автоматически отправлены.', 
+                icon: 'info', 
+                confirmButtonText: 'ОК',
+                allowOutsideClick: false
+            }).then(() => {
+                submitTest();
+            });
         }
     }, 1000);
 }
@@ -111,12 +120,21 @@ function renderCurrentQuestion() {
     const qTextElem = document.getElementById('question-text');
     qTextElem.innerHTML = q.question_text;
     
-    if (window.renderMathInElement) {
-        renderMathInElement(qTextElem, {
+    //if (window.renderMathInElement) {
+    //    renderMathInElement(qTextElem, {
+      //      delimiters: [
+        //        {left: '$$', right: '$$', display: true},
+          //      {left: '$', right: '$', display: false}
+          //  ]
+       // });
+    //}
+    if (typeof window.renderMathInElement === 'function') {
+        window.renderMathInElement(qTextElem, {
             delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false}
-            ]
+                { left: '$$', right: '$$', display: true },  // Блочные формулы по центру
+                { left: '$', right: '$', display: false }     // Строчные формулы в тексте
+            ],
+            throwOnError: false // Чтобы ошибочные синтаксисы не ломали JS
         });
     }
 
@@ -266,17 +284,29 @@ function setupNavigationListeners() {
             renderCurrentQuestion();
             renderQuestionsGrid();
         } else {
-            if (confirm('Вы дошли до конца теста. Завершить и проверить ответы?')) {
-                submitTest();
-            }
+            confirmAndSubmitTest();
         }
     });
 
     document.getElementById('btn-finish-test').addEventListener('click', () => {
-        if (confirm('Вы уверены, что хотите завершить тестирование?')) {
-            submitTest();
-        }
+        confirmAndSubmitTest();
     });
+}
+
+async function confirmAndSubmitTest() {
+    const result = await Swal.fire({
+        title: 'Завершение тестирования',
+        html: 'Вы уверены, что хотите завершить тестирование и отправить ответы?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Да, завершить',
+        cancelButtonText: 'Отмена',
+        confirmButtonColor: '#ec4899'
+    });
+
+    if (result.isConfirmed) {
+        submitTest();
+    }
 }
 
 async function submitTest() {
@@ -287,17 +317,20 @@ async function submitTest() {
 
         const response = await fetch(`/api/v1/tests/${currentTest.id}/submit`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Authorization': token ? `Bearer ${token}` : ''
             },
-            body: JSON.stringify({ answers: userAnswers })
+            body: JSON.stringify({ 
+                answers: userAnswers,
+                startedIn: testStartTime
+            })
         });
 
         if (!response.ok) throw new Error('Не удалось завершить тестирование');
 
         const result = await response.json();
-        
+
         await showTestResultModal({
             score: result.score_percent,
             correctCount: result.correct_count,
@@ -306,10 +339,9 @@ async function submitTest() {
         });
 
         window.location.href = 'index.html';
-
     } catch (error) {
         console.error('Ошибка проверки теста:', error);
-        alert('Произошла ошибка при отправке ответов.');
+        Swal.fire({ title: 'Ошибка', text: 'Не удалось сохранить ответы к тесту', icon: 'error', confirmButtonText: 'ОК' });
     }
 }
 

@@ -164,50 +164,39 @@
         </div>
     </div>
 
-    <!-- Окно деталей тестирования -->
     <div id="test-review-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
-            
-            <!-- Шапка -->
-            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
+        <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">       
+            <div class="p-4 bg-[var(--bg-card)] border-b border-[var(--border-color)] flex justify-between items-center">   
                 <div>
                     <span id="test-review-group" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Группа</span>
                     <h3 id="test-review-student-name" class="text-base font-bold text-[var(--text-main)] mt-0.5">ФИО Студента</h3>
                     <p id="test-review-title" class="text-xs text-amber-400 font-semibold">Название теста</p>
                 </div>
-                <button id="btn-close-test-modal" type="button" class="text-[var(--text-main)] hover:text-white p-2 text-lg transition">
-                    <i class="fa-solid fa-xmark"></i>
+
+                <button id="btn-close-test-modal" type="button" class="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-pink-500 hover:bg-pink-500/10 border border-transparent hover:border-pink-500/20 transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <!-- Сводка результата -->
-            <div class="p-4 bg-gray-400/40 border-b border-gray-600 grid grid-cols-3 gap-4 text-center">
-                <div class="p-2.5 rounded-xl bg-gray-400/40 border border-gray-400/40">
+            <div class="p-4 bg-[var(--bg-main)] border-b border-[var(--border-color)] grid grid-cols-3 gap-4 text-center">
+                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
                     <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Набранный балл</div>
                     <div id="test-review-score" class="text-lg font-bold font-mono text-emerald-600 mt-0.5">0%</div>
                 </div>
-                <div class="p-2.5 rounded-xl bg-gray-400/40 border border-gray-400/40">
+                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
                     <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Затрачено времени</div>
                     <div id="test-review-duration" class="text-lg font-bold font-mono text-blue-600 mt-0.5">00:00</div>
                 </div>
-                <div class="p-2.5 rounded-xl bg-gray-400/40 border border-gray-400/40">
+                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
                     <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Дата сдачи</div>
-                    <div id="test-review-date" class="text-xs font-semibold text-[var(--text-main)] mt-1.5">01.01.2026</div>
+                    <div id="test-review-date" class="text-lg font-semibold font-mono text-red-600 mt-0.5">01.01.2026</div>
                 </div>
             </div>
 
-            <!-- Список вопросов и ответов -->
             <div class="flex-1 overflow-y-auto p-6 space-y-4">
                 <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">Разбор ответов на вопросы</h4>
                 <div id="test-questions-breakdown" class="space-y-3"></div>
             </div>
-
-            <div class="p-4 border-t border-gray-700 bg-gray-500/50 flex justify-end">
-                <button id="btn-cancel-test-review" type="button" class="px-5 py-2 bg-red-600 hover:bg-red-400 text-white rounded-xl text-xs font-semibold transition">
-                    Закрыть
-                </button>
-            </div>
-
         </div>
     </div>
 

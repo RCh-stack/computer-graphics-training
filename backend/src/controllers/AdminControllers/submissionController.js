@@ -116,6 +116,7 @@ async function getTestSubmissions(req, res) {
                 ts.test_id,
                 ts.score_percent,
                 ts.user_answers,
+                ts.started_in,
                 ts.completed_at,
                 u.first_name,
                 u.last_name,
