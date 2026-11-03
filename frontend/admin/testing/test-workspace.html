@@ -4,19 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Конструктор теста | VirtualLab Edu</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../../style.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-
-    <!-- Верхняя панель управления -->
     <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="index.html" class="text-xs text-pink-400 hover:underline flex items-center gap-2">
                 <i class="fa-solid fa-arrow-left"></i> К списку тестов
             </a>
+
             <div class="flex items-center gap-3">
                 <button id="btn-save-test" class="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-pink-600/20 flex items-center gap-2">
                     <i class="fa-solid fa-floppy-disk"></i> Сохранить тест
@@ -26,9 +23,7 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            <!-- ЛЕВАЯ КОЛОНКА: Навигация по вопросам -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">        
             <aside class="lg:col-span-3 space-y-4">
                 <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-3">
                     <div class="flex justify-between items-center border-b border-gray-700/60 pb-2">
@@ -36,10 +31,7 @@
                         <span id="questions-counter" class="text-xs font-mono text-pink-400 font-bold">0</span>
                     </div>
 
-                    <!-- Панель номеров вопросов -->
-                    <div id="questions-nav-list" class="grid grid-cols-4 gap-2 max-h-[400px] overflow-y-auto pr-1">
-                        <!-- Динамические кнопки 1, 2, 3... -->
-                    </div>
+                    <div id="questions-nav-list" class="grid grid-cols-4 gap-2 max-h-[400px] overflow-y-auto pr-1"></div>
 
                     <button id="btn-add-question" type="button" class="w-full py-2.5 bg-[var(--bg-card)] hover:bg-pink-500 text-black border border-pink-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 mt-2">
                         <i class="fa-solid fa-plus"></i> Добавить вопрос
@@ -47,7 +39,6 @@
                 </div>
             </aside>
 
-            <!-- ЦЕНТРАЛЬНАЯ КОЛОНКА: Редактирование выбранного вопроса -->
             <section class="lg:col-span-6 space-y-4">
                 <div id="editor-empty-state" class="hidden bg-[var(--bg-card)] p-12 rounded-2xl border border-gray-700 text-center text-[var(--text-main)] text-xs">
                     Вопросы пока не созданы. Нажмите «Добавить вопрос» слева.
@@ -61,15 +52,17 @@
                         </button>
                     </div>
 
-                    <!-- Текст вопроса -->
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Формулировка вопроса</label>
+                        <button type="button" onclick="openMathEditorFor('q-text')" class="text-xs text-pink-400 hover:text-pink-300 hover:underline flex ml-auto items-center gap-1">
+                            <i class="fa-solid fa-calculator"></i> Формула
+                        </button>
                         <textarea id="q-text" rows="3" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Введите условие задачи или вопрос..."></textarea>
                     </div>
 
-                    <!-- Выбор типа ответа -->
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Тип ответа</label>
+
                         <select id="q-type" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500">
                             <option value="single_choice">Выбор из вариантов (Single Choice)</option>
                             <option value="text_input">Текстовый ответ (Text Input)</option>
@@ -77,26 +70,22 @@
                         </select>
                     </div>
 
-                    <!-- Блок параметров вариантов ответа (для single_choice) -->
                     <div id="options-manager-block" class="space-y-3 pt-2">
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)]">
                             Варианты ответов (отметьте правильный):
                         </label>
-                        <div id="options-list-container" class="space-y-2">
-                            <!-- Список вариантов с радиокнопками -->
-                        </div>
+                        <div id="options-list-container" class="space-y-2"></div>
+
                         <button id="btn-add-option" type="button" class="text-xs text-pink-400 hover:underline font-semibold flex items-center gap-1 pt-1">
                             <i class="fa-solid fa-plus"></i> Добавить вариант
                         </button>
                     </div>
 
-                    <!-- Блок ввода правильного ответа (для text_input / numeric_input) -->
                     <div id="direct-answer-block" class="hidden pt-2">
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Точный правильный ответ</label>
                         <input type="text" id="q-direct-correct" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Например: 42 или vec3(1.0)">
                     </div>
 
-                    <!-- Дополнительно: Код и Медиа -->
                     <div class="border-t border-gray-700/60 pt-4 space-y-3">
                         <div>
                             <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1"><i class="fa-solid fa-code mr-1"></i> Фрагмент кода (C++ / GLSL)</label>
@@ -110,13 +99,16 @@
 
                         <div>
                             <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Пояснение к решению</label>
+                            <button type="button" onclick="openMathEditorFor('q-explanation')" class="text-xs text-pink-400 hover:text-pink-300 hover:underline flex ml-auto items-center gap-1">
+                                <i class="fa-solid fa-calculator"></i> Формула
+                            </button>
+
                             <input type="text" id="q-explanation" class="w-full px-3.5 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Объяснение, показываемое после сдачи теста">
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- ПРАВАЯ КОЛОНКА: Настройки самого теста -->
             <aside class="lg:col-span-3 space-y-4">
                 <div class="bg-[var(--bg-card)] p-5 rounded-2xl border border-gray-700 space-y-4">
                     <h3 class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider border-b border-gray-700/60 pb-2">Параметры теста</h3>
@@ -155,7 +147,73 @@
         </div>
     </main>
 
+    <div id="math-editor-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl w-full max-w-lg p-6 space-y-5 shadow-2xl animate-fade-in">
+    
+            <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+                <h3 class="text-base font-bold text-[var(--text-main)]">Конструктор формул</h3>
+                <button id="btn-close-math-modal" type="button" class="text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+    
+            <div>
+                <label class="block text-xs font-semibold text-[var(--text-muted)] mb-2">Введите или соберите формулу:</label>
+                <math-field id="formula-input-field"
+                    class="w-full p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)] text-lg focus:outline-none focus:border-pink-500">
+                    \mathbf{a} \cdot \mathbf{b}
+                </math-field>
+            </div>
+    
+            <div class="space-y-1.5">
+                <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Быстрые символы:</label>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" onclick="insertSymbol('\\cdot')"
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">•
+                        Скаляр
+                    </button>
+
+                    <button type="button" onclick="insertSymbol('\\times')"
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">×
+                        Векторное
+                    </button>
+                    
+                    <button type="button" onclick="insertSymbol('\\mathbf{v}')"
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">v
+                        Вектор
+                    </button>
+
+                    <button type="button" onclick="insertSymbol('\\frac{a}{b}')"
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">a/b
+                        Дробь
+                    </button>
+
+                    <button type="button" onclick="insertSymbol('\\sqrt{x}')"
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">√
+                        Корень
+                    </button>
+                </div>
+            </div>
+    
+            <div class="flex justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
+                <button id="btn-cancel-math" type="button"
+                    class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold">
+                    Отмена
+                </button>
+
+                <button id="btn-insert-math" type="button"
+                    class="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20">
+                    Добавить в строку
+                </button>
+            </div>  
+        </div>
+    </div>
+
     <script src="src/loader.js"></script>
     <script src="src/workspace.js"></script>
+    <script src="https://unpkg.com/mathlive"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

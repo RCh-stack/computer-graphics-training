@@ -28,6 +28,7 @@ function initQuillEditor() {
                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                 ['blockquote', 'code-block'],
                 ['link', 'image'],
+                ['formula'],
                 ['clean']
             ]
         }

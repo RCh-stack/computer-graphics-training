@@ -120,21 +120,13 @@ function renderCurrentQuestion() {
     const qTextElem = document.getElementById('question-text');
     qTextElem.innerHTML = q.question_text;
     
-    //if (window.renderMathInElement) {
-    //    renderMathInElement(qTextElem, {
-      //      delimiters: [
-        //        {left: '$$', right: '$$', display: true},
-          //      {left: '$', right: '$', display: false}
-          //  ]
-       // });
-    //}
     if (typeof window.renderMathInElement === 'function') {
         window.renderMathInElement(qTextElem, {
             delimiters: [
-                { left: '$$', right: '$$', display: true },  // Блочные формулы по центру
-                { left: '$', right: '$', display: false }     // Строчные формулы в тексте
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
             ],
-            throwOnError: false // Чтобы ошибочные синтаксисы не ломали JS
+            throwOnError: false
         });
     }
 
@@ -219,7 +211,7 @@ function renderInteractiveOptions(question) {
                 placeholder="Например: ray tracing"
                 class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
             >
-        `;
+        `;    
         optionsContainer.appendChild(wrapper);
 
         const input = wrapper.querySelector('#text-answer-input');
@@ -257,6 +249,16 @@ function renderInteractiveOptions(question) {
                     <span class="text-sm font-medium">${opt.text}</span>
                 </div>
             `;
+
+            if (typeof window.renderMathInElement === 'function') {
+                window.renderMathInElement(label, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ],
+                    throwOnError: false
+                });
+            }
 
             label.addEventListener('click', () => {
                 userAnswers[question.id] = opt.id;

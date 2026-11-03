@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VirtualLab — Теоретический модуль</title>
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 </head>
 <body class="h-screen flex flex-col font-sans overflow-hidden select-none transition-colors duration-200">
-
-    <!-- ВЕРХНИЙ БАР -->
     <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0 z-10">
         <div class="flex items-center space-x-4">
             <a href="../index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold hover:opacity-80 transition">
@@ -31,16 +30,14 @@
         </div>
     </header>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ (3 КОЛОНКИ) -->
     <div class="flex-1 flex overflow-hidden">
-
-        <!-- 1. САЙДБАР: ОГЛАВЛЕНИЕ КУРСА -->
         <aside class="w-64 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex flex-col shrink-0">
             <div class="p-4 border-b border-[var(--border-color)]">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Прогресс курса</span>
                     <span id="overall-progress-text" class="text-[10px] font-mono text-indigo-400 font-bold">0%</span>
                 </div>
+
                 <div class="w-full bg-[var(--bg-card)] h-2 rounded-full overflow-hidden border border-[var(--border-color)]">
                     <div id="overall-progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-500"></div>
                 </div>
@@ -51,27 +48,22 @@
             </nav>
         </aside>
 
-        <!-- 2. ЦЕНТРАЛЬНЫЙ БЛОК: ТЕОРИЯ И КОНТЕНТ -->
         <main id="lesson-content" class="flex-1 overflow-y-auto p-8 space-y-6 bg-[var(--bg-panel)]">
-            <!-- ИНДИКАТОР ЗАГРУЗКИ / КОНТЕНТ УРОКА -->
             <div class="max-w-2xl mx-auto text-[var(--text-muted)] animate-pulse">
                 Загрузка материала урока...
             </div>
         </main>
 
-        <!-- 3. ПРАВЫЙ САЙДБАР: ИНТЕРАКТИВНЫЙ МИНИ-ВИДЖЕТ -->
         <aside class="w-80 bg-[var(--bg-panel)] border-l border-[var(--border-color)] flex flex-col p-4 space-y-4 shrink-0">
             <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Интерактивная модель</h3>
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             </div>
 
-            <!-- ДИНАМИЧЕСКИЙ КОНТЕЙНЕР ДЛЯ ВИДЖЕТОВ -->
             <div id="widget-sidebar-container" class="space-y-4 flex-1 flex flex-col">
                 <div class="text-xs text-[var(--text-muted)] italic">Выберите урок для загрузки интерактивной модели...</div>
             </div>
         </aside>
-
     </div>
 
     <script src="../src/theme.js"></script>

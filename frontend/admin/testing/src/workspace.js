@@ -7,6 +7,7 @@ const testId = new URLSearchParams(window.location.search).get('id');
 
 let questionsState = [];
 let activeQIndex = 0;
+let activeInputTarget = null;
 
 function initEvents() {
     document.getElementById('btn-save-test')?.addEventListener('click', saveTest);
@@ -217,9 +218,14 @@ function renderActiveQuestionEditor() {
                            ${isChecked ? 'checked' : ''} 
                            class="accent-pink-500 cursor-pointer w-4 h-4">
                     <input type="text" 
+                           id = opt_${optIndex + 1}
                            value="${opt.text || ''}" 
                            class="option-text-input flex-1 px-3 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-pink-500" 
                            placeholder="Вариант ${optIndex + 1}">
+                    <button type="button" onclick="openMathEditorFor('opt_${optIndex + 1}')" 
+                        class="p-1.5 text-pink-400 hover:text-pink-300 transition" title="Вставить формулу">
+                        <i class="fa-solid fa-calculator"></i>
+                    </button>
                     <button type="button" class="btn-remove-option text-gray-500 hover:text-red-400 text-xs px-2" data-optindex="${optIndex}">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -339,4 +345,73 @@ async function saveTest() {
         console.error(err);
         Swal.fire('Ошибка', 'Ошибка подключения к серверу', 'error');
     }
+}
+
+window.openMathEditorFor = function(target) {
+    if (typeof target === 'string') {
+        activeInputTarget = document.getElementById(target);
+    } else {
+        activeInputTarget = target;
+    }
+    
+    if (!activeInputTarget) {
+        console.warn('Целевое поле для вставки формулы не найдено');
+        return;
+    }
+
+    const mathField = document.getElementById('formula-input-field');
+    if (mathField) {
+        mathField.value = '\\mathbf{a} \\cdot \\mathbf{b}';
+    }
+
+    document.getElementById('math-editor-modal')?.classList.remove('hidden');
+};
+
+window.insertSymbol = function(latexSnippet) {
+    const mathField = document.getElementById('formula-input-field');
+    if (mathField) {
+        mathField.insert(latexSnippet);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    initMathEditorModalEvents();
+});
+
+function initMathEditorModalEvents() {
+    const modal = document.getElementById('math-editor-modal');
+    const btnInsert = document.getElementById('btn-insert-math');
+    const btnClose = document.getElementById('btn-close-math-modal');
+    const btnCancel = document.getElementById('btn-cancel-math');
+
+    const closeModal = () => modal?.classList.add('hidden');
+
+    btnClose?.addEventListener('click', closeModal);
+    btnCancel?.addEventListener('click', closeModal);
+
+    btnInsert?.addEventListener('click', () => {
+        const mathField = document.getElementById('formula-input-field');
+        if (!mathField || !activeInputTarget) {
+            closeModal();
+            return;
+        }
+
+        const rawLatex = mathField.value;
+        if (!rawLatex || !rawLatex.trim()) {
+            closeModal();
+            return;
+        }
+
+        const formattedFormula = `$${rawLatex.trim()}$`;
+
+        const startPos = activeInputTarget.selectionStart ?? activeInputTarget.value.length;
+        const endPos = activeInputTarget.selectionEnd ?? activeInputTarget.value.length;
+        const currentValue = activeInputTarget.value;
+
+        activeInputTarget.value = currentValue.substring(0, startPos) + formattedFormula + currentValue.substring(endPos);
+
+        activeInputTarget.dispatchEvent(new Event('input', { bubbles: true }));
+
+        closeModal();
+    });
 }
