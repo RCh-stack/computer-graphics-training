@@ -39,6 +39,7 @@ function openReviewModal(sub) {
     document.getElementById('review-student-group').innerText = sub.group_name || 'БЕЗ ГРУППЫ';
     document.getElementById('review-lab-title').innerText = sub.lab_title || 'Лабораторная работа';
     document.getElementById('review-code-container').innerText = sub.submitted_code || '// Код отсутствует';
+    document.getElementById('review-language').innerText = `Отправленный код на ${sub.language}`;
     document.getElementById('review-submitted-at').innerText = new Date(sub.submitted_at).toLocaleString('ru-RU');
     document.getElementById('review-tests-badge').innerText = sub.unit_tests_passed || '0/0';
 
@@ -117,7 +118,7 @@ function initReviewModalEvents() {
                 });
             }
         } catch (error) {
-            console.error('Ошибка сохранения вердикта:', error);
+            console.error('Ошибка сохранения статуса:', error);
         }
     });
 }

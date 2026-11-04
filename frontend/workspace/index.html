@@ -4,12 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VirtualLab — Лабораторные работы</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body class="h-screen flex flex-col font-sans overflow-hidden select-none transition-colors duration-200">
-
-    <!-- ВЕРХНИЙ БАР -->
     <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0 z-10">
         <div class="flex items-center space-x-4">
             <a href="../index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold hover:opacity-80 transition">
@@ -32,22 +29,21 @@
         </div>
     </header>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">
-        
-        <!-- Приветственный блок и статистика -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8 space-y-8">     
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[var(--bg-panel)] border border-[var(--border-color)] p-6 rounded-2xl shadow-lg">
             <div class="space-y-1">
                 <h2 class="text-2xl font-bold tracking-tight">Интерактивные лабораторные работы</h2>
                 <p class="text-xs text-[var(--text-muted)] max-w-2xl">
-                    Дорабатывайте алгоритмы рендеринга на C++, запускайте автоматические юнит-тесты и визуализируйте работу графического ядра.
+                    Дорабатывайте алгоритмы рендеринга, запускайте автоматические юнит-тесты и визуализируйте работу графического ядра.
                 </p>
             </div>
+
             <div class="flex space-x-3 text-center">
                 <div class="bg-[var(--bg-card)] px-4 py-2.5 rounded-xl border border-[var(--border-color)]">
                     <div id="stat-passed-labs" class="text-base font-extrabold text-indigo-400 font-mono">0 / 0</div>
                     <div class="text-[10px] text-[var(--text-muted)] font-semibold uppercase">Пройдено</div>
                 </div>
+
                 <div class="bg-[var(--bg-card)] px-4 py-2.5 rounded-xl border border-[var(--border-color)]">
                     <div id="stat-avg-score" class="text-base font-extrabold text-pink-500 font-mono">0%</div>
                     <div class="text-[10px] text-[var(--text-muted)] font-semibold uppercase">Прогресс</div>
@@ -55,12 +51,11 @@
             </div>
         </div>
 
-        <!-- Сетка лабораторных работ -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="labs-grid">
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="labs-grid"></div>
     </main>
 
     <script src="src/ui.js"></script>
     <script src="../src/theme.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </body>
 </html>

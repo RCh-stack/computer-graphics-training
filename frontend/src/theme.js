@@ -28,6 +28,10 @@ function updateThemeUI(isDark) {
             themeIcon.className = isDark ? 'fa-solid fa-moon w-5' : 'fa-solid fa-sun w-5';
         }
     });
+
+    if (window.monaco && window.monaco.editor) {
+        window.monaco.editor.setTheme(isDark ? 'vs-dark' : 'vs-light');
+    }
 }
 
 function toggleTheme() {

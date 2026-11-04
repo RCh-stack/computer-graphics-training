@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { getAllLabs, getLabById, runTests, submitLab } = require('../controllers/labController');
+const { getAllLabs, getLabById, saveLab, runTests, submitLab } = require('../controllers/labController');
 const { authenticateToken } = require('../services/jwt');
 
 router.get('/', authenticateToken, getAllLabs);
 
 router.get('/:id', authenticateToken, getLabById);
+
+router.post('/save', authenticateToken, saveLab);
 
 router.post('/run', authenticateToken, runTests);
 

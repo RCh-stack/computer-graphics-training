@@ -1,9 +1,47 @@
+document.getElementById('btn-save-draft')?.addEventListener('click', saveDraft);
 document.getElementById('btn-run')?.addEventListener('click', runCode);
 document.getElementById('btn-submit')?.addEventListener('click', submitCode)
 
+async function saveDraft() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const labId = urlParams.get('id');
+    const code = window.windowEditor ? window.windowEditor.getValue() : '';
+
+    if (!code.trim()) {
+        Swal.fire('Информация', 'Код не может быть пустым', 'info');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        
+        const res = await fetch('/api/v1/labs/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ lab_id: labId, student_code: code })
+        });
+
+        if (res.ok) {
+            Swal.fire({
+                title: 'Сохранено!',
+                text: 'Черновик успешно сохранен',
+                icon: 'success',
+                timer: 1500
+            }).then((result) => {
+                location.reload();     
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка сохранения черновика:', error);
+    }
+}
+
 async function runCode() {
     if (!window.windowEditor) {
-        alert('Редактор кода не инициализирован!');
+        Swal.fire('Ошибка', 'Редактор кода не инициализирован!', 'error');
         return;
     }
 
@@ -11,13 +49,16 @@ async function runCode() {
     const labId = urlParams.get('id');
 
     if (!labId) {
-        alert('Не удалось определить ID лабораторной работы!');
+        Swal.fire('Ошибка', 'Не удалось определить ID лабораторной работы!', 'error');
         return;
     }
 
     const code = window.windowEditor.getValue();   
     const btnRun = document.getElementById('btn-run');
     const wasmBadge = document.getElementById('wasm-status');
+
+    const selectedLang = document.getElementById('language-select')?.value || 'cpp';
+    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' }; 
 
     setRunBtnLoading(true, btnRun, wasmBadge);
 
@@ -32,7 +73,8 @@ async function runCode() {
             },
             body: JSON.stringify({
                 lab_id: labId,
-                compiler: "g++-15",
+                language: selectedLang,
+                compiler: langConfig.compiler,
                 student_code: code
             })
         });
@@ -62,7 +104,7 @@ async function runCode() {
 
 async function submitCode() {
     if (!window.windowEditor) {
-        alert('Редактор кода не инициализирован!');
+        Swal.fire('Ошибка', 'Редактор кода не инициализирован!', 'error');
         return;
     }
 
@@ -70,13 +112,16 @@ async function submitCode() {
     const labId = urlParams.get('id');
 
     if (!labId) {
-        alert('Не удалось определить ID лабораторной работы!');
+        Swal.fire('Ошибка', 'Не удалось определить ID лабораторной работы!', 'error');
         return;
     }
 
     const code = window.windowEditor.getValue();   
     const btnSubmit = document.getElementById('btn-submit');
     const wasmBadge = document.getElementById('wasm-status');
+
+    const selectedLang = document.getElementById('language-select')?.value || 'cpp';
+    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' }; 
 
     setSubmitBtnLoading(true, btnSubmit, wasmBadge);
 
@@ -91,7 +136,8 @@ async function submitCode() {
             },
             body: JSON.stringify({
                 lab_id: labId,
-                compiler: "g++-15",
+                language: selectedLang,
+                compiler: langConfig.compiler,
                 student_code: code
             })
         });
@@ -101,6 +147,17 @@ async function submitCode() {
         }
 
         const result = await response.json();
+
+        if (result.status === 'compile_error') {
+            Swal.fire({
+                title: 'Ошибка компиляции',
+                html: `<pre class="text-left text-xs bg-gray-950 p-3 rounded-xl border border-gray-700 font-mono text-red-400 overflow-x-auto max-h-60">${result.compile_output || 'Не удалось скомпилировать код.'}</pre><p class="text-xs text-gray-400 mt-2">Код сохранен как черновик.</p>`,
+                icon: 'error',
+                confirmButtonColor: '#ec4899'
+            });
+            return;
+        }
+
         const submission = result.submission;
 
         await showLabResultModal({

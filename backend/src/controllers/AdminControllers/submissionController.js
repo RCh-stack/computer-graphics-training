@@ -21,6 +21,7 @@ async function getLabSubmissions(req, res) {
                 ls.user_id,
                 ls.lab_id,
                 ls.submitted_code,
+                ls.language,
                 ls.unit_tests_passed,
                 ls.unit_tests_details,
                 ls.teacher_comment,

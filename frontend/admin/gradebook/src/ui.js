@@ -218,14 +218,18 @@ function renderLabsGradebook(students, labs) {
                 return `<td class="p-3 text-center text-[var(--text-main)]">—</td>`;
             }
 
-            let badgeStyle = 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20';
+            let badgeStyle = '';
 
             if (sub.status === 'PASSED') {
                 badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
             } else if (sub.status === 'REVISION') {
-                badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20';
+                badgeStyle = 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20';
             } else if (sub.status === 'REJECTED') {
                 badgeStyle = 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
+            } else if (sub.status === 'SUBMITTED') {
+                badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20';
+            } else {
+                badgeStyle = 'bg-gray-500/10 text-gray-400 border-gray-500/30 hover:bg-gray-500/20'
             }
 
             return `

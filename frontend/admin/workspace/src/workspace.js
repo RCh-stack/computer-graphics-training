@@ -11,11 +11,26 @@ let labState = {
 };
 let activeTCIndex = 0;
 
+let adminTemplatesState = {
+    cpp: '',
+    python: '',
+    csharp: '',
+    go: ''
+};
+let activeAdminLang = 'cpp';
+
 function initEvents() {
     document.getElementById('btn-save-lab')?.addEventListener('click', saveLab);
     document.getElementById('btn-add-req')?.addEventListener('click', addRequirement);
     document.getElementById('btn-add-testcase')?.addEventListener('click', addNewTestCase);
     document.getElementById('btn-delete-active-tc')?.addEventListener('click', deleteActiveTestCase);
+
+    document.getElementById('admin-template-lang-select')?.addEventListener('change', (e) => {
+        adminTemplatesState[activeAdminLang] = document.getElementById('lab-template-code').value;
+        
+        activeAdminLang = e.target.value;
+        document.getElementById('lab-template-code').value = adminTemplatesState[activeAdminLang] || '';
+    });
 
     document.getElementById('testcase-nav-list')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.tc-nav-btn');
@@ -60,7 +75,27 @@ async function loadLabDetails() {
             document.getElementById('lab-order').value = lab.order || 0;
             document.getElementById('lab-is-unlocked').checked = lab.is_unlocked;
             document.getElementById('lab-description').value = lab.description || '';
-            document.getElementById('lab-template-code').value = lab.template_code || '';
+
+            let rawTemplate = lab.template_code;
+            if (typeof rawTemplate === 'string') {
+                try {
+                    const parsed = JSON.parse(rawTemplate);
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        adminTemplatesState = { cpp: '', python: '', csharp: '', go: '', ...parsed };
+                    } else {
+                        adminTemplatesState.cpp = rawTemplate;
+                    }
+                } catch {
+                    adminTemplatesState.cpp = rawTemplate;
+                }
+            } else if (typeof rawTemplate === 'object' && rawTemplate !== null) {
+                adminTemplatesState = { cpp: '', python: '', csharp: '', go: '', ...rawTemplate };
+            }
+
+            activeAdminLang = 'cpp';
+            const langSelect = document.getElementById('admin-template-lang-select');
+            if (langSelect) langSelect.value = 'cpp';
+            document.getElementById('lab-template-code').value = adminTemplatesState.cpp || '';
 
             let taskJson = lab.task_json;
             if (typeof taskJson === 'string') {
@@ -83,8 +118,8 @@ async function loadLabDetails() {
             renderTestCaseNav();
             renderActiveTestCaseEditor();
         }
-    } catch (err) {
-        console.error('Ошибка загрузки работы:', err);
+    } catch (error) {
+        console.error('Ошибка загрузки работы:', error);
     }
 }
 
@@ -216,6 +251,8 @@ async function saveLab() {
     syncActiveTestCaseFromDOM();
     syncRequirementsFromDOM();
 
+    adminTemplatesState[activeAdminLang] = document.getElementById('lab-template-code').value;
+
     const token = localStorage.getItem('authToken');
 
     const payload = {
@@ -224,7 +261,9 @@ async function saveLab() {
         difficulty: document.getElementById('lab-difficulty').value,
         order: parseInt(document.getElementById('lab-order').value) || 0,
         isUnlocked: document.getElementById('lab-is-unlocked').checked,
-        templateCode: document.getElementById('lab-template-code').value,
+        
+        templateCode: JSON.stringify(adminTemplatesState),
+        
         taskJson: {
             title: document.getElementById('task-title').value,
             instruction: document.getElementById('task-instruction').value,
