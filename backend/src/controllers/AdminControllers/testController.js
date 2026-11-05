@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { sendGlobalNotification } = require('../../services/notification');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -78,6 +79,14 @@ async function createTest(req, res) {
             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6)
             RETURNING id;
         `, [title, description || '', difficulty || 'Легкий', timeLimit || 15, isUnlocked !== false, nextOrder]);
+
+        await sendGlobalNotification({
+            title: `Новое тестирование: ${title}`,
+            message: 'Преподаватель опубликовал новое тестирование для прохождения.',
+            type: 'NEW_TEST',
+            link: `testing/test-workspace.html?id=${result.rows[0].id}`,
+            createdBy: req.user.id
+        });
 
         return res.json({ status: 'success', testId: result.rows[0].id });
     } catch (error) {

@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { sendUserNotification } = require('../services/notification');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -107,7 +108,7 @@ async function getTeachers(req, res) {
  */
 async function approveStudent(req, res) {
    
-    const { userId, groupId } = req.body;
+    const { userId, groupId, groupName } = req.body;
 
     const client = getDbClient();
 
@@ -120,6 +121,13 @@ async function approveStudent(req, res) {
              WHERE id = $2;`,
             [groupId || null, userId]
         );
+
+        await sendUserNotification({
+            userId: userId,
+            title: 'Обновление учебной группы',
+            message: `Вас назначили в учебную группу: ${groupName}`,
+            type: 'GROUP_CHANGE'
+        });
 
         return res.json({ status: 'success', message: 'Студент успешно одобрен' });
     } catch (error) {
@@ -154,6 +162,13 @@ async function changeUserRole(req, res) {
             'UPDATE "users" SET role = $1 WHERE id = $2;',
             [role, userId]
         );
+
+        await sendUserNotification({
+            userId: userId,
+            title: 'Обновление прав доступа',
+            message: `Вам назначена новая роль на платформе: ${role}`,
+            type: 'ROLE_CHANGE'
+        });
 
         return res.json({ 
             status: 'success', 
@@ -218,7 +233,7 @@ async function createGroup(req, res) {
  * PUT /api/v1/admin/users/group
  */
 async function updateUserGroup(req, res) {
-    const { userId, groupId } = req.body;
+    const { userId, groupId, groupName } = req.body;
 
     if (!userId) {
         return res.status(400).json({ status: 'error', message: 'Не указан ID пользователя' });
@@ -237,9 +252,16 @@ async function updateUserGroup(req, res) {
             WHERE id = $2;
         `, [targetGroupId, userId]);
 
+        await sendUserNotification({
+            userId: userId,
+            title: 'Обновление учебной группы',
+            message: `Вас назначили в учебную группу: ${groupName}`,
+            type: 'GROUP_CHANGE'
+        });
+
         return res.json({
             status: 'success',
-            message: 'Академическая группа успешно обновлена'
+            message: 'Учебная группа успешно обновлена'
         });
     } catch (error) {
         console.error('Ошибка изменения группы пользователя:', error);

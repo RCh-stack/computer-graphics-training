@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { sendGlobalNotification } = require('../../services/notification');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -68,6 +69,14 @@ async function createLab(req, res) {
             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)
             RETURNING id;
         `, [title, description || '', difficulty || 'Средний', isUnlocked !== false, order || 0, templateCode || '', taskJsonString, testCasesString]);
+
+        await sendGlobalNotification({
+            title: `Новая лабораторная работа: ${title}`,
+            message: 'Преподаватель опубликовал новую лабораторную работу.',
+            type: 'NEW_LAB',
+            link: `workspace/lab-workspace.html?id=${result.rows[0].id}`,
+            createdBy: req.user.id
+        });
 
         return res.json({ status: 'success', labId: result.rows[0].id });
     } catch (error) {

@@ -4,41 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Обучающая система: Ray Tracing и Path Tracing</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-
     <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <!-- Логотип -->
             <div class="flex items-center space-x-3 cursor-pointer navigation-link" data-target="dashboard">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
                 <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></span>
             </div>
 
-            <!-- Правый блок: Профиль и Выпадающее меню -->
             <div class="relative">
                 <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-gray-800/20 border border-transparent hover:border-gray-700 transition">
                     <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center border border-pink-500/30" id="user-avatar">
                         U
                     </div>
+
                     <div class="hidden sm:block text-left">
                         <div id="user-name" class="text-sm font-semibold leading-tight text-[var(--text-main)]">Студент</div>
                         <div id="user-role" class="text-[11px] text-gray-400 capitalize">Пользователь</div>
                     </div>
+
                     <i class="fa-solid fa-chevron-down text-xs text-gray-400 ml-1"></i>
                 </button>
 
-                <!-- Выпадающее меню (Dropdown) -->
                 <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-700/50">
-                    
-                    <!-- Данные пользователя -->
                     <div class="px-4 py-2.5">
                         <p id="dropdown-user-email" class="text-xs text-gray-400 truncate">student@edu.ru</p>
                     </div>
 
-                    <!-- Пункты меню -->
                     <div class="py-1">
                         <a href="profile/index.html" class="flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
                             <i class="fa-solid fa-chart-line w-5 text-gray-400"></i>
@@ -50,7 +45,6 @@
                         </button>
                     </div>
 
-                    <!-- Выход -->
                     <div class="py-1">
                         <button id="logout-btn" class="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition">
                             <i class="fa-solid fa-right-from-bracket w-5 text-red-400"></i>
@@ -62,13 +56,13 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        
+    <main class="max-w-7xl mx-auto px-4 py-8">     
         <section id="dashboard" class="page active space-y-8 animate-fade-in">
             <div class="text-center max-w-3xl mx-auto my-6">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-[var(--text-main)] mb-4">
                     Изучение алгоритмов реалистичного рендеринга
                 </h1>
+
                 <p class="text-[var(--text-main)] text-lg">
                     Добро пожаловать в учебно-демонстрационную систему. Выберите модуль для начала работы.
                 </p>
@@ -77,6 +71,7 @@
                     <button id="btn-mode-student" type="button" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-pink-600 text-white shadow-md">
                         <i class="fa-solid fa-graduation-cap mr-1.5"></i> Обучение
                     </button>
+
                     <button id="btn-mode-admin" type="button" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition text-gray-400 hover:text-[var(--text-main)]">
                         <i class="fa-solid fa-sliders mr-1.5"></i> Управление
                     </button>
@@ -89,9 +84,11 @@
                         <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-book-open text-blue-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Теоретический блок</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Основы геометрической оптики, уравнение рендеринга, различие между Ray Tracing и Path Tracing.</p>
                     </div>
+
                     <button onclick="launchModule('theory/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-blue-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Читать теорию</button>
                 </div>
 
@@ -100,9 +97,11 @@
                         <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-flask text-emerald-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Лабораторные работы</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Практические задания для закрепления материала.</p>
                     </div>
+
                     <button onclick="launchModule('workspace/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-emerald-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Открыть задачи</button>
                 </div>
 
@@ -111,9 +110,11 @@
                         <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-list-check text-amber-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Тестирование</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Проверка полученных знаний по алгоритмам трассировки.</p>
                     </div>
+
                     <button onclick="launchModule('testing/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-amber-600 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition" data-target="testing">Пройти тест</button>
                 </div>
 
@@ -122,9 +123,11 @@
                         <div class="w-12 h-12 rounded-lg bg-pink-500/10 flex items-center justify-center mb-4">
                             <i class="fa-solid fa-display text-pink-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Демонстрация</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Интерактивный симулятор трассировки. Сравнение Ray Tracing и Path Tracing в реальном времени.</p>
                     </div>
+
                     <button onclick="launchModule('demo/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-pink-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Запустить демо</button>
                 </div>
             </div>    
@@ -135,6 +138,7 @@
                         <div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
                             <i class="fa-solid fa-book-open text-blue-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Теоретический блок</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление теоретическим материалом.</p>
                     </div>
@@ -146,6 +150,7 @@
                         <div class="w-12 h-12 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-4 border border-emerald-500/20">
                             <i class="fa-solid fa-flask text-emerald-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Лабораторные работы</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой лабораторных работ, создание и редактирование практических работ.</p>
                     </div>
@@ -157,6 +162,7 @@
                         <div class="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center mb-4 border border-amber-500/20">
                             <i class="fa-solid fa-list-check text-amber-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Тестирование</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление подсистемой тестирования, создание и редактирование тестов.</p>
                     </div>
@@ -168,18 +174,91 @@
                         <div class="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
                             <i class="fa-solid fa-user-shield text-red-400 text-xl"></i>
                         </div>
+
                         <h3 class="text-xl font-bold text-[var(--text-main)] mb-2">Администрирование</h3>
                         <p class="text-[var(--text-main)] text-sm leading-relaxed">Управление группами, активация студентов, проверка результатов и выдача прав.</p>
                     </div>
                     <button onclick="launchModule('./admin/users/index.html')" class="navigation-link mt-6 w-full bg-[var(--bg-card)] hover:bg-red-500 text-[var(--text-main)] font-medium py-2 px-4 rounded-lg transition">Управление курсом</button>
                 </div>
             </div>
+
+            <div class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 shadow-xl space-y-4 mt-10">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-color)] pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
+                            <i class="fa-solid fa-newspaper text-lg"></i>
+                        </div>
+
+                        <div>
+                            <h2 class="text-lg font-bold text-[var(--text-main)]">Лента новостей и уведомлений</h2>
+                            <p class="text-xs text-[var(--text-muted)]">Объявления курса и персональные результаты</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <select id="news-filter-type" class="bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs rounded-xl px-3 py-2 text-[var(--text-main)] focus:outline-none focus:border-pink-500">
+                            <option value="ALL">Все события</option>
+                            <option value="PERSONAL">Личные уведомления</option>
+                            <option value="ANNOUNCEMENT">Объявления курса</option>
+                        </select>
+
+                        <button id="btn-open-create-news" class="hidden px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus"></i> Опубликовать
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="news-feed-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                <div class="text-center text-xs text-[var(--text-muted)] py-6">Загрузка ленты...</div>
+            </div>
+        </div>           
         </section>
     </main>
 
-    <script src="src/auth.js"></script>
+    <div id="create-news-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl animate-fade-in">
+            
+            <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
+                <h3 class="text-sm font-bold text-[var(--text-main)]">Новое объявление для курса</h3>
+                <button id="btn-close-news-modal" type="button" class="text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase text-[var(--text-muted)] mb-1">Заголовок</label>
+                    <input type="text" id="news-title-input" class="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-pink-500" placeholder="Например: Дедлайн по лабораторной №2">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase text-[var(--text-muted)] mb-1">Текст сообщения</label>
+                    <textarea id="news-message-input" rows="4" class="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-pink-500" placeholder="Подробная информация для всех студентов..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase text-[var(--text-muted)] mb-1">Ссылка (необязательно)</label>
+                    <input type="text" id="news-link-input" class="w-full px-3 py-2 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-pink-500" placeholder="testing/index.html">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2 border-t border-[var(--border-color)]">
+                <button id="btn-cancel-news" type="button" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold">
+                    Отмена
+                </button>
+                <button id="btn-publish-news" type="button" class="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20">
+                    Опубликовать
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="src/ui.js"></script>
+    <script src="src/auth.js"></script>
+    <script src="src/news.js"></script>
     <script src="src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

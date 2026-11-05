@@ -1,5 +1,6 @@
 const { Client } = require('pg');
 const { resolveOptionText } = require('../../services/textHandler');
+const { sendUserNotification } = require('../../services/notification');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -31,7 +32,8 @@ async function getLabSubmissions(req, res) {
                 u.last_name,
                 u.email,
                 g.name as group_name,
-                l.title as lab_title
+                l.title as lab_title,
+                l."order" as order
             FROM "lab_submissions" ls
             JOIN "users" u ON ls.user_id = u.id
             LEFT JOIN "groups" g ON u.group_id = g.id
@@ -82,11 +84,36 @@ async function reviewLabSubmission(req, res) {
     try {
         await client.connect();
 
-        await client.query(`
+        const updateRes = await client.query(`
             UPDATE "lab_submissions"
             SET status = $1, teacher_comment = $2
-            WHERE id = $3;
+            WHERE id = $3
+            RETURNING user_id, lab_id;
         `, [status, teacherComment || '', id]);
+
+        if (updateRes.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Запись о сдаче работы не найдена' });
+        }
+
+        const { user_id, lab_id } = updateRes.rows[0];
+
+        const labRes = await client.query(`
+            SELECT title, "order" FROM "labs" WHERE id = $1 LIMIT 1;
+        `, [lab_id]);
+
+        const lab = labRes.rows[0] || {};
+        const labOrder = lab.order !== undefined ? lab.order : '';
+        const labTitle = lab.title || 'Лабораторная работа';
+
+        const statusText = status === 'PASSED' ? 'Принято ✅' : status === 'REVISION' ? 'На доработку ⚠️' : 'Отклонена ❌';
+    
+        await sendUserNotification({
+            userId: user_id,
+            title: `Статус лабораторной работы №${labOrder} (${labTitle})`,
+            message: `Ваша работа переведена в статус "${statusText}". ${teacherComment ? 'Комментарий: ' + teacherComment : ''}`,
+            type: 'LAB_STATUS',
+            link: `workspace/lab-workspace.html?id=${lab_id}`
+        });
 
         return res.json({ 
             status: 'success', 

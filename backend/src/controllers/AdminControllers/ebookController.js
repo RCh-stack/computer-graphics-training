@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { sendGlobalNotification } = require('../../services/notification');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -71,6 +72,14 @@ async function createChapter(req, res) {
             VALUES (gen_random_uuid()::text, $1, $2)
             RETURNING id, title, "order";
         `, [title, nextOrder]);
+
+        await sendGlobalNotification({
+            title: `Новый раздел электронного учебника: ${title}`,
+            message: 'Опубликован новый раздел в электронном учебнике.',
+            type: 'NEW_CHAPTER',
+            link: `theory/index.html`,
+            createdBy: req.user.id
+        });
 
         return res.json({ status: 'success', chapter: result.rows[0] });
     } catch (error) {
@@ -193,6 +202,14 @@ async function createLesson(req, res) {
             INSERT INTO "theory_articles" (id, chapter_id, title, content_path, widgets_config, "order")
             VALUES ($1, $2, $3, $4, $5::jsonb, $6);
         `, [lessonId, chapterId, title, relativePath, JSON.stringify([]), nextOrder]);
+
+         await sendGlobalNotification({
+            title: `Новый урок: ${title}`,
+            message: 'Опубликован новый урок в разделе электронного учебника.',
+            type: 'NEW_LESSON',
+            link: `theory/index.html`,
+            createdBy: req.user.id
+        });
 
         return res.json({ status: 'success', lessonId });
     } catch (error) {

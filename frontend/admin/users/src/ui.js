@@ -137,6 +137,9 @@ async function approveStudent(userId) {
     const select = document.getElementById(`group-select-${userId}`);
     const groupId = select ? select.value : null;
 
+    const selectedGroup = cachedGroups.find(g => String(g.id) === String(groupId));
+    const groupName = selectedGroup ? selectedGroup.name : 'Без группы';
+
     const token = localStorage.getItem('authToken');
 
     const response = await fetch(`/api/v1/admin/users/approve`, {
@@ -145,7 +148,7 @@ async function approveStudent(userId) {
             'Content-Type': 'application/json',
             'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ userId, groupId })
+        body: JSON.stringify({ userId, groupId, groupName })
     });
 
     if (response.ok) {
@@ -295,13 +298,16 @@ async function changeUserGroup(userId, currentGroupId, userName) {
     if (isConfirmed) {
         const token = localStorage.getItem('authToken');
 
+        const selectedGroup = cachedGroups.find(g => String(g.id) === String(selectedGroupId));
+        const groupName = selectedGroup ? selectedGroup.name : 'Без группы';
+
         const response = await fetch(`/api/v1/admin/users/group`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': token ? `Bearer ${token}` : ''
             },
-            body: JSON.stringify({ userId, groupId: selectedGroupId })
+            body: JSON.stringify({ userId, groupId: selectedGroupId, groupName })
         });
 
         if (response.ok) {
