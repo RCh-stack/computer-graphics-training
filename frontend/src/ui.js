@@ -27,3 +27,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     });          
 });
+
+async function apiFetch(url, options = {}) {
+    const token = localStorage.getItem('authToken');
+    
+    options.headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...options.headers
+    };
+
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+        const data = await response.clone().json().catch(() => ({}));
+        if (data.status === 'ROLE_CHANGED' || data.status === 'ACCOUNT_DISABLED') {
+            if (typeof forceLogout === 'function') {
+                forceLogout(data.message);
+            } else {
+                localStorage.clear();
+                window.location.href = '/frontend/authorization/index.html';
+            }
+            throw new Error(data.message);
+        }
+    }
+
+    return response;
+}
