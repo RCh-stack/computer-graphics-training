@@ -12,11 +12,13 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../../index.html" class="flex items-center space-x-3 cursor-pointer">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
-                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Журнал</span></span>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/20 text-pink-400 border border-pink-500/30">Журнал</span></span>
             </a>
             <div class="flex items-center gap-4">
                 <a href="../users/index.html" class="text-xs text-pink-400 hover:underline"><i class="fa-solid fa-users"></i> Пользователи</a>
-                <a href="../../index.html" class="text-xs text-[var(--text-main)] hover:text-black transition"><i class="fa-solid fa-arrow-left"></i> Главная</a>
+                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
+                    Светлая
+                </button>
             </div>
         </div>
     </header>
@@ -189,6 +191,7 @@
 
     <script src="src/ui.js"></script>
     <script src="src/submissions.js"></script>
+    <script src="../../src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

@@ -39,7 +39,7 @@ async function loadTests() {
                 : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20"><i class="fa-solid fa-lock mr-1"></i> Заблокирован</span>`;
 
             return `
-                <div class="bg-[var(--bg-card)] border border-gray-700/80 rounded-2xl p-5 hover:border-pink-500/50 transition-all flex flex-col justify-between space-y-4">
+                <div class="bg-[var(--bg-card)] border border-gray-700/80 rounded-2xl p-5 hover:border-amber-500/50 transition-all flex flex-col justify-between space-y-4">
                     <div class="space-y-2">
                         <div class="flex justify-between items-start gap-2">
                             <h3 class="font-bold text-base text-[var(--text-main)]">${test.title}</h3>
@@ -49,13 +49,13 @@ async function loadTests() {
                     </div>
 
                     <div class="flex items-center gap-4 text-xs text-[var(--text-main)] pt-2 border-t border-gray-700/50 font-mono">
-                        <div><i class="fa-solid fa-clock text-pink-400 mr-1"></i> ${test.time_limit || 15} мин</div>
-                        <div><i class="fa-solid fa-signal text-pink-400 mr-1"></i> ${test.difficulty || 'Средний'}</div>
-                        <div><i class="fa-solid fa-circle-question text-pink-400 mr-1"></i> ${test.questions_count || 0} вопр.</div>
+                        <div><i class="fa-solid fa-clock text-amber-500 mr-1"></i> ${test.time_limit || 15} мин</div>
+                        <div><i class="fa-solid fa-signal text-amber-500 mr-1"></i> ${test.difficulty || 'Средний'}</div>
+                        <div><i class="fa-solid fa-circle-question text-amber-500 mr-1"></i> ${test.questions_count || 0} вопр.</div>
                     </div>
 
                     <div class="flex gap-2 pt-2">
-                        <a href="test-workspace.html?id=${test.id}" class="flex-1 text-center py-2 bg-pink-600/20 hover:bg-pink-600 text-pink-400 hover:text-white font-semibold rounded-xl text-xs transition border border-pink-500/30">
+                        <a href="test-workspace.html?id=${test.id}" class="flex-1 text-center py-2 bg-amber-600/20 hover:bg-amber-600 text-amber-500 hover:text-white font-semibold rounded-xl text-xs transition border border-amber-500/30">
                             <i class="fa-solid fa-pen-to-square mr-1"></i> Редактировать
                         </a>
                         <button data-test-id="${test.id}" data-test-title="${test.title}" class="btn-delete-test px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs transition">

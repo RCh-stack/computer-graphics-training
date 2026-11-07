@@ -158,8 +158,8 @@ function renderQuestionsNav() {
     container.innerHTML = questionsState.map((q, idx) => {
         const isActive = idx === activeQIndex;
         const btnClass = isActive 
-            ? 'bg-pink-600 text-white font-bold border-pink-500 shadow-md shadow-pink-600/30' 
-            : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-pink-500/50';
+            ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-md shadow-amber-600/30' 
+            : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-amber-500/50';
 
         return `
             <button type="button" data-index="${idx}" class="q-nav-btn py-2 px-1 text-xs rounded-xl border transition text-center font-mono ${btnClass}">
@@ -216,14 +216,14 @@ function renderActiveQuestionEditor() {
                            name="active_correct_radio" 
                            value="${opt.id}" 
                            ${isChecked ? 'checked' : ''} 
-                           class="accent-pink-500 cursor-pointer w-4 h-4">
+                           class="accent-amber-500 cursor-pointer w-4 h-4">
                     <input type="text" 
                            id = opt_${optIndex + 1}
                            value="${opt.text || ''}" 
-                           class="option-text-input flex-1 px-3 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-pink-500" 
+                           class="option-text-input flex-1 px-3 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-amber-500" 
                            placeholder="Вариант ${optIndex + 1}">
                     <button type="button" onclick="openMathEditorFor('opt_${optIndex + 1}')" 
-                        class="p-1.5 text-pink-400 hover:text-pink-300 transition" title="Вставить формулу">
+                        class="p-1.5 text-amber-500 hover:text-amber-400 transition" title="Вставить формулу">
                         <i class="fa-solid fa-calculator"></i>
                     </button>
                     <button type="button" class="btn-remove-option text-gray-500 hover:text-red-400 text-xs px-2" data-optindex="${optIndex}">

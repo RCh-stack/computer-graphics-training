@@ -4,18 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VirtualLab — Демонстрация RayTracing C++ WebAssembly</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="../style.css">
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen overflow-hidden flex flex-col font-sans select-none">
-
-    <!-- ВЕРХНИЙ БАР DEMO.HTML -->
     <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-4">
-            <!-- Кнопка "Назад в Hub" -->
-            <a href="index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] hover:bg-gray-200 border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold transition text-[var(--text-main)]">
+            <a href="../index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold hover:opacity-80 transition">
                 <span>←</span>
-                <span>Модули</span>
+                <span>Главная</span>
             </a>
 
             <div class="h-4 w-px bg-[var(--border-color)]"></div>
@@ -42,10 +38,7 @@
         </div>
     </header>
 
-    <!-- ОСНОВНАЯ РАБОЧАЯ ОБЛАСТЬ -->
     <div class="flex-1 flex overflow-hidden">
-
-        <!-- 2. ЛЕВАЯ ПАНЕЛЬ: ИЕРАРХИЯ СЦЕНЫ (OUTLINER) -->
         <aside class="w-64 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex flex-col justify-between shrink-0">
             <div class="p-3 space-y-4 overflow-y-auto">
                 <div class="space-y-2">
@@ -54,6 +47,7 @@
                         <button id="btn-add-sphere" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-pink-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
                             <span>+ Сфера</span>
                         </button>
+
                         <button id="btn-add-light" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-amber-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
                             <span>+ Источник</span>
                         </button>
@@ -65,6 +59,7 @@
                         <span>Объекты сцены</span>
                         <span id="outliner-count" class="text-pink-500 font-mono">0</span>
                     </div>
+
                     <div id="outliner-list" class="space-y-1 max-h-[300px] overflow-y-auto pr-1"></div>
                 </div>
 
@@ -75,6 +70,7 @@
                             <span>FOV (радианы):</span>
                             <span id="val-fov" class="text-pink-500 font-bold">1.50</span>
                         </div>
+
                         <input type="range" id="param-fov" min="0.5" max="2.5" step="0.05" value="1.50" class="w-full accent-pink-500 cursor-pointer">
                     </div>
 
@@ -89,7 +85,6 @@
             </div>
         </aside>
 
-        <!-- 3. ЦЕНТРАЛЬНАЯ ОБЛАСТЬ: CANVAS VIEWPORT & ТЕОРИЯ -->
         <main class="flex-1 bg-[var(--bg-main)] flex flex-col justify-between overflow-hidden relative p-4">
             <div class="flex-1 flex items-center justify-center overflow-hidden">
                 <div class="relative border border-gray-800/80 rounded-2xl bg-black shadow-2xl overflow-hidden max-w-full max-h-full flex items-center justify-center">
@@ -97,7 +92,6 @@
                 </div>
             </div>
 
-            <!-- 4. НИЖНЯЯ ПАНЕЛЬ: ПОШАГОВЫЙ СТЕППЕР -->
             <div class="mt-4 bg-[var(--bg-panel)] border border-black rounded-2xl p-4 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -123,7 +117,6 @@
             </div>
         </main>
 
-        <!-- 5. ПРАВАЯ ПАНЕЛЬ: ИНСПЕКТОР СВОЙСТВ -->
         <aside class="w-72 bg-[var(--bg-panel)] border-l border-gray-800 p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
             <div id="inspector-container" class="space-y-4">
                 <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider pb-2 border-b border-gray-800">
@@ -136,12 +129,12 @@
         </aside>
     </div>
 
-    <!-- Модули Javascript -->
-    <script src="src/config.js"></script>
-    <script src="src/state.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/app.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/config.js"></script>
     <script src="../src/theme.js"></script>
     <script src="/core/engine.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </body>
 </html>

@@ -4,16 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Авторизация | VirtualLab Edu</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen flex items-center justify-center p-4">
-
-    <div class="max-w-md w-full bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl p-8 space-y-6">
-        
-        <!-- Логотип -->
+    <div class="max-w-md w-full bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl p-8 space-y-6">    
         <div class="text-center space-y-2">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-500/10 mb-2">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-3xl"></i>
@@ -22,13 +17,11 @@
             <p id="form-subtitle" class="text-sm text-gray-400">Вход в систему обучения Ray и Path Tracing</p>
         </div>
 
-        <!-- Уведомление об ошибках/информации -->
         <div id="alert-box" class="hidden text-sm rounded-xl p-3 flex items-center space-x-2">
             <i id="alert-icon" class="fa-solid fa-circle-exclamation"></i>
             <span id="alert-message"></span>
         </div>
 
-        <!-- 1. ФОРМА АВТОРИЗАЦИИ -->
         <form id="login-form" class="auth-form space-y-4">
             <div>
                 <label for="login-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email / Логин</label>
@@ -46,6 +39,7 @@
                     <label for="login-password" class="block text-xs font-semibold uppercase text-gray-400">Пароль</label>
                     <button type="button" onclick="showForm('reset')" class="text-xs text-pink-400 hover:underline">Забыли пароль?</button>
                 </div>
+
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-lock"></i>
@@ -66,7 +60,6 @@
             </div>
         </form>
 
-        <!-- 2. ФОРМА РЕГИСТРАЦИИ -->
         <form id="register-form" class="auth-form hidden space-y-4">
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -114,10 +107,7 @@
             </div>
         </form>
 
-        <!-- 3. ФОРМА ВОССТАНОВЛЕНИЯ ПАРОЛЯ -->
-        <form id="reset-form" class="auth-form hidden space-y-4">
-            
-            <!-- Шаг 1: Запрос кода -->
+        <form id="reset-form" class="auth-form hidden space-y-4">           
             <div id="reset-step-1" class="space-y-4">
                 <div>
                     <label for="reset-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Ваш Email</label>
@@ -136,7 +126,6 @@
                 </button>
             </div>
 
-            <!-- Шаг 2: Ввод кода и нового пароля -->
             <div id="reset-step-2" class="hidden space-y-4">
                 <div>
                     <label for="reset-code" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Код подтверждения (6 цифр)</label>
@@ -164,5 +153,7 @@
     </div>
 
     <script src="src/ui.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

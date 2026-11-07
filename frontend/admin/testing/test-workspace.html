@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Конструктор теста | VirtualLab Edu</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
     <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="index.html" class="text-xs text-pink-400 hover:underline flex items-center gap-2">
+            <a href="index.html" class="text-xs text-amber-500 hover:underline flex items-center gap-2">
                 <i class="fa-solid fa-arrow-left"></i> К списку тестов
             </a>
 
             <div class="flex items-center gap-3">
-                <button id="btn-save-test" class="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-pink-600/20 flex items-center gap-2">
+                <button id="btn-save-test" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-amber-600/20 flex items-center gap-2">
                     <i class="fa-solid fa-floppy-disk"></i> Сохранить тест
+                </button>
+
+                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
+                    Светлая
                 </button>
             </div>
         </div>
@@ -28,12 +32,12 @@
                 <div class="bg-[var(--bg-card)] p-4 rounded-2xl border border-gray-700 space-y-3">
                     <div class="flex justify-between items-center border-b border-gray-700/60 pb-2">
                         <span class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">Список вопросов</span>
-                        <span id="questions-counter" class="text-xs font-mono text-pink-400 font-bold">0</span>
+                        <span id="questions-counter" class="text-xs font-mono text-amber-500 font-bold">0</span>
                     </div>
 
                     <div id="questions-nav-list" class="grid grid-cols-4 gap-2 max-h-[400px] overflow-y-auto pr-1"></div>
 
-                    <button id="btn-add-question" type="button" class="w-full py-2.5 bg-[var(--bg-card)] hover:bg-pink-500 text-black border border-pink-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 mt-2">
+                    <button id="btn-add-question" type="button" class="w-full py-2.5 bg-[var(--bg-card)] hover:bg-amber-500 text-[var(--text-main)] border border-amber-500/30 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 mt-2">
                         <i class="fa-solid fa-plus"></i> Добавить вопрос
                     </button>
                 </div>
@@ -46,7 +50,7 @@
 
                 <div id="question-editor-card" class="bg-[var(--bg-card)] p-6 rounded-2xl border border-gray-700 space-y-5">
                     <div class="flex justify-between items-center border-b border-gray-700/60 pb-3">
-                        <h2 class="text-sm font-bold text-pink-400 font-mono" id="active-question-header">Вопрос #1</h2>
+                        <h2 class="text-sm font-bold text-amber-500 font-mono" id="active-question-header">Вопрос №1</h2>
                         <button id="btn-delete-active-q" type="button" class="text-xs text-red-400 hover:underline flex items-center gap-1">
                             <i class="fa-solid fa-trash"></i> Удалить вопрос
                         </button>
@@ -54,16 +58,16 @@
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Формулировка вопроса</label>
-                        <button type="button" onclick="openMathEditorFor('q-text')" class="text-xs text-pink-400 hover:text-pink-300 hover:underline flex ml-auto items-center gap-1">
+                        <button type="button" onclick="openMathEditorFor('q-text')" class="text-xs text-amber-500 hover:text-amber-400 hover:underline flex ml-auto items-center gap-1">
                             <i class="fa-solid fa-calculator"></i> Формула
                         </button>
-                        <textarea id="q-text" rows="3" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Введите условие задачи или вопрос..."></textarea>
+                        <textarea id="q-text" rows="3" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500" placeholder="Введите условие задачи или вопрос..."></textarea>
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Тип ответа</label>
 
-                        <select id="q-type" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500">
+                        <select id="q-type" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500">
                             <option value="single_choice">Выбор из вариантов (Single Choice)</option>
                             <option value="text_input">Текстовый ответ (Text Input)</option>
                             <option value="numeric_input">Числовой ответ (Numeric Input)</option>
@@ -76,34 +80,34 @@
                         </label>
                         <div id="options-list-container" class="space-y-2"></div>
 
-                        <button id="btn-add-option" type="button" class="text-xs text-pink-400 hover:underline font-semibold flex items-center gap-1 pt-1">
+                        <button id="btn-add-option" type="button" class="text-xs text-amber-500 hover:underline font-semibold flex items-center gap-1 pt-1">
                             <i class="fa-solid fa-plus"></i> Добавить вариант
                         </button>
                     </div>
 
                     <div id="direct-answer-block" class="hidden pt-2">
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Точный правильный ответ</label>
-                        <input type="text" id="q-direct-correct" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Например: 42 или vec3(1.0)">
+                        <input type="text" id="q-direct-correct" class="w-full px-3.5 py-2.5 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500" placeholder="Например: 42 или vec3(1.0)">
                     </div>
 
                     <div class="border-t border-gray-700/60 pt-4 space-y-3">
                         <div>
                             <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1"><i class="fa-solid fa-code mr-1"></i> Фрагмент кода (C++ / GLSL)</label>
-                            <textarea id="q-code-snippet" rows="3" class="w-full font-mono px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs text-pink-300 focus:outline-none focus:border-pink-500" placeholder="// Optional code snippet..."></textarea>
+                            <textarea id="q-code-snippet" rows="3" class="w-full font-mono px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs text-amber-500 focus:outline-none focus:border-amber-500" placeholder="// Optional code snippet..."></textarea>
                         </div>
 
                         <div>
                             <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1"><i class="fa-solid fa-image mr-1"></i> Ссылка на изображение (Media URL)</label>
-                            <input type="text" id="q-media-url" class="w-full px-3.5 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="https://example.com/diagram.png">
+                            <input type="text" id="q-media-url" class="w-full px-3.5 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500" placeholder="https://example.com/diagram.png">
                         </div>
 
                         <div>
                             <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Пояснение к решению</label>
-                            <button type="button" onclick="openMathEditorFor('q-explanation')" class="text-xs text-pink-400 hover:text-pink-300 hover:underline flex ml-auto items-center gap-1">
+                            <button type="button" onclick="openMathEditorFor('q-explanation')" class="text-xs text-amber-500 hover:text-amber-400 hover:underline flex ml-auto items-center gap-1">
                                 <i class="fa-solid fa-calculator"></i> Формула
                             </button>
 
-                            <input type="text" id="q-explanation" class="w-full px-3.5 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500" placeholder="Объяснение, показываемое после сдачи теста">
+                            <input type="text" id="q-explanation" class="w-full px-3.5 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500" placeholder="Объяснение, показываемое после сдачи теста">
                         </div>
                     </div>
                 </div>
@@ -115,17 +119,17 @@
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Название</label>
-                        <input type="text" id="test-title" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500">
+                        <input type="text" id="test-title" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500">
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Описание</label>
-                        <textarea id="test-description" rows="2" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500"></textarea>
+                        <textarea id="test-description" rows="2" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500"></textarea>
                     </div>
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Сложность</label>
-                        <select id="test-difficulty" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500">
+                        <select id="test-difficulty" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500">
                             <option value="Легкий">Легкий</option>
                             <option value="Средний">Средний</option>
                             <option value="Сложный">Сложный</option>
@@ -134,11 +138,11 @@
 
                     <div>
                         <label class="block text-[11px] font-semibold uppercase text-[var(--text-main)] mb-1">Таймер (минут)</label>
-                        <input type="number" id="test-time-limit" min="1" value="15" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-pink-500">
+                        <input type="number" id="test-time-limit" min="1" value="15" class="w-full px-3 py-2 bg-[var(--bg-panel)] border border-gray-700 rounded-xl text-xs focus:outline-none focus:border-amber-500">
                     </div>
 
                     <div class="flex items-center gap-2 pt-1">
-                        <input type="checkbox" id="test-is-unlocked" class="w-4 h-4 accent-pink-500 rounded cursor-pointer">
+                        <input type="checkbox" id="test-is-unlocked" class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
                         <label for="test-is-unlocked" class="text-xs text-[var(--text-main)] cursor-pointer">Открыт для прохождения</label>
                     </div>
                 </div>
@@ -161,7 +165,7 @@
             <div>
                 <label class="block text-xs font-semibold text-[var(--text-muted)] mb-2">Введите или соберите формулу:</label>
                 <math-field id="formula-input-field"
-                    class="w-full p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)] text-lg focus:outline-none focus:border-pink-500">
+                    class="w-full p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-main)] text-lg focus:outline-none focus:border-amber-500">
                     \mathbf{a} \cdot \mathbf{b}
                 </math-field>
             </div>
@@ -170,27 +174,27 @@
                 <label class="block text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Быстрые символы:</label>
                 <div class="flex flex-wrap gap-1.5">
                     <button type="button" onclick="insertSymbol('\\cdot')"
-                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">•
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-amber-500 font-mono">•
                         Скаляр
                     </button>
 
                     <button type="button" onclick="insertSymbol('\\times')"
-                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">×
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-amber-500 font-mono">×
                         Векторное
                     </button>
                     
                     <button type="button" onclick="insertSymbol('\\mathbf{v}')"
-                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">v
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-amber-500 font-mono">v
                         Вектор
                     </button>
 
                     <button type="button" onclick="insertSymbol('\\frac{a}{b}')"
-                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">a/b
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-amber-500 font-mono">a/b
                         Дробь
                     </button>
 
                     <button type="button" onclick="insertSymbol('\\sqrt{x}')"
-                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-pink-500 font-mono">√
+                        class="px-2.5 py-1 text-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg hover:border-amber-500 font-mono">√
                         Корень
                     </button>
                 </div>
@@ -203,7 +207,7 @@
                 </button>
 
                 <button id="btn-insert-math" type="button"
-                    class="px-5 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20">
+                    class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-amber-600/20">
                     Добавить в строку
                 </button>
             </div>  
@@ -212,6 +216,7 @@
 
     <script src="src/loader.js"></script>
     <script src="src/workspace.js"></script>
+    <script src="../../src/theme.js"></script>
     <script src="https://unpkg.com/mathlive"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

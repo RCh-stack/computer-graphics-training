@@ -13,9 +13,16 @@
             <a href="index.html" class="text-xs text-emerald-400 hover:underline flex items-center gap-2">
                 <i class="fa-solid fa-arrow-left"></i> К списку лабораторных
             </a>
-            <button id="btn-save-lab" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
-                <i class="fa-solid fa-floppy-disk"></i> Сохранить работу
-            </button>
+
+            <div class="flex items-center gap-4">
+                <button id="btn-save-lab" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Сохранить работу
+                </button>
+
+                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
+                    Светлая
+                </button>
+            </div>
         </div>
     </header>
 
@@ -157,6 +164,7 @@
     </main>
 
     <script src="src/workspace.js"></script>
+    <script src="../../src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>

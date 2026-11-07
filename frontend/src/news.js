@@ -52,24 +52,32 @@ function createNewsCardHTML(item) {
         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
     });
 
-    let iconClass = 'fa-bell text-pink-400 bg-pink-500/10 border-pink-500/20';
+    let iconType = 'fa-bell';
+    let iconClass = 'text-pink-400 bg-pink-500/10 border-pink-500/20';
     let typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20">Уведомление</span>';
 
     if (item.type === 'LAB_STATUS') {
-        iconClass = 'fa-flask text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        iconType = 'fa-flask';
+        iconClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
         typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Лабораторная</span>';
     } else if (item.type === 'NEW_TEST') {
-        iconClass = 'fa-list-check text-amber-400 bg-amber-500/10 border-amber-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Новый тест</span>';
+        iconType = 'fa-list-check';
+        iconClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Тест</span>';
+    } else if (item.type === 'NEW_LESSON') {
+        iconType = 'fa-book';
+        iconClass = 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border blue-amber-500/20">Урок</span>';
     } else if (!isPersonal) {
-        iconClass = 'fa-bullhorn text-blue-400 bg-blue-500/10 border-blue-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Объявление</span>';
+        iconType = 'fa-bullhorn';
+        iconClass = 'text-red-400 bg-red-500/10 border-red-500/20';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">Объявление</span>';
     }
 
     return `
         <div class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] hover:border-pink-500/40 transition flex items-start space-x-3 group">
             <div class="w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${iconClass}">
-                <i class="fa-solid ${iconClass.split(' ')[0]} text-xs"></i>
+                <i class="fa-solid ${iconType} text-xs"></i>
             </div>
             
             <div class="flex-1 space-y-1">

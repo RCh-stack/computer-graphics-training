@@ -23,7 +23,7 @@ function initGradebookTabs() {
     const secTests = document.getElementById('section-tests-gradebook');
 
     const activeClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-emerald-400 border-emerald-500 flex items-center gap-2';
-    const activeTestClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-amber-400 border-amber-500 flex items-center gap-2';
+    const activeTestClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-amber-500 border-amber-500 flex items-center gap-2';
     const activeTheoryClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-blue-400 border-blue-500 flex items-center gap-2';
     const inactiveClass = 'px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-main)] hover:text-[var(--text-main)] flex items-center gap-2';
 
@@ -145,9 +145,9 @@ function renderTheoryGradebook(chapters, rows) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-gray-500">Студент</th>
-            <th class="p-3 border-b border-gray-500">Группа</th>
-            ${chapters.map(ch => `<th class="p-3 border-b border-gray-500 text-center" title="${ch.title}">Глава №${ch.order || ch.id}</th>`).join('')}
+            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
+            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
+            ${chapters.map(ch => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${ch.title}">Глава №${ch.order || ch.id}</th>`).join('')}
         </tr>
     `;
 
@@ -161,7 +161,7 @@ function renderTheoryGradebook(chapters, rows) {
             const chData = r.chapters[ch.id] || { percent: 0, completed: 0, total: 0 };
             const percent = chData.percent;
 
-            let badgeStyle = 'bg-gray-400 text-[var(--text-main)] border-gray-300';
+            let badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)]';
             if (percent === 100) {
                 badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
             } else if (percent > 0) {
@@ -178,7 +178,7 @@ function renderTheoryGradebook(chapters, rows) {
         }).join('');
 
         return `
-            <tr class="border-b border-gray-300/30 hover:bg-gray-300/30 transition">
+            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
                 <td class="p-3 font-semibold text-[var(--text-main)]">
                     ${r.name}
                     <div class="text-[10px] font-normal text-[var(--text-main)]">${r.email}</div>
@@ -198,9 +198,9 @@ function renderLabsGradebook(students, labs) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-gray-500">Студент</th>
-            <th class="p-3 border-b border-gray-500">Группа</th>
-            ${labs.map(l => `<th class="p-3 border-b border-gray-500 text-center" title="${l.title}">Лаб №${l.order || l.id}</th>`).join('')}
+            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
+            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
+            ${labs.map(l => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${l.title}">Лаб №${l.order || l.id}</th>`).join('')}
         </tr>
     `;
 
@@ -223,13 +223,13 @@ function renderLabsGradebook(students, labs) {
             if (sub.status === 'PASSED') {
                 badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
             } else if (sub.status === 'REVISION') {
-                badgeStyle = 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20';
+                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20';
             } else if (sub.status === 'REJECTED') {
                 badgeStyle = 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
             } else if (sub.status === 'SUBMITTED') {
                 badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20';
             } else {
-                badgeStyle = 'bg-gray-500/10 text-gray-400 border-gray-500/30 hover:bg-gray-500/20'
+                badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)] hover:bg-[var(--bg-panel)]'
             }
 
             return `
@@ -245,7 +245,7 @@ function renderLabsGradebook(students, labs) {
         }).join('');
 
         return `
-            <tr class="border-b border-gray-300/30 hover:bg-gray-300/30 transition">
+            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
                 <td class="p-3 font-semibold text-[var(--text-main)]">
                     ${st.name}
                     <div class="text-[10px] font-normal text-[var(--text-main)]">${st.email}</div>
@@ -264,9 +264,9 @@ function renderTestsGradebook(students, tests) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-gray-500">Студент</th>
-            <th class="p-3 border-b border-gray-500">Группа</th>
-            ${tests.map(t => `<th class="p-3 border-b border-gray-500 text-center" title="${t.title}">Тест №${t.order || t.id}</th>`).join('')}
+            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
+            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
+            ${tests.map(t => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${t.title}">Тест №${t.order || t.id}</th>`).join('')}
         </tr>
     `;
 
@@ -290,7 +290,7 @@ function renderTestsGradebook(students, tests) {
             if (score >= 80) {
                 badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
             } else if (score >= 50) {
-                badgeStyle = 'bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20';
+                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20';
             }
 
             return `
@@ -306,7 +306,7 @@ function renderTestsGradebook(students, tests) {
         }).join('');
 
         return `
-            <tr class="border-b border-gray-300/30 hover:bg-gray-300/30 transition">
+            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
                 <td class="p-3 font-semibold text-[var(--text-main)]">
                     ${st.name}
                     <div class="text-[10px] font-normal text-[var(--text-main)]">${st.email}</div>

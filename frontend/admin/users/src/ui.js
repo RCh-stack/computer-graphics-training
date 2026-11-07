@@ -53,9 +53,9 @@ function switchAdminTab(tabName) {
     document.getElementById('tab-groups').classList.add('hidden');
     document.getElementById('tab-teachers').classList.add('hidden');
 
-    document.getElementById('tab-btn-pending').className = 'py-3 font-medium text-[var(--text-main)] hover:text-white transition flex items-center gap-2';
-    document.getElementById('tab-btn-groups').className = 'py-3 font-medium text-[var(--text-main)] hover:text-white transition flex items-center gap-2';
-    document.getElementById('tab-btn-teachers').className = 'py-3 font-medium text-[var(--text-main)] hover:text-white transition flex items-center gap-2';
+    document.getElementById('tab-btn-pending').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
+    document.getElementById('tab-btn-groups').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
+    document.getElementById('tab-btn-teachers').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
 
     if (tabName === 'pending') {
         document.getElementById('tab-pending').classList.remove('hidden');

@@ -14,7 +14,7 @@ async function executeLabTests({ studentCode, testCases, compiler = 'g++-15' }) 
     for (let i = 0; i < tests.length; i++) {
         const test = tests[i];
         const testId = test.id || i + 1;
-        const testName = test.name || `Тест #${testId}`;
+        const testName = test.name || `Тест №${testId}`;
         const inputData = test.input || '';
         const expectedOutput = String(test.expected_output || test.expectedOutput || '').trim();
 

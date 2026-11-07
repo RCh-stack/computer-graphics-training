@@ -45,7 +45,7 @@ async function loadChaptersTree() {
         const container = document.getElementById('chapters-tree-container');
 
         if (!data.chapters || data.chapters.length === 0) {
-            container.innerHTML = `<div class="p-12 border border-dashed border-gray-700 rounded-2xl text-center text-[var(--text-main)] text-xs">Главы учебника пока не созданы.</div>`;
+            container.innerHTML = `<div class="p-12 border border-dashed border-[var(--border-color)] rounded-2xl text-center text-[var(--text-main)] text-xs">Главы учебника пока не созданы.</div>`;
             return;
         }
 
@@ -53,20 +53,20 @@ async function loadChaptersTree() {
             const lessons = Array.isArray(ch.lessons) ? ch.lessons : [];
 
             return `
-                <div class="bg-[var(--bg-card)] border border-gray-400 rounded-2xl overflow-hidden">
-                    <div class="p-4 bg-gray-400/40 flex justify-between items-center border-b border-gray-200/40">
+                <div class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden">
+                    <div class="p-4 bg-[var(--bg-card)] flex justify-between items-center border-b border-[var(--border-color)]">
                         <div class="flex items-center gap-3">
-                            <span class="w-7 h-7 rounded-lg bg-blue-200/20 text-blue-600 font-mono font-bold text-xs flex items-center justify-center border border-blue-500/30">
+                            <span class="w-7 h-7 rounded-lg bg-blue-200/20 text-blue-400 font-mono font-bold text-xs flex items-center justify-center border border-blue-500/30">
                                 ${ch.order || idx + 1}
                             </span>
                             <h3 class="font-bold text-sm text-[var(--text-main)]">${ch.title}</h3>
-                            <button data-chapter-id="${ch.id}" data-chapter-title="${ch.title}" class="btn-edit-chapter text-[var(--text-main)] hover:text-blue-400 text-xs ml-1" title="Переименовать главу">
+                            <button data-chapter-id="${ch.id}" data-chapter-title="${ch.title}" class="btn-edit-chapter text-[var(--text-main)] hover:text-blue-300 text-xs ml-1" title="Переименовать раздел">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <button data-chapter-id="${ch.id}" class="btn-create-lesson px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-xs font-semibold transition border border-blue-500/30 flex items-center gap-1">
+                            <button data-chapter-id="${ch.id}" class="btn-create-lesson px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-semibold transition border border-blue-500/30 flex items-center gap-1">
                                 <i class="fa-solid fa-plus text-[10px]"></i> Страница
                             </button>
                             <button data-chapter-id="${ch.id}" data-chapter-title="${ch.title}" class="btn-delete-chapter text-red-600 hover:text-red-600 p-1.5 text-xs">
@@ -79,14 +79,14 @@ async function loadChaptersTree() {
                         ${lessons.length === 0 
                             ? `<div class="p-3 text-center text-xs text-[var(--text-main)]">В этой главе еще нет статей</div>`
                             : lessons.map(les => `
-                                <div class="p-3 hover:bg-gray-400/30 transition flex justify-between items-center rounded-xl">
+                                <div class="p-3 hover:bg-[var(--bg-card)] transition flex justify-between items-center rounded-xl">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-[11px] font-mono text-blue-400 font-semibold px-1.5 py-0.5 rounded bg-blue-500/10">№ ${les.order || 0}</span>
+                                        <span class="text-[11px] font-mono text-blue-300 font-semibold px-1.5 py-0.5 rounded bg-blue-500/10">№ ${les.order || 0}</span>
                                         <span class="text-xs font-medium text-[var(--text-main)]">${les.title}</span>
                                     </div>
 
                                     <div class="flex items-center gap-3">
-                                        <a href="editor.html?id=${les.id}" class="text-xs text-blue-600 hover:underline flex items-center gap-1 font-semibold">
+                                        <a href="editor.html?id=${les.id}" class="text-xs text-blue-400 hover:underline flex items-center gap-1 font-semibold">
                                             <i class="fa-solid fa-pen-to-square"></i> Редактировать
                                         </a>
                                         <button data-lesson-id="${les.id}" data-lesson-title="${les.title}" class="btn-delete-lesson text-xs text-red-600 hover:text-red-300">
@@ -189,7 +189,7 @@ async function confirmDeleteChapter(chapterId, title) {
     const token = localStorage.getItem('authToken');
 
     const res = await Swal.fire({
-        title: 'Удалить главу?',
+        title: 'Удалить раздел?',
         text: `Удалить "${title}" со всеми страницами?`,
         icon: 'warning',
         showCancelButton: true,
