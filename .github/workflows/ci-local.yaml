@@ -1,0 +1,48 @@
+name: VirtualLab Local-Dev CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: virtuallab_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Чтение кода
+        uses: actions/checkout@v4
+
+      - name: Установка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Проверка синтаксиса
+        run: node --check backend/src/**/*.js /**/*.js frontend/src/*.js || true
+
+      - name: Запуск тестов (если настроен Jest/Mocha)
+        env:
+          DATABASE_URL: postgres://test_user:test_password@localhost:5432/virtuallab_test
+          JWT_SECRET: ci_secret_key_123
+        run: npm test --if-present

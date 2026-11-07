@@ -13,9 +13,3 @@ eslint.config.js
 progressApi.test.js
 
 uploads
-
-workflows/
-
-.husky
-
-.lintstagedrc.json
