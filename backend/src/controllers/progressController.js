@@ -4,9 +4,9 @@ const { Client } = require('pg');
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
 }
+
 /**
  * GET /api/v1/progress/summary
- * Получение общей сводной информации по успеваемости текущего студента
  */
 async function getStudentSummary(req, res, next) {
     const userId = req.user ? req.user.id : null;
@@ -19,6 +19,24 @@ async function getStudentSummary(req, res, next) {
 
     try {
         await client.connect();
+
+        const theoryStatQuery = `
+        SELECT 
+            c.id AS "chapter_id",
+            c.title AS "chapter_title",
+            c."order" AS "chapter_order",
+            COUNT(a.id)::int AS "total_articles",
+            COUNT(tp.id)::int AS "completed_articles"
+        FROM "theory_chapters" c
+            LEFT JOIN "theory_articles" a 
+                ON a.chapter_id = c.id
+            LEFT JOIN "theory_progress" tp 
+                ON tp.article_id = a.id AND tp.user_id = $1 AND tp.completed = TRUE
+        GROUP BY c.id, c.title, c."order"
+        ORDER BY c."order" ASC;
+        `;
+
+        const theoryStatRes = await client.query(theoryStatQuery, [userId]);
 
         const labsStatQuery = `
         SELECT 
@@ -47,10 +65,51 @@ async function getStudentSummary(req, res, next) {
 
         const labsStat = labsStatRes.rows[0] || {};
         const testsStat = testsStatRes.rows[0] || {};
+        const theoryRows = theoryStatRes.rows || [];
+
+        let totalArticlesSum = 0;
+        let completedArticlesSum = 0;
+        let completedChaptersCount = 0;
+
+        const chaptersProgress = theoryRows.map(ch => {
+            const total = ch.total_articles || 0;
+            const completed = ch.completed_articles || 0;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const isCompleted = total > 0 && completed >= total;
+
+            totalArticlesSum += total;
+            completedArticlesSum += completed;
+            if (isCompleted) {
+                completedChaptersCount++;
+            }
+
+            return {
+                id: ch.chapter_id,
+                title: ch.chapter_title,
+                order: ch.chapter_order,
+                totalArticles: total,
+                completedArticles: completed,
+                percent,
+                isCompleted
+            };
+        });
+
+        const totalChaptersCount = chaptersProgress.length;
+        const overallTheoryPercent = totalArticlesSum > 0 
+            ? Math.round((completedArticlesSum / totalArticlesSum) * 100) 
+            : 0;
 
         return res.json({
             status: 'success',
             data: {
+                theory: {
+                    totalArticles: totalArticlesSum,
+                    completedArticles: completedArticlesSum,
+                    totalChapters: totalChaptersCount,
+                    completedChapters: completedChaptersCount,
+                    percent: overallTheoryPercent,
+                    chapters: chaptersProgress
+                },
                 labs: {
                     total: labsStat.labs_total || 0,
                     submitted: labsStat.labs_submitted || 0,
@@ -75,7 +134,6 @@ async function getStudentSummary(req, res, next) {
 
 /**
  * GET /api/v1/progress/history
- * Получение подробной истории всех сдач (лабораторных и тестов)
  */
 async function getDetailedHistory(req, res, next) {
 
@@ -90,7 +148,22 @@ async function getDetailedHistory(req, res, next) {
     try {
         await client.connect();
 
-        // 1. История сдачи лабораторных работ
+        const theoryHistoryQuery = `
+        SELECT 
+            tp.id,
+            tp."article_id",
+            a.title AS "article_title",
+            a."chapter_id",
+            c.title AS "chapter_title",
+            tp."created_at" AS "completed_at"
+        FROM "theory_progress" tp
+        JOIN "theory_articles" a ON a.id = tp."article_id"
+        JOIN "theory_chapters" c ON c.id = a."chapter_id"
+        WHERE tp."user_id" = $1 AND tp.completed = TRUE
+        ORDER BY tp."created_at" DESC;
+        `;
+        const theoryHistoryRes = await client.query(theoryHistoryQuery, [userId]);
+
         const labHistoryQuery = `
         SELECT 
             ls.id,
@@ -105,7 +178,6 @@ async function getDetailedHistory(req, res, next) {
         `;
         const labHistoryRes = await client.query(labHistoryQuery, [userId]);
 
-        // 2. История прохождения тестов
         const testHistoryQuery = `
         SELECT 
             ts.id,
@@ -124,6 +196,7 @@ async function getDetailedHistory(req, res, next) {
         return res.json({
             status: 'success',
             data: {
+                theory: theoryHistoryRes.rows,
                 labs: labHistoryRes.rows,
                 tests: testHistoryRes.rows,
             },

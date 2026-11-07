@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль | VirtualLab Edu</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-
-    <!-- Шапка страницы -->
     <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../index.html" class="flex items-center space-x-3 cursor-pointer">
@@ -17,32 +15,36 @@
                 <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></span>
             </a>
 
-            <!-- Профиль и Меню -->
             <div class="relative">
-                <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-gray-800/20 border border-transparent hover:border-gray-700 transition">
+                <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)] transition">
                     <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center border border-pink-500/30" id="user-avatar">
                         U
                     </div>
+
                     <div class="hidden sm:block text-left">
                         <div id="user-name" class="text-sm font-semibold leading-tight text-[var(--text-main)]">Студент</div>
-                        <div id="user-role" class="text-[11px] text-gray-400 capitalize">Пользователь</div>
+                        <div id="user-role" class="text-[11px] text-[var(--text-main)] capitalize">Пользователь</div>
                     </div>
-                    <i class="fa-solid fa-chevron-down text-xs text-gray-400 ml-1"></i>
+
+                    <i class="fa-solid fa-chevron-down text-xs text-[var(--text-main)] ml-1"></i>
                 </button>
 
-                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-700/50">
+                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-700/50">
                     <div class="px-4 py-2.5">
-                        <p id="dropdown-user-email" class="text-xs text-gray-400 truncate">student@edu.ru</p>
+                        <p id="dropdown-user-email" class="text-xs text-[var(--text-main)] truncate">student@edu.ru</p>
                     </div>
+
                     <div class="py-1">
                         <a href="../index.html" class="flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
-                            <i class="fa-solid fa-house w-5 text-gray-400"></i>
+                            <i class="fa-solid fa-house w-5 text-[var(--text-main)]"></i>
                             <span>Главная</span>
                         </a>
+
                         <button id="theme-toggle" class="w-full flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
                             Переключить тему
                         </button>
                     </div>
+
                     <div class="py-1">
                         <button id="logout-btn" class="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition">
                             <i class="fa-solid fa-right-from-bracket w-5 text-red-400"></i>
@@ -54,12 +56,8 @@
         </div>
     </header>
 
-    <!-- Основной контент -->
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        
-        <div class="flex flex-col md:flex-row gap-8">
-            
-            <!-- Вертикальные вкладки сайдбара -->
+    <main class="max-w-7xl mx-auto px-4 py-8">      
+        <div class="flex flex-col md:flex-row gap-8">         
             <aside class="w-full md:w-64 space-y-2">
                 <button onclick="switchTab('tab-overview')" id="btn-tab-overview" 
                     class="tab-btn active w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition border bg-pink-500/10 text-pink-400 border-pink-500/20">
@@ -68,35 +66,41 @@
                 </button>
 
                 <button onclick="switchTab('tab-settings')" id="btn-tab-settings" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent hover:border-gray-700 hover:bg-gray-800/30 text-gray-400">
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent border-[var(--border-color)] hover:bg-[var(--bg-card)] text-[var(--text-main)]">
                     <i class="fa-solid fa-user-gear w-5"></i>
                     <span>Личные данные</span>
                 </button>
 
                 <button onclick="switchTab('tab-security')" id="btn-tab-security" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent hover:border-gray-700 hover:bg-gray-800/30 text-gray-400">
+                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent border-[var(--border-color)] hover:bg-[var(--bg-card)] text-[var(--text-main)]">
                     <i class="fa-solid fa-shield-halved w-5"></i>
                     <span>Безопасность</span>
                 </button>
             </aside>
 
-            <!-- Область контента вкладок -->
-            <section class="flex-1 bg-[var(--bg-panel)] p-6 rounded-2xl border border-gray-700">
-                
-                <!-- Вкладка 1: Статистика -->
+            <section class="flex-1 bg-[var(--bg-panel)] p-6 rounded-2xl border border-[var(--border-color)]">              
                 <div id="tab-overview" class="tab-content space-y-6">
-                    <div class="border-b border-gray-700/60 pb-4">
+                    <div class="border-b border-[var(--border-color)] pb-4">
                         <h2 class="text-xl font-bold">Успеваемость и прогресс</h2>
-                        <p class="text-xs text-gray-400 mt-1">Сводка выполненных лабораторных работ и пройденных тестов</p>
+                        <p class="text-xs text-[var(--text-main)] mt-1">Сводка выполненных лабораторных работ и пройденных тестов</p>
                     </div>
 
-                    <!-- Карточки с краткой информацией -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                            <div class="flex items-center justify-between text-xs text-blue-400 font-medium">
+                                <span>Изучено уроков</span>
+                                <i class="fa-solid fa-book"></i>
+                            </div>
+
+                            <div class="text-2xl font-extrabold mt-2" id="stat-lessons-count">0 / 0</div>
+                        </div>
+
                         <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                             <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
                                 <span>Выполнено лабораторных</span>
                                 <i class="fa-solid fa-flask"></i>
                             </div>
+
                             <div class="text-2xl font-extrabold mt-2" id="stat-labs-count">0 / 0</div>
                         </div>
 
@@ -105,6 +109,7 @@
                                 <span>Пройдено тестов</span>
                                 <i class="fa-solid fa-list-check"></i>
                             </div>
+
                             <div class="text-2xl font-extrabold mt-2" id="stat-tests-count">0 / 0</div>
                         </div>
 
@@ -113,91 +118,116 @@
                                 <span>Средний результат</span>
                                 <i class="fa-solid fa-award"></i>
                             </div>
+
                             <div class="text-2xl font-extrabold mt-2" id="stat-avg-grade">0%</div>
                         </div>
                     </div>
 
-                    <!-- Графики -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-gray-700/60">
-                            <h3 class="text-xs font-semibold mb-4 text-gray-400 uppercase tracking-wider">Лабораторные работы</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Теория</h3>
+                            <div class="w-44 h-44 relative">
+                                <canvas id="theoryChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Лабораторные работы</h3>
                             <div class="w-44 h-44 relative">
                                 <canvas id="labsChart"></canvas>
                             </div>
                         </div>
 
-                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-gray-700/60">
-                            <h3 class="text-xs font-semibold mb-4 text-gray-400 uppercase tracking-wider">Тестирование</h3>
+                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Тестирование</h3>
                             <div class="w-44 h-44 relative">
                                 <canvas id="testsChart"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Журнал истории сдач -->
+                    <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] overflow-hidden">
+                        <button type="button" onclick="toggleChaptersCollapse()" 
+                            class="w-full p-4 flex items-center justify-between text-left hover:bg-[var(--bg-panel)] transition">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-[var(--text-main)]">
+                                    Детализация прогресса по главам учебника
+                                </span>
+                            </div>
+                            <i id="collapse-icon" class="fa-solid fa-chevron-down text-xs text-[var(--text-muted)] transition-transform duration-300"></i>
+                        </button>
+
+                        <div id="theory-chapters-collapse" class="hidden px-4 pb-4 pt-1 border-t border-[var(--border-color)]">
+                            <div id="theory-chapters-list" class="space-y-3 pt-2"></div>
+                        </div>
+                    </div>
+
                     <div class="pt-4 space-y-4">
-                        <div class="flex items-center justify-between border-b border-gray-700/60 pb-3">
+                        <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
                             <h3 class="text-base font-bold flex items-center gap-2 text-[var(--text-main)]">
                                 <i class="fa-solid fa-clock-rotate-left text-pink-400"></i>
                                 <span>История активности</span>
                             </h3>
-                            <!-- Фильтр вида истории -->
-                            <div class="flex bg-[var(--bg-card)] p-1 rounded-xl border border-gray-700 text-xs">
+
+                            <div class="flex bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-color)] text-xs">
                                 <button id="history-filter-all" onclick="filterHistory('all')" 
                                     class="px-3 py-1 rounded-lg font-medium text-pink-400 bg-pink-500/10 border border-pink-500/20 transition">Все</button>
+                                <button id="history-filter-theory" onclick="filterHistory('theory')" 
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Теория</button>
                                 <button id="history-filter-labs" onclick="filterHistory('labs')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-gray-400 hover:text-white transition">Лабораторные</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Лабораторные</button>
                                 <button id="history-filter-tests" onclick="filterHistory('tests')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-gray-400 hover:text-white transition">Тесты</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Тесты</button>
                             </div>
                         </div>
 
-                        <!-- Таблица / Список записей истории -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-xs border-collapse">
                                 <thead>
-                                    <tr class="border-b border-gray-700/60 text-gray-400 uppercase tracking-wider font-semibold">
+                                    <tr class="border-b border-[var(--border-color)] text-[var(--text-main)] uppercase tracking-wider font-semibold">
                                         <th class="py-3 px-3">Тип</th>
-                                        <th class="py-3 px-3">Название работы / теста</th>
+                                        <th class="py-3 px-3">Название урока / работы / теста</th>
                                         <th class="py-3 px-3 text-center">Оценка</th>
                                         <th class="py-3 px-3 text-right">Дата сдачи</th>
                                     </tr>
                                 </thead>
+
                                 <tbody id="history-table-body" class="divide-y divide-gray-700/40 text-[var(--text-main)]">
-                                    <!-- Записи будут подгружаться динамически -->
                                     <tr>
-                                        <td colspan="4" class="py-6 text-center text-gray-400">Загрузка истории...</td>
+                                        <td colspan="4" class="py-6 text-center text-[var(--text-main)]">Загрузка истории...</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    
+                    </div>                  
                 </div>
 
-                <!-- Вкладка 2: Личные данные -->
                 <div id="tab-settings" class="tab-content hidden space-y-6">
-                    <div class="border-b border-gray-700/60 pb-4">
+                    <div class="border-b border-[var(--border-color)] pb-4">
                         <h2 class="text-xl font-bold">Личные данные</h2>
-                        <p class="text-xs text-gray-400 mt-1">Редактирование имя и фамилии профиля</p>
+                        <p class="text-xs text-[var(--text-main)] mt-1">Редактирование имя и фамилии профиля</p>
                     </div>
 
                     <form id="profile-form" class="space-y-4 max-w-md">
                         <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Имя</label>
+                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Имя</label>
                             <input type="text" id="input-first-name" required
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-gray-700 text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
                         </div>
+
                         <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Фамилия</label>
+                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Фамилия</label>
                             <input type="text" id="input-last-name" required
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-gray-700 text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
                         </div>
+
                         <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Email (недоступно для редактирования)</label>
+                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Email (недоступно для редактирования)</label>
                             <input type="email" id="input-email" disabled
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-gray-700 text-sm opacity-50 cursor-not-allowed">
+                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm opacity-50 cursor-not-allowed">
                         </div>
+
                         <button type="submit" 
                             class="px-5 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-pink-600/20">
                             Сохранить изменения
@@ -205,39 +235,38 @@
                     </form>
                 </div>
 
-                <!-- Вкладка 3: Безопасность -->
                 <div id="tab-security" class="tab-content hidden space-y-6">
-                    <div class="border-b border-gray-700/60 pb-4">
+                    <div class="border-b border-[var(--border-color)] pb-4">
                         <h2 class="text-xl font-bold">Безопасность</h2>
-                        <p class="text-xs text-gray-400 mt-1">Изменение текущего пароля от аккаунта</p>
+                        <p class="text-xs text-[var(--text-main)] mt-1">Изменение текущего пароля от аккаунта</p>
                     </div>
 
                     <form id="password-form" class="space-y-4 max-w-md">
                         <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Текущий пароль</label>
+                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Текущий пароль</label>
                             <input type="password" id="input-old-password" required
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-gray-700 text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
                         </div>
+
                         <div>
-                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Новый пароль</label>
+                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Новый пароль</label>
                             <input type="password" id="input-new-password" required minlength="6"
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-gray-700 text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
                         </div>
+
                         <button type="submit" 
                             class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20">
                             Обновить пароль
                         </button>
                     </form>
                 </div>
-
             </section>
         </div>
-
     </main>
 
     <script src="src/ui.js"></script>
-    <script src="../src/auth.js"></script>
     <script src="../src/ui.js"></script>
+    <script src="../src/auth.js"></script>
     <script src="../src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
