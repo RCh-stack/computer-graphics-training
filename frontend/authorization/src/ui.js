@@ -68,7 +68,12 @@ async function handleLogin(e) {
             if (data.status === 'pending_approval') {
                 showAlert('Ваша заявка находится на рассмотрении у преподавателя.', 'error');
             } else {
-                showAlert(data.message || 'Неверный логин или пароль');
+                Swal.fire({
+                    title: res.status === 429 ? 'Доступ временно ограничен' : 'Неверный логин или пароль',
+                    text: data.message || 'Проверьте введенные данные',
+                    icon: res.status === 429 ? 'warning' : 'error',
+                    confirmButtonColor: '#ec4899'
+                });
             }
         }
     } catch (error) {

@@ -2,7 +2,7 @@ name: VirtualLab Local-Dev CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -39,9 +39,9 @@ jobs:
         run: npm ci
 
       - name: Проверка синтаксиса
-        run: node --check backend/src/**/*.js /**/*.js frontend/src/*.js || true
+        run: node --check backend/src/**/*.js /**/*.js frontend/src/*.js frontend/**/src/*.js || true
 
-      - name: Запуск тестов (если настроен Jest/Mocha)
+      - name: Запуск тестов
         env:
           DATABASE_URL: postgres://test_user:test_password@localhost:5432/virtuallab_test
           JWT_SECRET: ci_secret_key_123

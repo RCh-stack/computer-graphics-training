@@ -79,21 +79,25 @@ async function runCode() {
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Ошибка сервера: ${response.status}`);
-        }
-
         const result = await response.json();
 
-        await showLabResultModal({
-            isSubmit: false,
-            isPassed: result.all_passed,
-            tests: result.tests,
-            compileError: result.compile_output
-        });
+         if (response.ok) {
+            await showLabResultModal({
+                isSubmit: false,
+                isPassed: result.all_passed,
+                tests: result.tests,
+                compileError: result.compile_output
+            });
 
-        handleExecutionResult(result);
-
+            handleExecutionResult(result);
+        } else {
+            Swal.fire({
+                title: response.status === 429 ? 'Доступ временно ограничен' : `Ошибка сервера: ${response.status}`,
+                text: result.message,
+                icon: response.status === 429 ? 'warning' : 'error',
+                confirmButtonColor: '#ec4899'
+            });
+        }
     } catch (error) {
         console.error('Ошибка при отправке кода:', error);
         showErrorInUI('Не удалось связаться с сервером проверки.');
