@@ -1,4 +1,6 @@
 const { Client } = require('pg');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -7,7 +9,7 @@ function getDbClient() {
 /**
  * GET /api/v1/tests
  */
-async function getAllTests(req, res) {
+const getAllTests = catchAsync(async (req, res) => {
     const userId = req.user ? req.user.id : null;
     const client = getDbClient();
 
@@ -31,27 +33,24 @@ async function getAllTests(req, res) {
             LEFT JOIN "test_submissions" ts 
                    ON t.id = ts.test_id AND ts.user_id = $1
             GROUP BY t.id, ts.score_percent, ts.completed_at
-            ORDER BY t.order ASC
+            ORDER BY t.order ASC;
         `;
 
         const result = await client.query(query, [userId]);
 
-        return res.json({ 
-            status: 'success', 
-            tests: result.rows 
+        return res.json({
+            status: 'success',
+            tests: result.rows
         });
-    } catch (error) {
-        console.error('Ошибка получения списка тестов:', error);
-        return res.status(500).json({ error: 'Ошибка сервера при получении списка тестов' });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * GET /api/v1/tests/:id
  */
-async function getTestById(req, res) {
+const getTestById = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
@@ -60,29 +59,34 @@ async function getTestById(req, res) {
 
         const testResult = await client.query(
             `SELECT id, title, description, difficulty, "time_limit", "is_unlocked"
-            FROM "tests"
-            WHERE id = $1 LIMIT 1;`,
+             FROM "tests"
+             WHERE id = $1 LIMIT 1;`,
             [id]
         );
 
         const test = testResult.rows[0];
 
         if (!test) {
-            return res.status(404).json({ error: 'Тест не найден' });
+            throw new AppError('Тест не найден', 404, 'TEST_NOT_FOUND');
         }
 
         const questionsResult = await client.query(
             `SELECT id, "order", "question_text", "options_json", explanation
-            FROM "test_questions"
-            WHERE "test_id" = $1
-            ORDER BY "order" ASC;`,
+             FROM "test_questions"
+             WHERE "test_id" = $1
+             ORDER BY "order" ASC;`,
             [id]
         );
 
         test.questions = questionsResult.rows.map(q => {
-            const optionsData = typeof q.options_json === 'string' 
-                ? JSON.parse(q.options_json) 
-                : (q.options_json || {});
+            let optionsData = q.options_json || {};
+            if (typeof optionsData === 'string') {
+                try {
+                    optionsData = JSON.parse(optionsData);
+                } catch {
+                    optionsData = {};
+                }
+            }
 
             return {
                 id: q.id,
@@ -96,24 +100,22 @@ async function getTestById(req, res) {
         });
 
         return res.json({ status: 'success', test });
-    } catch (error) {
-        console.error(`Ошибка получения теста ${id}:`, error);
-        return res.status(500).json({ error: 'Ошибка сервера при получении теста' });
     } finally {
         await client.end();
     }
-};
+});
 
 /**
  * POST /api/v1/tests/:id/submit
  */
-async function submitTest(req, res) {
+const submitTest = catchAsync(async (req, res) => {
     const { id } = req.params;
-    const { startedIn, answers = {} } = req.body;
-    const userId = req.user ? req.user.id : null; 
+    const startedIn = req.body.started_in ?? req.body.startedIn ?? null;
+    const answers = req.body.answers || {};
+    const userId = req.user ? req.user.id : null;
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Необходима авторизация' });
+        throw new AppError('Необходима авторизация', 401, 'UNAUTHORIZED');
     }
 
     const client = getDbClient();
@@ -123,37 +125,42 @@ async function submitTest(req, res) {
 
         const questionsResult = await client.query(
             `SELECT id, "order", "correct_answer", "options_json", explanation
-            FROM "test_questions"
-            WHERE "test_id" = $1
-            ORDER BY "order" ASC;`,
+             FROM "test_questions"
+             WHERE "test_id" = $1
+             ORDER BY "order" ASC;`,
             [id]
         );
 
         const questions = questionsResult.rows;
 
         if (questions.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Вопросы к тесту не найдены' });
+            throw new AppError('Вопросы к тесту не найдены', 404, 'TEST_QUESTIONS_NOT_FOUND');
         }
 
         let correctCount = 0;
 
         questions.forEach(q => {
             const userAnswer = answers[q.id];
-            const optionsData = typeof q.options_json === 'string' ? JSON.parse(q.options_json) : (q.options_json || {});
-            
+            let optionsData = q.options_json || {};
+            if (typeof optionsData === 'string') {
+                try {
+                    optionsData = JSON.parse(optionsData);
+                } catch {
+                    optionsData = {};
+                }
+            }
+
             if (userAnswer !== undefined && userAnswer !== null) {
                 if (optionsData.type === 'numeric_input') {
                     const expected = parseFloat(q.correct_answer);
                     const actual = parseFloat(userAnswer);
                     const tolerance = optionsData.tolerance || 0.01;
-                    
+
                     if (!isNaN(actual) && Math.abs(expected - actual) <= tolerance) {
                         correctCount++;
                     }
-                } else {
-                    if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
-                        correctCount++;
-                    }
+                } else if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
+                    correctCount++;
                 }
             }
         });
@@ -171,7 +178,7 @@ async function submitTest(req, res) {
                           completed_at = EXCLUDED.completed_at
             RETURNING score_percent;
         `;
-    
+
         await client.query(upsertQuery, [userId, id, scorePercent, JSON.stringify(answers), startedIn]);
 
         return res.json({
@@ -180,23 +187,20 @@ async function submitTest(req, res) {
             correct_count: correctCount,
             total_count: totalQuestions
         });
-    } catch (error) {
-        console.error('Verify Test Error:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-};
+});
 
 /**
  * GET /api/v1/tests/:id/result
  */
-async function getTestResult(req, res) { 
+const getTestResult = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userId = req.user ? req.user.id : null;
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Необходима авторизация' });
+        throw new AppError('Необходима авторизация', 401, 'UNAUTHORIZED');
     }
 
     const client = getDbClient();
@@ -213,7 +217,7 @@ async function getTestResult(req, res) {
         `, [userId, id]);
 
         if (subRes.rows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Вы еще не проходили этот тест' });
+            throw new AppError('Вы еще не проходили этот тест', 404, 'SUBMISSION_NOT_FOUND');
         }
 
         const submission = subRes.rows[0];
@@ -227,10 +231,14 @@ async function getTestResult(req, res) {
 
         let userAnsObj = submission.user_answers;
         if (typeof userAnsObj === 'string') {
-            try { userAnsObj = JSON.parse(userAnsObj); } catch { userAnsObj = {}; }
+            try {
+                userAnsObj = JSON.parse(userAnsObj);
+            } catch {
+                userAnsObj = {};
+            }
         }
 
-        const breakdown = qRes.rows.map((q, idx) => {
+        const breakdown = qRes.rows.map(q => {
             let rawUserAnswer = '';
 
             if (Array.isArray(userAnsObj)) {
@@ -245,7 +253,11 @@ async function getTestResult(req, res) {
 
             let options = q.options_json;
             if (typeof options === 'string') {
-                try { options = JSON.parse(options); } catch { options = null; }
+                try {
+                    options = JSON.parse(options);
+                } catch {
+                    options = null;
+                }
             }
             const optionsList = Array.isArray(options) ? options : (options?.options || []);
 
@@ -270,13 +282,10 @@ async function getTestResult(req, res) {
                 questions: breakdown
             }
         });
-    } catch (error) {
-        console.error('Ошибка получения результатов теста:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 module.exports = {
     getAllTests,

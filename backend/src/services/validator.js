@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const AppError = require('../utils/appError');
 
 /**
  * @param {{ body?: z.ZodType, params?: z.ZodType, query?: z.ZodType }} schemas
@@ -26,12 +27,14 @@ function validate(schemas) {
         }
 
         if (validationErrors.length > 0) {
-            return res.status(400).json({
-                status: 'error',
-                code: 'VALIDATION_ERROR',
-                message: validationErrors[0].message,
-                errors: validationErrors
-            });
+            return next(
+                new AppError(
+                    validationErrors[0].message,
+                    400,
+                    'VALIDATION_ERROR',
+                    validationErrors
+                )
+            );
         }
 
         next();

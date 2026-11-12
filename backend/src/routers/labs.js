@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAllLabs, getLabById, saveLab, runTests, submitLab } = require('../controllers/labController');
+const { getAllLabs, getLabById, saveLab, runTests, submitLab } = require('../controllers/user/labController');
 const { compilerLimiter } = require('../services/rateLimiter')
 const { authenticateToken } = require('../services/jwt');
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { getNewsFeed, postAnnouncement } = require('../controllers/newsController');
+const { getNewsFeed, postAnnouncement } = require('../controllers/admin/newsController');
 const { authenticateToken } = require('../services/jwt');
 
 router.get('/', authenticateToken, getNewsFeed);

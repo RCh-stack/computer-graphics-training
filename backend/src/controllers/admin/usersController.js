@@ -1,5 +1,7 @@
 const { Client } = require('pg');
-const { sendUserNotification } = require('../services/notification');
+const { sendUserNotification } = require('../../services/notification');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -8,8 +10,7 @@ function getDbClient() {
 /*
  * GET /api/v1/admin/users/pending-students
  */
-async function getPendingStudents(req, res) {
-    
+const getPendingStudents = catchAsync(async (req, res) => {
     const client = getDbClient();
 
     try {
@@ -24,23 +25,20 @@ async function getPendingStudents(req, res) {
 
         const groups = await client.query('SELECT id, name FROM "groups" ORDER BY name ASC;');
 
-        return res.json({ 
-            status: 'success', 
+        return res.json({
+            status: 'success',
             students: pending.rows,
             groups: groups.rows
         });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * GET /api/v1/admin/users/students
  */
-async function getStudents(req, res) {
-   
+const getStudents = catchAsync(async (req, res) => {
     const groupId = req.query.groupId ? req.query.groupId : null;
     const client = getDbClient();
 
@@ -64,22 +62,19 @@ async function getStudents(req, res) {
 
         const data = await client.query(query, params);
 
-        return res.json({ 
-            status: 'success', 
+        return res.json({
+            status: 'success',
             students: data.rows
         });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * GET /api/v1/admin/users/teachers
  */
-async function getTeachers(req, res) {
-   
+const getTeachers = catchAsync(async (req, res) => {
     const client = getDbClient();
 
     try {
@@ -87,156 +82,170 @@ async function getTeachers(req, res) {
 
         const data = await client.query(
             `SELECT id, first_name, last_name, email, role, created_at
-            FROM "users"
-            WHERE is_approved = true AND role = 'TEACHER'
-            ORDER BY last_name ASC, first_name ASC;`
+             FROM "users"
+             WHERE is_approved = true AND role = 'TEACHER'
+             ORDER BY last_name ASC, first_name ASC;`
         );
 
-        return res.json({ 
-            status: 'success', 
+        return res.json({
+            status: 'success',
             teachers: data.rows
         });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * PUT /api/v1/admin/users/approve
  */
-async function approveStudent(req, res) {
-   
+const approveStudent = catchAsync(async (req, res) => {
     const { userId, groupId, groupName } = req.body;
+
+    if (!userId) {
+        throw new AppError('Не указан ID пользователя', 400, 'MISSING_USER_ID');
+    }
 
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        await client.query(
+        const result = await client.query(
             `UPDATE "users" 
              SET is_approved = true, group_id = $1 
              WHERE id = $2;`,
             [groupId || null, userId]
         );
 
-        await sendUserNotification({
-            userId: userId,
-            title: 'Обновление учебной группы',
-            message: `Вас назначили в учебную группу: ${groupName}`,
-            type: 'GROUP_CHANGE'
-        });
-
-        return res.json({ status: 'success', message: 'Студент успешно одобрен' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
+        if (result.rowCount === 0) {
+            throw new AppError('Пользователь не найден', 404, 'USER_NOT_FOUND');
+        }
     } finally {
         await client.end();
     }
-}
+
+    try {
+        await sendUserNotification({
+            userId,
+            title: 'Обновление учебной группы',
+            message: `Вас назначили в учебную группу: ${groupName || 'без группы'}`,
+            type: 'GROUP_CHANGE'
+        });
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление об одобрении студента:', notifyErr.message);
+    }
+
+    return res.json({ status: 'success', message: 'Студент успешно одобрен' });
+});
 
 /*
  * PUT /api/v1/admin/users/role
  */
-async function changeUserRole(req, res) {
-    
+const changeUserRole = catchAsync(async (req, res) => {
     const { userId, role } = req.body;
     const currentUserId = req.user.id;
 
-    const client = getDbClient();
+    if (!userId) {
+        throw new AppError('Не указан ID пользователя', 400, 'MISSING_USER_ID');
+    }
 
     if (!['STUDENT', 'TEACHER'].includes(role)) {
-        return res.status(400).json({ status: 'error', message: 'Некорректная роль' });
+        throw new AppError('Некорректная роль', 400, 'INVALID_ROLE');
     }
 
     if (userId === currentUserId) {
-        return res.status(400).json({ status: 'error', message: 'Вы не можете изменить роль самому себе' });
+        throw new AppError('Вы не можете изменить роль самому себе', 400, 'SELF_ROLE_CHANGE_FORBIDDEN');
     }
+
+    const client = getDbClient();
 
     try {
         await client.connect();
 
-        await client.query(
+        const result = await client.query(
             'UPDATE "users" SET role = $1 WHERE id = $2;',
             [role, userId]
         );
 
+        if (result.rowCount === 0) {
+            throw new AppError('Пользователь не найден', 404, 'USER_NOT_FOUND');
+        }
+    } finally {
+        await client.end();
+    }
+
+    try {
         await sendUserNotification({
-            userId: userId,
+            userId,
             title: 'Обновление прав доступа',
             message: `Вам назначена новая роль на платформе: ${role}`,
             type: 'ROLE_CHANGE'
         });
-
-        return res.json({ 
-            status: 'success', 
-            message: `Роль пользователя успешно изменена на ${role}` 
-        });
-    } catch (error) {
-        console.error('Ошибка смены роли:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
-    } finally {
-        await client.end();
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление об изменении роли:', notifyErr.message);
     }
-}
+
+    return res.json({
+        status: 'success',
+        message: `Роль пользователя успешно изменена на ${role}`
+    });
+});
 
 /*
  * GET /api/v1/admin/users/groups
  */
-async function getGroups(req, res) {
- 
+const getGroups = catchAsync(async (req, res) => {
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        const groups = await client.query(
-            'SELECT id, name FROM "groups" ORDER BY name ASC;');
+        const groups = await client.query('SELECT id, name FROM "groups" ORDER BY name ASC;');
 
-        return res.json({ 
-            status: 'success', 
+        return res.json({
+            status: 'success',
             groups: groups.rows
         });
-
-    } catch(error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * POST /api/v1/admin/users/groups
  */
-async function createGroup(req, res) {
-
+const createGroup = catchAsync(async (req, res) => {
     const { name } = req.body;
+
+    if (!name || !String(name).trim()) {
+        throw new AppError('Укажите название учебной группы', 400, 'MISSING_GROUP_NAME');
+    }
+
     const client = getDbClient();
 
     try {
         await client.connect();
 
         await client.query(
-            'INSERT INTO "groups" (id, name) VALUES (gen_random_uuid()::text, $1);', [name]);
+            'INSERT INTO "groups" (id, name) VALUES (gen_random_uuid()::text, $1);',
+            [String(name).trim()]
+        );
 
-        return res.json({ status: 'success', message: 'Группа создана' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
+        return res.status(201).json({ status: 'success', message: 'Группа создана' });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * PUT /api/v1/admin/users/group
  */
-async function updateUserGroup(req, res) {
+const updateUserGroup = catchAsync(async (req, res) => {
     const { userId, groupId, groupName } = req.body;
 
     if (!userId) {
-        return res.status(400).json({ status: 'error', message: 'Не указан ID пользователя' });
+        throw new AppError('Не указан ID пользователя', 400, 'MISSING_USER_ID');
     }
 
     const client = getDbClient();
@@ -245,36 +254,41 @@ async function updateUserGroup(req, res) {
         await client.connect();
 
         const targetGroupId = groupId && groupId !== 'unassigned' && groupId !== '' ? groupId : null;
-        
-        await client.query(`
+
+        const result = await client.query(`
             UPDATE "users"
             SET group_id = $1
             WHERE id = $2;
         `, [targetGroupId, userId]);
 
-        await sendUserNotification({
-            userId: userId,
-            title: 'Обновление учебной группы',
-            message: `Вас назначили в учебную группу: ${groupName}`,
-            type: 'GROUP_CHANGE'
-        });
-
-        return res.json({
-            status: 'success',
-            message: 'Учебная группа успешно обновлена'
-        });
-    } catch (error) {
-        console.error('Ошибка изменения группы пользователя:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
+        if (result.rowCount === 0) {
+            throw new AppError('Пользователь не найден', 404, 'USER_NOT_FOUND');
+        }
     } finally {
         await client.end();
     }
-}
+
+    try {
+        await sendUserNotification({
+            userId,
+            title: 'Обновление учебной группы',
+            message: `Вас назначили в учебную группу: ${groupName || 'без группы'}`,
+            type: 'GROUP_CHANGE'
+        });
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление об изменении группы:', notifyErr.message);
+    }
+
+    return res.json({
+        status: 'success',
+        message: 'Учебная группа успешно обновлена'
+    });
+});
 
 /*
  * GET /api/v1/admin/users/gradebook
  */
-async function getGradebook(req, res) {
+const getGradebook = catchAsync(async (req, res) => {
     const { groupId } = req.query;
     const client = getDbClient();
 
@@ -303,23 +317,23 @@ async function getGradebook(req, res) {
         const rows = [];
         for (const student of studentsRes.rows) {
             const labGrades = await client.query(
-                'SELECT lab_id, grade FROM "lab_submissions" WHERE user_id = $1;', 
+                'SELECT lab_id, grade FROM "lab_submissions" WHERE user_id = $1;',
                 [student.id]
             );
             const testGrades = await client.query(
-                'SELECT test_id, score_percent FROM "test_submissions" WHERE user_id = $1;', 
+                'SELECT test_id, score_percent FROM "test_submissions" WHERE user_id = $1;',
                 [student.id]
             );
 
             const labsMap = {};
-            labGrades.rows.forEach(r => labsMap[r.lab_id] = r.grade);
+            labGrades.rows.forEach(r => { labsMap[r.lab_id] = r.grade; });
 
             const testsMap = {};
-            testGrades.rows.forEach(r => testsMap[r.test_id] = r.score_percent);
+            testGrades.rows.forEach(r => { testsMap[r.test_id] = r.score_percent; });
 
             const allScores = [...Object.values(labsMap), ...Object.values(testsMap)];
-            const avg = allScores.length > 0 
-                ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) 
+            const avg = allScores.length > 0
+                ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
                 : 0;
 
             rows.push({
@@ -340,14 +354,10 @@ async function getGradebook(req, res) {
                 rows
             }
         });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 module.exports = {
     getPendingStudents,
@@ -355,7 +365,7 @@ module.exports = {
     getTeachers,
     approveStudent,
     changeUserRole,
-    getGroups, 
+    getGroups,
     createGroup,
     updateUserGroup,
     getGradebook

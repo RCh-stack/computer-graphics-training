@@ -1,7 +1,11 @@
 const { Client } = require('pg');
-const { sendGlobalNotification } = require('../../services/notification');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs').promises;
+
+const { sendGlobalNotification } = require('../../services/notification');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -21,7 +25,7 @@ ensureUploadDir();
 /*
  * GET /api/v1/admin/ebook/chapters
  */
-async function getChapters(req, res) {
+const getChapters = catchAsync(async (req, res) => {
     const client = getDbClient();
 
     try {
@@ -39,32 +43,32 @@ async function getChapters(req, res) {
                            ) ORDER BY a."order" ASC
                        ) FILTER (WHERE a.id IS NOT NULL), '[]'
                    ) as lessons
-            SELECT_FROM_CHAPTERS
             FROM "theory_chapters" c
             LEFT JOIN "theory_articles" a ON c.id = a.chapter_id
             GROUP BY c.id
             ORDER BY c."order" ASC;
-        `.replace('SELECT_FROM_CHAPTERS', ''));
+        `);
 
         return res.json({ status: 'success', chapters: chaptersRes.rows });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * POST /api/v1/admin/ebook/chapters
  */
-async function createChapter(req, res) {
+const createChapter = catchAsync(async (req, res) => {
     const { title } = req.body;
     const client = getDbClient();
+    let createdChapter;
 
     try {
         await client.connect();
 
-        const maxOrderRes = await client.query('SELECT COALESCE(MAX("order"), 0) + 1 as next_order FROM "theory_chapters";');
+        const maxOrderRes = await client.query(
+            'SELECT COALESCE(MAX("order"), 0) + 1 as next_order FROM "theory_chapters";'
+        );
         const nextOrder = maxOrderRes.rows[0].next_order;
 
         const result = await client.query(`
@@ -73,26 +77,30 @@ async function createChapter(req, res) {
             RETURNING id, title, "order";
         `, [title, nextOrder]);
 
+        createdChapter = result.rows[0];
+    } finally {
+        await client.end();
+    }
+
+    try {
         await sendGlobalNotification({
             title: `Новый раздел электронного учебника: ${title}`,
             message: 'Опубликован новый раздел в электронном учебнике.',
             type: 'NEW_CHAPTER',
-            link: `theory/index.html`,
+            link: 'theory/index.html',
             createdBy: req.user.id
         });
-
-        return res.json({ status: 'success', chapter: result.rows[0] });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
-    } finally {
-        await client.end();
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление о новом разделе:', notifyErr.message);
     }
-}
+
+    return res.status(201).json({ status: 'success', chapter: createdChapter });
+});
 
 /*
  * PUT /api/v1/admin/ebook/chapters/:id
  */
-async function updateChapter(req, res) { 
+const updateChapter = catchAsync(async (req, res) => {
     const { id } = req.params;
     const { title, order } = req.body;
     const client = getDbClient();
@@ -100,45 +108,49 @@ async function updateChapter(req, res) {
     try {
         await client.connect();
 
-        await client.query(`
+        const result = await client.query(`
             UPDATE "theory_chapters"
             SET title = COALESCE($1, title),
                 "order" = COALESCE($2, "order")
             WHERE id = $3;
         `, [title, order, id]);
 
+        if (result.rowCount === 0) {
+            throw new AppError('Глава учебника не найдена', 404, 'CHAPTER_NOT_FOUND');
+        }
+
         return res.json({ status: 'success', message: 'Глава обновлена' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * DELETE /api/v1/admin/ebook/chapters/:id
  */
-async function deleteChapter(req, res) {
+const deleteChapter = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        await client.query('DELETE FROM "theory_chapters" WHERE id = $1;', [id]);
+        const result = await client.query('DELETE FROM "theory_chapters" WHERE id = $1;', [id]);
+
+        if (result.rowCount === 0) {
+            throw new AppError('Глава учебника не найдена', 404, 'CHAPTER_NOT_FOUND');
+        }
 
         return res.json({ status: 'success', message: 'Глава удалена' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * GET /api/v1/admin/ebook/lessons/:id
  */
-async function getLessonById(req, res) {
+const getLessonById = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
@@ -146,16 +158,18 @@ async function getLessonById(req, res) {
         await client.connect();
 
         const result = await client.query('SELECT * FROM "theory_articles" WHERE id = $1;', [id]);
-        if (result.rows.length === 0) return res.status(404).json({ status: 'error', message: 'Страница не найдена' });
+        if (result.rows.length === 0) {
+            throw new AppError('Страница учебника не найдена', 404, 'LESSON_NOT_FOUND');
+        }
 
         const lesson = result.rows[0];
-        
         let htmlContent = '';
+
         if (lesson.content_path) {
             const fullPath = path.join(ARTICLES_DIR, path.basename(lesson.content_path));
             try {
                 htmlContent = await fs.readFile(fullPath, 'utf-8');
-            } catch (e) {
+            } catch {
                 htmlContent = '# Файл страницы не найден на диске';
             }
         }
@@ -167,22 +181,27 @@ async function getLessonById(req, res) {
                 content: htmlContent
             }
         });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * POST /api/v1/admin/ebook/lessons
  */
-async function createLesson(req, res) {
-    const { chapterId, title } = req.body;
+const createLesson = catchAsync(async (req, res) => {
+    const chapterId = req.body.chapter_id ?? req.body.chapterId;
+    const { title } = req.body;
     const client = getDbClient();
+
+    const lessonId = crypto.randomUUID();
+    const fileName = `lesson_${lessonId}.md`;
+    const relativePath = `/uploads/articles/${fileName}`;
+    const fullFilePath = path.join(ARTICLES_DIR, fileName);
 
     try {
         await client.connect();
+        await client.query('BEGIN');
 
         const maxOrderRes = await client.query(
             'SELECT COALESCE(MAX("order"), 0) + 1 as next_order FROM "theory_articles" WHERE chapter_id = $1;',
@@ -190,48 +209,54 @@ async function createLesson(req, res) {
         );
         const nextOrder = maxOrderRes.rows[0].next_order;
 
-        const lessonId = require('crypto').randomUUID();
-        const fileName = `lesson_${lessonId}.md`;
-        const relativePath = `/uploads/articles/${fileName}`;
-        const fullFilePath = path.join(ARTICLES_DIR, fileName);
-
-        const initialHtml = `<h2>${title}</h2>\n<p>Введите теоретический материал статьи...</p>`;        
-        await fs.writeFile(fullFilePath, initialHtml, 'utf-8');
-
         await client.query(`
             INSERT INTO "theory_articles" (id, chapter_id, title, content_path, widgets_config, "order")
             VALUES ($1, $2, $3, $4, $5::jsonb, $6);
         `, [lessonId, chapterId, title, relativePath, JSON.stringify([]), nextOrder]);
 
-         await sendGlobalNotification({
-            title: `Новый урок: ${title}`,
-            message: 'Опубликован новый урок в разделе электронного учебника.',
-            type: 'NEW_LESSON',
-            link: `theory/index.html`,
-            createdBy: req.user.id
-        });
+        const initialHtml = `<h2>${title}</h2>\n<p>Введите теоретический материал статьи...</p>`;
+        await fs.writeFile(fullFilePath, initialHtml, 'utf-8');
 
-        return res.json({ status: 'success', lessonId });
+        await client.query('COMMIT');
     } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
+        await client.query('ROLLBACK').catch(() => {});
+        await fs.unlink(fullFilePath).catch(() => {});
+        throw error;
     } finally {
         await client.end();
     }
-}
+
+    try {
+        await sendGlobalNotification({
+            title: `Новый урок: ${title}`,
+            message: 'Опубликован новый урок в разделе электронного учебника.',
+            type: 'NEW_LESSON',
+            link: 'theory/index.html',
+            createdBy: req.user.id
+        });
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление о новом уроке:', notifyErr.message);
+    }
+
+    return res.status(201).json({ status: 'success', lessonId });
+});
 
 /*
  * PUT /api/v1/admin/ebook/lessons/:id
  */
-async function updateLesson(req, res) {
+const updateLesson = catchAsync(async (req, res) => {
     const { id } = req.params;
-    const { title, order, content, widgetsConfig } = req.body;
+    const { title, order, content } = req.body;
+    const widgetsConfig = req.body.widgets_config ?? req.body.widgetsConfig;
     const client = getDbClient();
 
     try {
         await client.connect();
 
         const artRes = await client.query('SELECT content_path FROM "theory_articles" WHERE id = $1;', [id]);
-        if (artRes.rows.length === 0) return res.status(404).json({ status: 'error', message: 'Страница не найдена' });
+        if (artRes.rows.length === 0) {
+            throw new AppError('Страница учебника не найдена', 404, 'LESSON_NOT_FOUND');
+        }
 
         const contentPath = artRes.rows[0].content_path;
         const fileName = path.basename(contentPath);
@@ -239,7 +264,9 @@ async function updateLesson(req, res) {
 
         await fs.writeFile(fullFilePath, content || '', 'utf-8');
 
-        const widgetsJsonString = typeof widgetsConfig === 'string' ? widgetsConfig : JSON.stringify(widgetsConfig || []);
+        const widgetsJsonString = typeof widgetsConfig === 'string'
+            ? widgetsConfig
+            : JSON.stringify(widgetsConfig || []);
 
         await client.query(`
             UPDATE "theory_articles"
@@ -248,17 +275,15 @@ async function updateLesson(req, res) {
         `, [title, order, widgetsJsonString, id]);
 
         return res.json({ status: 'success', message: 'Страница успешно сохранена' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * DELETE /api/v1/admin/ebook/lessons/:id
  */
-async function deleteLesson(req, res) {
+const deleteLesson = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
@@ -266,23 +291,23 @@ async function deleteLesson(req, res) {
         await client.connect();
 
         const artRes = await client.query('SELECT content_path FROM "theory_articles" WHERE id = $1;', [id]);
-        
-        if (artRes.rows.length > 0 && artRes.rows[0].content_path) {
-            const fileName = path.basename(artRes.rows[0].content_path);
-            const fullFilePath = path.join(ARTICLES_DIR, fileName);
-
-            await fs.unlink(fullFilePath).catch(() => {});
+        if (artRes.rows.length === 0) {
+            throw new AppError('Страница учебника не найдена', 404, 'LESSON_NOT_FOUND');
         }
 
         await client.query('DELETE FROM "theory_articles" WHERE id = $1;', [id]);
 
+        if (artRes.rows[0].content_path) {
+            const fileName = path.basename(artRes.rows[0].content_path);
+            const fullFilePath = path.join(ARTICLES_DIR, fileName);
+            await fs.unlink(fullFilePath).catch(() => {});
+        }
+
         return res.json({ status: 'success', message: 'Страница удалена' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 module.exports = {
     getChapters,

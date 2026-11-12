@@ -1,5 +1,8 @@
 const { Client } = require('pg');
+const crypto = require('crypto');
 const { sendGlobalNotification } = require('../../services/notification');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -8,7 +11,7 @@ function getDbClient() {
 /*
  * GET /api/v1/admin/tests
  */
-async function getAllTests(req, res) {
+const getAllTests = catchAsync(async (req, res) => {
     const client = getDbClient();
 
     try {
@@ -24,18 +27,15 @@ async function getAllTests(req, res) {
         `);
 
         return res.json({ status: 'success', tests: result.rows });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * GET /api/v1/admin/tests/:id
  */
-async function getTestById(req, res) {
-
+const getTestById = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
@@ -44,29 +44,35 @@ async function getTestById(req, res) {
 
         const testRes = await client.query('SELECT * FROM "tests" WHERE id = $1;', [id]);
 
-        if (testRes.rows.length === 0) return res.status(404).json({ status: 'error', message: 'Тест не найден' });
+        if (testRes.rows.length === 0) {
+            throw new AppError('Тест не найден', 404, 'TEST_NOT_FOUND');
+        }
 
-        const questionsRes = await client.query('SELECT * FROM "test_questions" WHERE test_id = $1;', [id]);
+        const questionsRes = await client.query(
+            'SELECT * FROM "test_questions" WHERE test_id = $1 ORDER BY "order" ASC;',
+            [id]
+        );
 
         return res.json({
             status: 'success',
             test: testRes.rows[0],
             questions: questionsRes.rows
         });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * POST /api/v1/admin/tests
  */
-async function createTest(req, res) {
+const createTest = catchAsync(async (req, res) => {
+    const { title, description, difficulty } = req.body;
+    const timeLimit = req.body.time_limit ?? req.body.timeLimit ?? 15;
+    const isUnlocked = req.body.is_unlocked ?? req.body.isUnlocked;
 
-    const { title, description, difficulty, timeLimit, isUnlocked } = req.body;
     const client = getDbClient();
+    let createdTestId;
 
     try {
         await client.connect();
@@ -78,28 +84,32 @@ async function createTest(req, res) {
             INSERT INTO "tests" (id, title, description, difficulty, time_limit, is_unlocked, "order")
             VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6)
             RETURNING id;
-        `, [title, description || '', difficulty || 'Легкий', timeLimit || 15, isUnlocked !== false, nextOrder]);
+        `, [title, description || '', difficulty || 'Легкий', timeLimit, isUnlocked !== false, nextOrder]);
 
+        createdTestId = result.rows[0].id;
+    } finally {
+        await client.end();
+    }
+
+    try {
         await sendGlobalNotification({
             title: `Новое тестирование: ${title}`,
             message: 'Преподаватель опубликовал новое тестирование для прохождения.',
             type: 'NEW_TEST',
-            link: `testing/test-workspace.html?id=${result.rows[0].id}`,
+            link: `testing/test-workspace.html?id=${createdTestId}`,
             createdBy: req.user.id
         });
-
-        return res.json({ status: 'success', testId: result.rows[0].id });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
-    } finally {
-        await client.end();
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление о новом тесте:', notifyErr.message);
     }
-}
 
-/**
+    return res.status(201).json({ status: 'success', testId: createdTestId });
+});
+
+/*
  * PUT /api/v1/admin/tests/:id
  */
-async function updateTest(req, res) {
+const updateTest = catchAsync(async (req, res) => {
     const { id } = req.params;
     const { title, description, difficulty, timeLimit, isUnlocked, questions } = req.body;
     const client = getDbClient();
@@ -108,16 +118,20 @@ async function updateTest(req, res) {
         await client.connect();
         await client.query('BEGIN');
 
-        await client.query(`
+        const updateRes = await client.query(`
             UPDATE "tests" 
             SET title = $1, description = $2, difficulty = $3, time_limit = $4, is_unlocked = $5
             WHERE id = $6;
         `, [title, description, difficulty, timeLimit, isUnlocked, id]);
 
+        if (updateRes.rowCount === 0) {
+            throw new AppError('Тест не найден', 404, 'TEST_NOT_FOUND');
+        }
+
         const existingRes = await client.query(`
             SELECT id, "order" FROM "test_questions" WHERE test_id = $1 ORDER BY "order" ASC;
         `, [id]);
-        
+
         const existingByOrder = new Map();
         existingRes.rows.forEach(row => {
             existingByOrder.set(Number(row.order), row.id);
@@ -171,35 +185,35 @@ async function updateTest(req, res) {
 
         await client.query('COMMIT');
         return res.json({ status: 'success', message: 'Тест успешно обновлен' });
-
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Ошибка в updateTest:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * DELETE /api/v1/admin/tests/:id
  */
-async function deleteTest(req, res) {
+const deleteTest = catchAsync(async (req, res) => {
     const { id } = req.params;
     const client = getDbClient();
 
     try {
         await client.connect();
 
-        await client.query('DELETE FROM "tests" WHERE id = $1;', [id]);
+        const result = await client.query('DELETE FROM "tests" WHERE id = $1;', [id]);
+
+        if (result.rowCount === 0) {
+            throw new AppError('Тест не найден', 404, 'TEST_NOT_FOUND');
+        }
 
         return res.json({ status: 'success', message: 'Тест удален' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 module.exports = {
     getAllTests,

@@ -1,5 +1,7 @@
 const { Client } = require('pg');
-const { executeLabTests } = require('../services/compiler');
+const { executeLabTests } = require('../../services/compiler');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 const COMPILER_MAP = {
     'cpp': 'g++-15',
@@ -15,7 +17,7 @@ function getDbClient() {
 /**
  * GET /api/v1/labs
  */
-async function getAllLabs(req, res) {
+const getAllLabs = catchAsync(async (req, res) => {
     const userId = req.user ? req.user.id : null;
     const client = getDbClient();
 
@@ -36,27 +38,24 @@ async function getAllLabs(req, res) {
             FROM "labs" l
             LEFT JOIN "lab_submissions" ls 
                    ON l.id = ls.lab_id AND ls.user_id = $1
-            ORDER BY l.order ASC
+            ORDER BY l.order ASC;
         `;
 
         const result = await client.query(query, [userId]);
 
-        return res.json({ 
-            status: 'success', 
-            labs: result.rows 
+        return res.json({
+            status: 'success',
+            labs: result.rows
         });
-    } catch (error) {
-        console.error('Ошибка получения списка лабораторных:', error);
-        return res.status(500).json({ error: 'Ошибка сервера при получении лабораторных работ' });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * GET /api/v1/labs/:id
  */
-async function getLabById(req, res) {
+const getLabById = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userId = req.user ? req.user.id : null;
     const client = getDbClient();
@@ -66,14 +65,14 @@ async function getLabById(req, res) {
 
         const result = await client.query(
             `SELECT id, title, description, "task_json", "template_code", "test_cases", "order"
-            FROM "labs"
-            WHERE id = $1 LIMIT 1;`,
+             FROM "labs"
+             WHERE id = $1 LIMIT 1;`,
             [id]
         );
 
         const lab = result.rows[0];
         if (!lab) {
-            return res.status(404).json({ error: 'Лабораторная работа не найдена' });
+            throw new AppError('Лабораторная работа не найдена', 404, 'LAB_NOT_FOUND');
         }
 
         const subRes = await client.query(`
@@ -98,26 +97,23 @@ async function getLabById(req, res) {
                 } : null
             }
         });
-    } catch (error) {
-        console.error(`Ошибка получения лабораторной ${id}:`, error);
-        return res.status(500).json({ error: 'Ошибка сервера при получении лабораторной работы' });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * POST /api/v1/labs/save
  */
-async function saveLab(req, res) { 
+const saveLab = catchAsync(async (req, res) => {
     const userId = req.user ? req.user.id : null;
     const { lab_id, student_code, language } = req.body;
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Требуется авторизация.' });
+        throw new AppError('Требуется авторизация', 401, 'UNAUTHORIZED');
     }
     if (!lab_id) {
-        return res.status(400).json({ status: 'error', message: 'Не указан lab_id.' });
+        throw new AppError('Не указан lab_id', 400, 'MISSING_LAB_ID');
     }
 
     const client = getDbClient();
@@ -141,31 +137,27 @@ async function saveLab(req, res) {
             status: 'success',
             message: 'Черновик успешно сохранен'
         });
-
-    } catch (error) {
-        console.error('Save Draft Error:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * POST /api/v1/labs/run
  */
-async function runTests(req, res) {
+const runTests = catchAsync(async (req, res) => {
+    const { lab_id, student_code, language = 'cpp' } = req.body;
+
+    if (!student_code?.trim()) {
+        throw new AppError('Передан пустой код', 400, 'EMPTY_CODE');
+    }
+    if (!lab_id) {
+        throw new AppError('Не указан lab_id', 400, 'MISSING_LAB_ID');
+    }
+
     const client = getDbClient();
 
     try {
-        const { lab_id, student_code, language = 'cpp' } = req.body;
-
-        if (!student_code?.trim()) {
-            return res.status(400).json({ status: 'error', message: 'Передан пустой код.' });
-        }
-        if (!lab_id) {
-            return res.status(400).json({ status: 'error', message: 'Не указан lab_id.' });
-        }
-
         await client.connect();
 
         const labResult = await client.query(
@@ -175,10 +167,7 @@ async function runTests(req, res) {
 
         const currentLab = labResult.rows[0];
         if (!currentLab) {
-            return res.status(404).json({
-                status: 'error',
-                message: `Лабораторная работа '${lab_id}' не найдена.`,
-            });
+            throw new AppError(`Лабораторная работа '${lab_id}' не найдена`, 404, 'LAB_NOT_FOUND');
         }
 
         const targetCompiler = COMPILER_MAP[language] || 'g++-15';
@@ -186,7 +175,7 @@ async function runTests(req, res) {
         const executionResult = await executeLabTests({
             studentCode: student_code,
             testCases: currentLab.test_cases,
-            language: language,
+            language,
             compiler: targetCompiler
         });
 
@@ -199,40 +188,36 @@ async function runTests(req, res) {
 
         return res.json({
             status: 'success',
-            lab_id: lab_id,
-            language: language,
+            lab_id,
+            language,
             all_passed: executionResult.all_passed,
             tests: executionResult.tests
         });
-
-    } catch (error) {
-        console.error('Run Error:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-};
+});
 
 /**
  * POST /api/v1/labs/submit
  */
-async function submitLab(req, res) {   
+const submitLab = catchAsync(async (req, res) => {
+    const userId = req.user ? req.user.id : null;
+    const { lab_id, student_code, language = 'cpp' } = req.body;
+
+    if (!userId) {
+        throw new AppError('Требуется авторизация', 401, 'UNAUTHORIZED');
+    }
+    if (!student_code?.trim()) {
+        throw new AppError('Передан пустой код', 400, 'EMPTY_CODE');
+    }
+    if (!lab_id) {
+        throw new AppError('Не указан lab_id', 400, 'MISSING_LAB_ID');
+    }
+
     const client = getDbClient();
 
     try {
-        const userId = req.user ? req.user.id : null;
-        const { lab_id, student_code, language = 'cpp' } = req.body;
-
-        if (!userId) {
-            return res.status(401).json({ status: 'error', message: 'Требуется авторизация.' });
-        }
-        if (!student_code?.trim()) {
-            return res.status(400).json({ status: 'error', message: 'Передан пустой код.' });
-        }
-        if (!lab_id) {
-            return res.status(400).json({ status: 'error', message: 'Не указан lab_id.' });
-        }
-
         await client.connect();
 
         const labResult = await client.query(
@@ -242,7 +227,7 @@ async function submitLab(req, res) {
 
         const currentLab = labResult.rows[0];
         if (!currentLab) {
-            return res.status(404).json({ status: 'error', message: 'Лабораторная работа не найдена.' });
+            throw new AppError('Лабораторная работа не найдена', 404, 'LAB_NOT_FOUND');
         }
 
         const targetCompiler = COMPILER_MAP[language] || 'g++-15';
@@ -250,11 +235,11 @@ async function submitLab(req, res) {
         const executionResult = await executeLabTests({
             studentCode: student_code,
             testCases: currentLab.test_cases,
-            language: language,
+            language,
             compiler: targetCompiler
         });
 
-       if (executionResult.status === 'compile_error') {
+        if (executionResult.status === 'compile_error') {
             await client.query(`
                 INSERT INTO "lab_submissions" (id, user_id, lab_id, submitted_code, status, submitted_at)
                 VALUES (gen_random_uuid(), $1, $2, $3, 'DRAFT', NOW())
@@ -311,13 +296,10 @@ async function submitLab(req, res) {
                 tests: executionResult.tests || []
             }
         });
-    } catch (error) {
-        console.error('Submit Error:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-};
+});
 
 module.exports = {
     getAllLabs,
