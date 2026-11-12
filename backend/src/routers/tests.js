@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAllTests, getTestById, submitTest, getTestResult } = require('../controllers/testController');
+const { getAllTests, getTestById, submitTest, getTestResult } = require('../controllers/user/testController');
 const { authenticateToken } = require('../services/jwt');
 
 router.get('/', authenticateToken, getAllTests)

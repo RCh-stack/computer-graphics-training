@@ -1,6 +1,8 @@
 const { Client } = require('pg');
 const { resolveOptionText } = require('../../services/textHandler');
 const { sendUserNotification } = require('../../services/notification');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -9,7 +11,7 @@ function getDbClient() {
 /*
  * GET /api/v1/admin/submissions/labs
  */
-async function getLabSubmissions(req, res) {
+const getLabSubmissions = catchAsync(async (req, res) => {
     const { labId, groupId, status } = req.query;
     const client = getDbClient();
 
@@ -60,26 +62,27 @@ async function getLabSubmissions(req, res) {
         const result = await client.query(query, params);
 
         return res.json({ status: 'success', submissions: result.rows });
-    } catch (error) {
-        console.error('Ошибка получения выполненных лабораторных работ:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * PUT /api/v1/admin/submissions/labs/:id/review
  */
-async function reviewLabSubmission(req, res) {
+const reviewLabSubmission = catchAsync(async (req, res) => {
     const { id } = req.params;
     const { status, teacherComment } = req.body;
 
     if (!status) {
-        return res.status(400).json({ status: 'error', message: 'Укажите статус проверки' });
+        throw new AppError('Укажите статус проверки', 400, 'MISSING_REVIEW_STATUS');
     }
 
     const client = getDbClient();
+    let userId;
+    let labId;
+    let labOrder = '';
+    let labTitle = 'Лабораторная работа';
 
     try {
         await client.connect();
@@ -89,48 +92,54 @@ async function reviewLabSubmission(req, res) {
             SET status = $1, teacher_comment = $2
             WHERE id = $3
             RETURNING user_id, lab_id;
-        `, [status, teacherComment || '', id]);
+        `, [status, teacherComment, id]);
 
         if (updateRes.rows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Запись о сдаче работы не найдена' });
+            throw new AppError('Запись о сдаче работы не найдена', 404, 'SUBMISSION_NOT_FOUND');
         }
 
-        const { user_id, lab_id } = updateRes.rows[0];
+        userId = updateRes.rows[0].user_id;
+        labId = updateRes.rows[0].lab_id;
 
         const labRes = await client.query(`
             SELECT title, "order" FROM "labs" WHERE id = $1 LIMIT 1;
-        `, [lab_id]);
+        `, [labId]);
 
         const lab = labRes.rows[0] || {};
-        const labOrder = lab.order !== undefined ? lab.order : '';
-        const labTitle = lab.title || 'Лабораторная работа';
-
-        const statusText = status === 'PASSED' ? 'Принято ✅' : status === 'REVISION' ? 'На доработку ⚠️' : 'Отклонена ❌';
-    
-        await sendUserNotification({
-            userId: user_id,
-            title: `Статус лабораторной работы №${labOrder} (${labTitle})`,
-            message: `Ваша работа переведена в статус "${statusText}". ${teacherComment ? 'Комментарий: ' + teacherComment : ''}`,
-            type: 'LAB_STATUS',
-            link: `workspace/lab-workspace.html?id=${lab_id}`
-        });
-
-        return res.json({ 
-            status: 'success', 
-            message: 'Результат проверки успешно сохранен' 
-        });
-    } catch (error) {
-        console.error('Ошибка проверки решения:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
+        if (lab.order !== undefined) labOrder = lab.order;
+        if (lab.title) labTitle = lab.title;
     } finally {
         await client.end();
     }
-}
+
+    const statusText = status === 'PASSED'
+        ? 'Принято ✅'
+        : status === 'REVISION'
+            ? 'На доработку ⚠️'
+            : 'Отклонена ❌';
+
+    try {
+        await sendUserNotification({
+            userId,
+            title: `Статус лабораторной работы №${labOrder} (${labTitle})`,
+            message: `Ваша работа переведена в статус "${statusText}". ${teacherComment ? 'Комментарий: ' + teacherComment : ''}`,
+            type: 'LAB_STATUS',
+            link: `workspace/lab-workspace.html?id=${labId}`
+        });
+    } catch (notifyErr) {
+        console.error('[WARN] Не удалось отправить уведомление студенту о проверке работы:', notifyErr.message);
+    }
+
+    return res.json({
+        status: 'success',
+        message: 'Результат проверки успешно сохранен'
+    });
+});
 
 /*
  * GET /api/v1/admin/submissions/tests
  */
-async function getTestSubmissions(req, res) {
+const getTestSubmissions = catchAsync(async (req, res) => {
     const { groupId } = req.query;
     const client = getDbClient();
 
@@ -172,7 +181,7 @@ async function getTestSubmissions(req, res) {
 
         const testIds = [...new Set(submissions.map(s => s.test_id))];
 
-        let questionsByTest = new Map();
+        const questionsByTest = new Map();
         if (testIds.length > 0) {
             const qResult = await client.query(`
                 SELECT id, test_id, question_text, options_json, correct_answer 
@@ -191,7 +200,11 @@ async function getTestSubmissions(req, res) {
         const enrichedSubmissions = submissions.map(sub => {
             let userAnsObj = sub.user_answers;
             if (typeof userAnsObj === 'string') {
-                try { userAnsObj = JSON.parse(userAnsObj); } catch { userAnsObj = {}; }
+                try {
+                    userAnsObj = JSON.parse(userAnsObj);
+                } catch {
+                    userAnsObj = {};
+                }
             }
 
             const testQuestions = questionsByTest.get(sub.test_id) || [];
@@ -216,7 +229,7 @@ async function getTestSubmissions(req, res) {
                     questionText: q.question_text,
                     correctAnswer: correctText,
                     userAnswer: userText,
-                    isCorrect: isCorrect
+                    isCorrect
                 };
             });
 
@@ -227,18 +240,15 @@ async function getTestSubmissions(req, res) {
         });
 
         return res.json({ status: 'success', submissions: enrichedSubmissions });
-    } catch (error) {
-        console.error('Ошибка получения результатов тестов:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /*
  * GET /api/v1/admin/submissions/ebook
  */
-async function getTheoryGradebook(req, res) {
+const getTheoryGradebook = catchAsync(async (req, res) => {
     const { groupId } = req.query;
     const client = getDbClient();
 
@@ -290,7 +300,7 @@ async function getTheoryGradebook(req, res) {
                 const completed = progressMap.get(`${st.id}_${ch.id}`) || 0;
                 const total = ch.total_articles || 0;
                 const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-                
+
                 chapterProgress[ch.id] = {
                     completed,
                     total,
@@ -312,16 +322,12 @@ async function getTheoryGradebook(req, res) {
             chapters,
             rows
         });
-
-    } catch (error) {
-        console.error('Ошибка получения прогресса теории:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
-module.exports = { 
+module.exports = {
     getLabSubmissions,
     reviewLabSubmission,
     getTestSubmissions,

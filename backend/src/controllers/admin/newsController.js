@@ -1,5 +1,7 @@
 const { Client } = require('pg');
-const { sendGlobalNotification } = require('../services/notification');
+const { sendGlobalNotification } = require('../../services/notification');
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
@@ -8,7 +10,7 @@ function getDbClient() {
 /**
  * GET /api/v1/news
  */
-async function getNewsFeed(req, res) {
+const getNewsFeed = catchAsync(async (req, res) => {
     const userId = req.user ? req.user.id : null;
     const client = getDbClient();
 
@@ -35,39 +37,32 @@ async function getNewsFeed(req, res) {
 
         const result = await client.query(query, [userId]);
         return res.json({ status: 'success', news: result.rows });
-    } catch (error) {
-        console.error('Ошибка получения новостей:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * POST /api/v1/news
  */
-async function postAnnouncement(req, res) {
+const postAnnouncement = catchAsync(async (req, res) => {
     const { title, message, link } = req.body;
     const authorId = req.user.id;
 
-    if (!title || !message) {
-        return res.status(400).json({ status: 'error', message: 'Заголовок и текст обязательны' });
+    if (!title?.trim() || !message?.trim()) {
+        throw new AppError('Заголовок и текст обязательны', 400, 'MISSING_ANNOUNCEMENT_FIELDS');
     }
 
-    try {
-        await sendGlobalNotification({
-            title,
-            message,
-            type: 'ANNOUNCEMENT',
-            link,
-            createdBy: authorId
-        });
+    await sendGlobalNotification({
+        title: title.trim(),
+        message: message.trim(),
+        type: 'ANNOUNCEMENT',
+        link,
+        createdBy: authorId
+    });
 
-        return res.json({ status: 'success', message: 'Объявление успешно опубликовано' });
-    } catch (error) {
-        return res.status(500).json({ status: 'error', message: error.message });
-    }
-}
+    return res.status(201).json({ status: 'success', message: 'Объявление успешно опубликовано' });
+});
 
 module.exports = {
     getNewsFeed,

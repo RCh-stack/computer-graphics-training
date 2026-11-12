@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAllLessons, getLessonById, updateLessonProgress } = require('../controllers/ebookController');
+const { getAllLessons, getLessonById, updateLessonProgress } = require('../controllers/user/ebookController');
 const { authenticateToken } = require('../services/jwt');
 
 router.get('/lessons', authenticateToken, getAllLessons)

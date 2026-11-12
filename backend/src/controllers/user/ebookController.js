@@ -2,6 +2,9 @@ const { Client } = require('pg');
 const path = require('path');
 const fs = require('fs').promises;
 
+const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
+
 function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
 }
@@ -9,7 +12,7 @@ function getDbClient() {
 /**
  * GET /api/v1/ebook/lessons
  */
-async function getAllLessons(req, res) {
+const getAllLessons = catchAsync(async (req, res) => {
     const userId = req.user?.id;
     const client = getDbClient();
 
@@ -73,14 +76,14 @@ async function getAllLessons(req, res) {
         });
 
         const chapters = Array.from(chaptersMap.values()).map(ch => {
-            ch.progressPercent = ch.totalCount > 0 
-                ? Math.round((ch.completedCount / ch.totalCount) * 100) 
+            ch.progressPercent = ch.totalCount > 0
+                ? Math.round((ch.completedCount / ch.totalCount) * 100)
                 : 0;
             return ch;
         });
 
-        const overallProgress = totalLessons > 0 
-            ? Math.round((totalCompleted / totalLessons) * 100) 
+        const overallProgress = totalLessons > 0
+            ? Math.round((totalCompleted / totalLessons) * 100)
             : 0;
 
         return res.json({
@@ -90,18 +93,15 @@ async function getAllLessons(req, res) {
             totalCompleted,
             chapters
         });
-    } catch (error) {
-        console.error('Ошибка получения оглавления:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 /**
  * GET /api/v1/ebook/lessons/:id
  */
-async function getLessonById(req, res) {
+const getLessonById = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
     const client = getDbClient();
@@ -131,21 +131,19 @@ async function getLessonById(req, res) {
         const article = result.rows[0];
 
         if (!article) {
-            return res.status(404).json({ status: 'error', message: 'Страница не найдена' });
+            throw new AppError('Страница не найдена', 404, 'LESSON_NOT_FOUND');
         }
 
         let htmlContent = '';
         if (article.content_path) {
             const cleanPath = article.content_path.replace(/^(\.\/|\/)+/, '');
+            const projectRoot = path.resolve(__dirname, '../../../');
+            const absolutePath = path.join(projectRoot, '', cleanPath);
 
-            const projectRoot = path.resolve(__dirname, '../../..');
-
-            const absolutePath = path.join(projectRoot, 'backend', cleanPath);
-            
             try {
                 htmlContent = await fs.readFile(absolutePath, 'utf8');
-            } catch (error) {
-                console.error(error);
+            } catch (fileErr) {
+                console.error(`[WARN] Не удалось прочитать файл урока ${absolutePath}:`, fileErr.message);
                 htmlContent = '<div class="alert alert-warning">Содержимое страницы временно недоступно.</div>';
             }
         }
@@ -161,25 +159,21 @@ async function getLessonById(req, res) {
                 isCompleted: article.is_completed
             }
         });
-
-    } catch (error) {
-        console.error(`Ошибка получения страницы ${id}:`, error);
-        return res.status(500).json({ status: 'error', message: 'Ошибка сервера при получении страницы' });
     } finally {
         await client.end();
     }
-};
+});
 
 /**
  * POST /api/v1/ebook/lessons/:id/progress
  */
-async function updateLessonProgress(req, res) {
+const updateLessonProgress = catchAsync(async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
     const { completed } = req.body;
 
     if (!userId) {
-        return res.status(401).json({ status: 'error', message: 'Необходима авторизация' });
+        throw new AppError('Необходима авторизация', 401, 'UNAUTHORIZED');
     }
 
     const client = getDbClient();
@@ -200,13 +194,10 @@ async function updateLessonProgress(req, res) {
         }
 
         return res.json({ status: 'success', isCompleted: completed !== false });
-    } catch (error) {
-        console.error('Ошибка сохранения прогресса:', error);
-        return res.status(500).json({ status: 'error', message: error.message });
     } finally {
         await client.end();
     }
-}
+});
 
 module.exports = {
     getAllLessons,

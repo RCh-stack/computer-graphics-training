@@ -37,9 +37,18 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/news', newsRoutes);
 
 const { notFoundHandler, globalErrorHandler } = require('./src/services/errorHandler.js');
-app.use(notFoundHandler);
+app.use('/api', notFoundHandler);
 app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
     console.log(`server start ${URL}:${PORT}`);
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('[UNHANDLED REJECTION]', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[UNCAUGHT EXCEPTION]', error);
+  process.exit(1);
 });
