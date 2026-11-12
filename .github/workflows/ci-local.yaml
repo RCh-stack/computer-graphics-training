@@ -39,12 +39,8 @@ jobs:
         run: npm ci
 
       - name: Проверка синтаксиса
-        run: node --check backend/src/**/*.js /**/*.js frontend/src/*.js frontend/**/src/*.js || true
-
-      - name: Проверка синтаксиса
         run: |
           find . -name "*.js" -not -path "*/node_modules/*" -exec node --check {} \;
-
 
       - name: Запуск тестов
         env:
