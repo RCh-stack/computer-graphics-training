@@ -282,6 +282,8 @@ async function saveLab() {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json();
+
         if (res.ok) {
             Swal.fire({ 
                 title: 'Сохранено!', 
@@ -290,7 +292,7 @@ async function saveLab() {
                 confirmButtonColor: '#10b981' 
             });
         } else {
-            Swal.fire('Ошибка', 'Не удалось сохранить лабораторную работу', 'error');
+            Swal.fire('Ошибка', data.message || 'Не удалось сохранить лабораторную работу', 'error');
         }
     } catch (error) {
         console.error(error);

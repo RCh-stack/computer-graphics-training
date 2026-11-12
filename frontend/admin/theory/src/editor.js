@@ -196,6 +196,8 @@ async function saveLesson() {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json();
+
         if (res.ok) {
             Swal.fire({ 
                 title: 'Сохранено!', 
@@ -207,7 +209,7 @@ async function saveLesson() {
                 allowEscapeKey: false  
             });
         } else {
-            Swal.fire({ title: 'Ошибка', text: 'Не удалось сохранить страницу', icon: 'error', confirmButtonText: 'ОК' });
+            Swal.fire({ title: 'Ошибка', text: data.message || 'Не удалось сохранить страницу', icon: 'error', confirmButtonText: 'ОК' });
         }
     } catch (error) {
         console.error(error);

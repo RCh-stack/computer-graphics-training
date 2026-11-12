@@ -245,7 +245,7 @@ function checkAutoCompletion() {
     if (isShortPage || isScrolledToBottom) {
         if (!scrollTimer) {
             scrollTimer = setTimeout(() => {
-                toggleLessonCompletion(currentLessonState.id, true);
+                updateLessonCompletion(currentLessonState.id, true);
                 scrollTimer = null;
             }, 3000);
         }

@@ -6,6 +6,7 @@ async function saveDraft() {
     const urlParams = new URLSearchParams(window.location.search);
     const labId = urlParams.get('id');
     const code = window.windowEditor ? window.windowEditor.getValue() : '';
+    const selectedLang = document.getElementById('language-select')?.value || 'cpp';
 
     if (!code.trim()) {
         Swal.fire('Информация', 'Код не может быть пустым', 'info');
@@ -21,7 +22,7 @@ async function saveDraft() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ lab_id: labId, student_code: code })
+            body: JSON.stringify({ lab_id: labId, student_code: code, language: selectedLang })
         });
 
         if (res.ok) {
@@ -92,7 +93,7 @@ async function runCode() {
             handleExecutionResult(result);
         } else {
             Swal.fire({
-                title: response.status === 429 ? 'Доступ временно ограничен' : `Ошибка сервера: ${response.status}`,
+                title: response.status === 429 ? 'Доступ временно ограничен' : 'Ошибка',
                 text: result.message,
                 icon: response.status === 429 ? 'warning' : 'error',
                 confirmButtonColor: '#ec4899'

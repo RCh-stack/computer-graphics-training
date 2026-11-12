@@ -102,6 +102,8 @@ function initReviewModalEvents() {
                 body: JSON.stringify({ status, teacherComment })
             });
 
+            const data = await res.json();
+
             if (res.ok) {
                 closeModal();
                 
@@ -116,6 +118,8 @@ function initReviewModalEvents() {
                     confirmButtonText: 'ОК',
                     confirmButtonColor: '#10b981'
                 });
+            } else {
+                Swal.fire('Ошибка', data.message || 'Не удалось сохранить результат проверки', 'error');
             }
         } catch (error) {
             console.error('Ошибка сохранения статуса:', error);

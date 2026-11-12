@@ -336,13 +336,15 @@ async function saveTest() {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json();
+
         if (res.ok) {
             Swal.fire({ title: 'Сохранено!', text: 'Тест успешно обновлен', icon: 'success', confirmButtonColor: '#f59e0b' });
         } else {
-            Swal.fire('Ошибка', 'Не удалось сохранить данные теста', 'error');
+            Swal.fire('Ошибка', data.message || 'Не удалось сохранить лабораторную работу', 'error');
         }
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        console.error(error);
         Swal.fire('Ошибка', 'Ошибка подключения к серверу', 'error');
     }
 }

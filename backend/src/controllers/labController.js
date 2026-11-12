@@ -111,7 +111,7 @@ async function getLabById(req, res) {
  */
 async function saveLab(req, res) { 
     const userId = req.user ? req.user.id : null;
-    const { lab_id, student_code } = req.body;
+    const { lab_id, student_code, language } = req.body;
 
     if (!userId) {
         return res.status(401).json({ status: 'error', message: 'Требуется авторизация.' });
@@ -126,15 +126,16 @@ async function saveLab(req, res) {
         await client.connect();
 
         const upsertQuery = `
-            INSERT INTO "lab_submissions" (id, user_id, lab_id, submitted_code, status, submitted_at)
-            VALUES (gen_random_uuid(), $1, $2, $3, 'DRAFT', NOW())
+            INSERT INTO "lab_submissions" (id, user_id, lab_id, submitted_code, status, submitted_at, language)
+            VALUES (gen_random_uuid(), $1, $2, $3, 'DRAFT', NOW(), $4)
             ON CONFLICT (user_id, lab_id)
             DO UPDATE SET
                 status = 'DRAFT',
-                submitted_code = EXCLUDED.submitted_code;
+                submitted_code = EXCLUDED.submitted_code,
+                language = EXCLUDED.language;
         `;
 
-        await client.query(upsertQuery, [userId, lab_id, student_code || '']);
+        await client.query(upsertQuery, [userId, lab_id, student_code || '', language || 'cpp']);
 
         return res.json({
             status: 'success',
