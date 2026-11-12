@@ -195,14 +195,23 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <select id="news-filter-type" class="bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs rounded-xl px-3 py-2 text-[var(--text-main)] focus:outline-none focus:border-pink-500">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="news-filter-type"
+                            class="bg-[var(--bg-panel)] border border-[var(--border-color)] text-xs rounded-xl px-3 py-2 text-[var(--text-main)] focus:outline-none focus:border-pink-500">
                             <option value="ALL">Все события</option>
                             <option value="PERSONAL">Личные уведомления</option>
                             <option value="ANNOUNCEMENT">Объявления курса</option>
                         </select>
-
-                        <button id="btn-open-create-news" class="hidden px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20 transition flex items-center gap-1.5">
+                    
+                        <button id="btn-clear-all-news" type="button"
+                            class="hidden px-3 py-2 bg-[var(--bg-panel)] hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 border border-[var(--border-color)] hover:border-red-500/30 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+                            title="Очистить ленту уведомлений">
+                            <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            <span>Очистить все</span>
+                        </button>
+                    
+                        <button id="btn-open-create-news"
+                            class="hidden px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20 transition flex items-center gap-1.5">
                             <i class="fa-solid fa-plus"></i> Опубликовать
                         </button>
                     </div>
@@ -221,7 +230,7 @@
             
             <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-3">
                 <h3 class="text-sm font-bold text-[var(--text-main)]">Новое объявление для курса</h3>
-                <button id="btn-close-news-modal" type="button" class="text-gray-400 hover:text-white">
+                <button id="btn-close-news-modal" type="button" class="text-gray-400 hover:text-pink-500">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
