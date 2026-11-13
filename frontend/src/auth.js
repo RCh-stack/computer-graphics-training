@@ -54,7 +54,6 @@ function forceLogout(reasonMessage = null) {
     }
 }
 
-// 1. Мгновенная проверка при открытии защищённой страницы
 (function enforceAuthOnPageLoad() {
     if (isAuthPage()) return;
 
@@ -66,7 +65,6 @@ function forceLogout(reasonMessage = null) {
     }
 })();
 
-// 2. Глобальный перехват ответов 401 от API
 const nativeFetch = window.fetch;
 window.fetch = async (...args) => {
     const response = await nativeFetch(...args);
@@ -90,8 +88,7 @@ window.fetch = async (...args) => {
                 forceLogout(message);
                 return response;
             }
-        } catch {
-            // Если тело ответа не JSON, всё равно сбрасываем сессию
+        } catch {           
         }
 
         forceLogout(message);
@@ -123,7 +120,7 @@ async function checkUserRoleAndSetupUI() {
         });
 
         if (res.status === 401) {
-            return; // Обработается глобальным перехватчиком fetch
+            return;
         }
 
         const data = await res.json();
