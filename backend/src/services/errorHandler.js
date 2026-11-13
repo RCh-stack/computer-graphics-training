@@ -1,3 +1,4 @@
+const Sentry = require('@sentry/node');
 const AppError = require('../utils/appError');
 
 function handlePostgresError(error) {
@@ -73,6 +74,31 @@ function logServerError(error, req) {
   if (!error.isOperational || error.statusCode >= 500) {
     console.error(`[${timestamp}] [ERROR ${error.statusCode}] ${requestInfo} - ${error.message}`);
     console.error(error.stack);
+
+    if (process.env.SENTRY_DSN) {
+      Sentry.withScope((scope) => {
+        if (req.user) {
+          scope.setUser({
+            id: String(req.user.id),
+            email: req.user.email,
+            role: req.user.role,
+          });
+        }
+
+        scope.setTag('error_code', error.code || 'INTERNAL_ERROR');
+        scope.setTag('http_status', String(error.statusCode));
+
+        scope.setContext('request_info', {
+          method: req.method,
+          url: req.originalUrl,
+          query: req.query,
+          params: req.params,
+          ip: req.ip,
+        });
+
+        Sentry.captureException(error);
+      });
+    }
   } else if (process.env.NODE_ENV === 'development') {
     console.warn(`[${timestamp}] [WARN ${error.statusCode}] ${requestInfo} - ${error.code}: ${error.message}`);
   }

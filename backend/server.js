@@ -1,4 +1,7 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+const Sentry = require('./src/utils/instrument');
 
 const express = require('express');
 
@@ -46,9 +49,11 @@ app.listen(PORT, () => {
 
 process.on('unhandledRejection', (error) => {
   console.error('[UNHANDLED REJECTION]', error);
+  Sentry.captureException(err);
 });
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', async (error) => {
   console.error('[UNCAUGHT EXCEPTION]', error);
+  await Sentry.close(2000);
   process.exit(1);
 });
