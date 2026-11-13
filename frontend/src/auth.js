@@ -1,5 +1,106 @@
+const AUTH_PAGE_URL = '/frontend/authorization/index.html';
+
+const AUTH_ERROR_CODES = new Set([
+    'TOKEN_EXPIRED',
+    'INVALID_TOKEN',
+    'TOKEN_MISSING',
+    'ACCOUNT_DISABLED',
+    'ROLE_CHANGED',
+    'TWO_FACTOR_REQUIRED',
+]);
+
+let isLoggingOut = false;
+
+function isAuthPage() {
+    const path = window.location.pathname.toLowerCase();
+    return path.includes('/authorization/') || path.includes('/auth/');
+}
+
+function isJwtExpired(token) {
+    try {
+        const payloadPart = token.split('.')[1];
+        if (!payloadPart) return true;
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+        const payload = JSON.parse(atob(padded));
+        return !payload.exp || Date.now() >= payload.exp * 1000;
+    } catch {
+        return true;
+    }
+}
+
+function forceLogout(reasonMessage = null) {
+    if (isLoggingOut) return;
+    isLoggingOut = true;
+
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+
+    if (isAuthPage()) return;
+
+    if (reasonMessage && typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Сессия завершена',
+            text: reasonMessage,
+            icon: 'info',
+            confirmButtonText: 'Войти заново',
+            confirmButtonColor: '#ec4899',
+            allowOutsideClick: false,
+        }).then(() => {
+            window.location.href = AUTH_PAGE_URL;
+        });
+    } else {
+        window.location.href = AUTH_PAGE_URL;
+    }
+}
+
+(function enforceAuthOnPageLoad() {
+    if (isAuthPage()) return;
+
+    const token = localStorage.getItem('authToken');
+    const userRaw = localStorage.getItem('user');
+
+    if (!token || !userRaw || isJwtExpired(token)) {
+        forceLogout();
+    }
+})();
+
+const nativeFetch = window.fetch;
+window.fetch = async (...args) => {
+    const response = await nativeFetch(...args);
+
+    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+    const isPublicAuthRequest =
+        url.includes('/api/v1/auth/login') ||
+        url.includes('/api/v1/auth/2fa/verify') ||
+        url.includes('/api/v1/auth/register') ||
+        url.includes('/api/v1/auth/request-reset') ||
+        url.includes('/api/v1/auth/reset-password');
+
+    if (response.status === 401 && !isPublicAuthRequest) {
+        let message = 'Срок действия сессии истек. Войдите заново.';
+        try {
+            const data = await response.clone().json();
+            const errorCode = data.code || data.status;
+            if (data.message) message = data.message;
+
+            if (AUTH_ERROR_CODES.has(errorCode)) {
+                forceLogout(message);
+                return response;
+            }
+        } catch {           
+        }
+
+        forceLogout(message);
+    }
+
+    return response;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
-    checkUserRoleAndSetupUI();
+    if (!isAuthPage()) {
+        checkUserRoleAndSetupUI();
+    }
 });
 
 async function checkUserRoleAndSetupUI() {
@@ -7,7 +108,7 @@ async function checkUserRoleAndSetupUI() {
     const userRaw = localStorage.getItem('user');
 
     if (!token || !userRaw) {
-        window.location.href = '/frontend/authorization/index.html';
+        forceLogout();
         return;
     }
 
@@ -18,15 +119,11 @@ async function checkUserRoleAndSetupUI() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        const data = await res.json();
-
         if (res.status === 401) {
-            const logoutStatuses = ['ROLE_CHANGED', 'ACCOUNT_DISABLED', 'TOKEN_EXPIRED', 'TOKEN_MISSING', 'INVALID_TOKEN'];
-            if (logoutStatuses.includes(data.status)) {
-                forceLogout(data.message || 'Ваша сессия завершена. Войдите заново.');
-                return;
-            }
+            return;
         }
+
+        const data = await res.json();
 
         if (res.ok && data.user) {
             if (data.user.role !== localUser.role) {
@@ -71,25 +168,6 @@ async function checkUserRoleAndSetupUI() {
 
     if (localUser.role === 'TEACHER' || localUser.role === 'ADMIN') {
         setupAdminModeToggle();
-    }
-}
-
-function forceLogout(reasonMessage = null) {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-
-    if (reasonMessage && typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: 'Сессия завершена',
-            text: reasonMessage,
-            icon: 'info',
-            confirmButtonText: 'Понятно',
-            confirmButtonColor: '#ec4899'
-        }).then(() => {
-            window.location.href = '/frontend/authorization/index.html';
-        });
-    } else {
-        window.location.href = '/frontend/authorization/index.html';
     }
 }
 

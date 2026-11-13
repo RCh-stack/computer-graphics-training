@@ -19,6 +19,9 @@ async function authenticateToken(req, res, next) {
   let decoded;
   try {
     decoded = jwt.verify(token, JWT_SECRET);
+    if (decoded.purpose === '2fa_verify') {
+      return next(new AppError('Требуется подтверждение двухфакторной аутентификации.', 401, 'TWO_FACTOR_REQUIRED'));
+    }
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return next(new AppError('Срок действия сессии истек. Войдите заново.', 401, 'TOKEN_EXPIRED'));
