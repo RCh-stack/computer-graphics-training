@@ -22,7 +22,7 @@ const loadProfile = catchAsync(async (req, res) => {
         await client.connect();
 
         const result = await client.query(
-            `SELECT id, email, "first_name", "last_name", role, "group_id" 
+            `SELECT id, email, "first_name", "last_name", role, "group_id", "is_2fa_enabled"
              FROM users WHERE id = $1 LIMIT 1;`,
             [userId]
         );

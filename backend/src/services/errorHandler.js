@@ -1,9 +1,9 @@
 const AppError = require('../utils/appError');
 
-function handlePostgresError(erroror) {
-  switch (erroror.code) {
+function handlePostgresError(error) {
+  switch (error.code) {
     case '23505': { // unique_violation
-      const detail = erroror.detail || '';
+      const detail = error.detail || '';
       if (detail.includes('email')) {
         return new AppError('Пользователь с таким email уже зарегистрирован', 409, 'DUPLICATE_EMAIL');
       }
@@ -17,7 +17,7 @@ function handlePostgresError(erroror) {
       );
     case '23502': // not_null_violation
       return new AppError(
-        `Не заполнено обязательное поле в базе данных${erroror.column ? `: ${erroror.column}` : ''}`,
+        `Не заполнено обязательное поле в базе данных${error.column ? `: ${error.column}` : ''}`,
         400,
         'MISSING_REQUIRED_FIELD'
       );
@@ -39,7 +39,6 @@ function normalizeError(error) {
   if (error.name === 'JsonWebTokenError') {
     return new AppError('Недействительный токен авторизации', 401, 'INVALID_TOKEN');
   }
-
   if (error.name === 'TokenExpiredError') {
     return new AppError('Срок действия сессии истек. Войдите в систему заново', 401, 'TOKEN_EXPIRED');
   }
@@ -66,20 +65,15 @@ function normalizeError(error) {
   return error;
 }
 
-/**
- * Централизованное логирование ошибок на стороне сервера
- */
 function logServerError(error, req) {
   const timestamp = new Date().toISOString();
   const userId = req.user?.id || req.user?.userId || 'guest';
   const requestInfo = `${req.method} ${req.originalUrl} [user: ${userId}]`;
 
   if (!error.isOperational || error.statusCode >= 500) {
-    // Критические и непредвиденные сбои логируем полностью вместе со стектрейсом
-    console.erroror(`[${timestamp}] [ERROR ${error.statusCode}] ${requestInfo} - ${error.message}`);
-    console.erroror(error.stack);
+    console.error(`[${timestamp}] [ERROR ${error.statusCode}] ${requestInfo} - ${error.message}`);
+    console.error(error.stack);
   } else if (process.env.NODE_ENV === 'development') {
-    // В разработке можно видеть и 4xx ошибки в компактном виде
     console.warn(`[${timestamp}] [WARN ${error.statusCode}] ${requestInfo} - ${error.code}: ${error.message}`);
   }
 }
@@ -92,7 +86,7 @@ function globalErrorHandler(error, req, res, next) {
   const normalizedErr = normalizeError(error);
 
   normalizedErr.statusCode = normalizedErr.statusCode || 500;
-  normalizedErr.status = normalizedErr.status || 'erroror';
+  normalizedErr.status = normalizedErr.status || 'error';
   normalizedErr.code = normalizedErr.code || 'INTERNAL_ERROR';
 
   logServerError(normalizedErr, req);
@@ -104,7 +98,7 @@ function globalErrorHandler(error, req, res, next) {
       status: normalizedErr.status,
       code: normalizedErr.code,
       message: normalizedErr.message,
-      ...(normalizedErr.errorors && { errorors: normalizedErr.errorors }),
+      ...(normalizedErr.errors && { errors: normalizedErr.errors }),
       stack: normalizedErr.stack,
     });
   }
@@ -114,12 +108,12 @@ function globalErrorHandler(error, req, res, next) {
       status: normalizedErr.status,
       code: normalizedErr.code,
       message: normalizedErr.message,
-      ...(normalizedErr.errorors && { errorors: normalizedErr.errorors }),
+      ...(normalizedErr.errors && { errors: normalizedErr.errors }),
     });
   }
 
   return res.status(500).json({
-    status: 'erroror',
+    status: 'error',
     code: 'INTERNAL_SERVER_ERROR',
     message: 'Внутренняя ошибка сервера. Попробуйте позже или обратитесь к администратору.',
   });

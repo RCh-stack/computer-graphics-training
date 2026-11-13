@@ -1,11 +1,53 @@
+let pending2FATempToken = null;
+let pending2FAEmail = null;
+
+function getSavedDeviceToken(email) {
+    try {
+        const map = JSON.parse(localStorage.getItem('trustedDeviceTokens') || '{}');
+        return map[String(email).trim().toLowerCase()] || null;
+    } catch {
+        return null;
+    }
+}
+
+function saveDeviceToken(email, deviceToken) {
+    if (!email || !deviceToken) return;
+    try {
+        const map = JSON.parse(localStorage.getItem('trustedDeviceTokens') || '{}');
+        map[String(email).trim().toLowerCase()] = deviceToken;
+        localStorage.setItem('trustedDeviceTokens', JSON.stringify(map));
+    } catch (e) {
+        console.error('Не удалось сохранить токен устройства:', e);
+    }
+}
+
+function completeLoginSession(data) {
+    localStorage.setItem('authToken', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    window.location.href = '../index.html';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+    document.getElementById('two-factor-step')?.addEventListener('submit', handleVerify2FA);
     document.getElementById('register-form')?.addEventListener('submit', handleRegister);
     document.getElementById('reset-form')?.addEventListener('submit', handleResetPassword);
+
+    document.getElementById('btn-back-to-login')?.addEventListener('click', () => {
+        showForm('login');
+    });
+
+    const codeInput = document.getElementById('login-2fa-code');
+    codeInput?.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    });
 });
 
 function showForm(formType) {
     hideAlert();
+    pending2FATempToken = null;
+    pending2FAEmail = null;
+
     document.querySelectorAll('.auth-form').forEach(f => f.classList.add('hidden'));
 
     const subtitle = document.getElementById('form-subtitle');
@@ -21,6 +63,26 @@ function showForm(formType) {
         document.getElementById('reset-step-1').classList.remove('hidden');
         document.getElementById('reset-step-2').classList.add('hidden');
         subtitle.innerText = 'Восстановление доступа к аккаунту';
+    }
+}
+
+function switchTo2FAStep(tempToken, email) {
+    hideAlert();
+    pending2FATempToken = tempToken;
+    pending2FAEmail = email;
+
+    document.querySelectorAll('.auth-form').forEach(f => f.classList.add('hidden'));
+    document.getElementById('two-factor-step')?.classList.remove('hidden');
+
+    const subtitle = document.getElementById('form-subtitle');
+    if (subtitle) {
+        subtitle.innerText = 'Подтверждение входа в аккаунт';
+    }
+
+    const codeInput = document.getElementById('login-2fa-code');
+    if (codeInput) {
+        codeInput.value = '';
+        codeInput.focus();
     }
 }
 
@@ -51,20 +113,17 @@ async function handleLogin(e) {
 
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
+    const deviceToken = getSavedDeviceToken(email);
 
     try {
         const res = await fetch('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, deviceToken })
         });
         const data = await res.json();
 
-        if (res.ok) {
-            localStorage.setItem('authToken', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            window.location.href = '../index.html';
-        } else {
+        if (!res.ok) {
             if (data.status === 'pending_approval') {
                 showAlert('Ваша заявка находится на рассмотрении у преподавателя.', 'error');
             } else {
@@ -75,10 +134,74 @@ async function handleLogin(e) {
                     confirmButtonColor: '#ec4899'
                 });
             }
+            return;
         }
+
+        if (data.status === '2fa_required' && data.tempToken) {
+            switchTo2FAStep(data.tempToken, email);
+            return;
+        }
+
+        completeLoginSession(data);
     } catch (error) {
-        console.error('Ошибка подключения к серверу: ', error)
+        console.error('Ошибка подключения к серверу: ', error);
         showAlert('Ошибка подключения к серверу');
+    }
+}
+
+async function handleVerify2FA(e) {
+    e.preventDefault();
+    hideAlert();
+
+    const code = document.getElementById('login-2fa-code')?.value.trim();
+    const rememberDevice = Boolean(document.getElementById('remember-device-checkbox')?.checked);
+
+    if (!code || code.length !== 6) {
+        showAlert('Введите 6-значный код из приложения-аутентификатора');
+        return;
+    }
+
+    const submitBtn = document.getElementById('btn-verify-2fa');
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const res = await fetch('/api/v1/auth/2fa/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tempToken: pending2FATempToken,
+                code,
+                rememberDevice
+            })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            if (data.code === 'TEMP_TOKEN_EXPIRED' || data.code === 'INVALID_TEMP_TOKEN') {
+                showForm('login');
+                showAlert(data.message || 'Сессия подтверждения истекла. Войдите заново.');
+                return;
+            }
+
+            Swal.fire({
+                title: res.status === 429 ? 'Слишком много попыток' : 'Неверный код подтверждения',
+                text: data.message || 'Проверьте код в приложении и повторите попытку',
+                icon: res.status === 429 ? 'warning' : 'error',
+                confirmButtonColor: '#ec4899'
+            });
+            return;
+        }
+
+        if (data.deviceToken && pending2FAEmail) {
+            saveDeviceToken(pending2FAEmail, data.deviceToken);
+        }
+
+        completeLoginSession(data);
+    } catch (error) {
+        console.error('Ошибка проверки 2FA: ', error);
+        showAlert('Ошибка подключения к серверу');
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
     }
 }
 
@@ -110,7 +233,7 @@ async function handleRegister(e) {
             showAlert(data.message || 'Ошибка регистрации');
         }
     } catch (error) {
-        console.error('Ошибка подключения к серверу: ', error)
+        console.error('Ошибка подключения к серверу: ', error);
         showAlert('Ошибка подключения к серверу');
     }
 }
@@ -139,7 +262,7 @@ async function requestResetCode() {
             showAlert(data.message || 'Пользователь с таким email не найден');
         }
     } catch (error) {
-        console.error('Ошибка отправки кода: ', error)
+        console.error('Ошибка отправки кода: ', error);
         showAlert('Ошибка отправки кода');
     }
 }
