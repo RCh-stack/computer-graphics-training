@@ -60,6 +60,44 @@
             </div>
         </form>
 
+        <form id="two-factor-step" class="auth-form hidden space-y-4">
+            <div class="text-center space-y-1">
+                <div
+                    class="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center mx-auto mb-2">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <h3 class="text-base font-bold text-[var(--text-main)]">Двухфакторная аутентификация</h3>
+                <p class="text-xs text-gray-400">
+                    Введите 6-значный код из приложения Google Authenticator
+                </p>
+            </div>
+        
+            <div>
+                <input type="text" id="login-2fa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                    placeholder="000000"
+                    class="w-full px-4 py-3 bg-[var(--bg-card)] border border-gray-700 rounded-xl text-center text-xl font-mono tracking-[0.4em] text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
+                    required />
+            </div>
+        
+            <label class="flex items-center space-x-2.5 cursor-pointer select-none pt-1">
+                <input type="checkbox" id="remember-device-checkbox"
+                    class="w-4 h-4 rounded border-gray-600 text-pink-600 focus:ring-pink-500 bg-[var(--bg-card)]" />
+                <span class="text-xs text-gray-400">
+                    Не запрашивать код на этом устройстве 7 дней
+                </span>
+            </label>
+        
+            <button type="submit" id="btn-verify-2fa"
+                class="w-full py-2.5 px-4 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-pink-600/20 transition">
+                Подтвердить вход
+            </button>
+        
+            <button type="button" id="btn-back-to-login"
+                class="w-full py-2 text-xs text-gray-400 hover:text-[var(--text-main)] transition">
+                ← Вернуться к вводу пароля
+            </button>
+        </form>
+
         <form id="register-form" class="auth-form hidden space-y-4">
             <div class="grid grid-cols-2 gap-3">
                 <div>

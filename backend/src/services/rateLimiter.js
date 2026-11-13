@@ -41,8 +41,19 @@ const compilerLimiter = rateLimit({
     )
 });
 
+const twoFactorLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res, next) => {
+        next(new AppError('Слишком много неверных попыток ввода кода 2FA. Попробуйте через 5 минут.', 429, 'TOO_MANY_2FA_ATTEMPTS'));
+    }
+});
+
 module.exports = {
     loginLimiter,
     forgotPasswordLimiter,
-    compilerLimiter
+    compilerLimiter,
+    twoFactorLimiter
 };
