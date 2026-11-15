@@ -203,7 +203,10 @@ async function confirmDeleteChapter(chapterId, title) {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) loadChaptersTree();
+        if (response.ok) {
+            Toast.success('Раздел учебника успешно удален');
+            loadChaptersTree();
+        }
     }
 }
 
@@ -225,6 +228,9 @@ async function confirmDeletelesson(lessonId, title) {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (response.ok) loadChaptersTree();
+        if (response.ok) {
+            Toast.success('Страница учебника успешно удалена');
+            loadChaptersTree();
+        }
     }
 }

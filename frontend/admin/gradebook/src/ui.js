@@ -389,7 +389,7 @@ function initExportToExcel() {
         });
 
         if (rowsData.length === 0) {
-            Swal.fire('Информация', 'Нет данных для экспорта', 'info');
+            Toast.info('Нет данных для экспорта');
             return;
         }
 

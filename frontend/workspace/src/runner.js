@@ -9,7 +9,7 @@ async function saveDraft() {
     const selectedLang = document.getElementById('language-select')?.value || 'cpp';
 
     if (!code.trim()) {
-        Swal.fire('Информация', 'Код не может быть пустым', 'info');
+        Toast.info('Код не может быть пустым');
         return;
     }
 
@@ -37,12 +37,13 @@ async function saveDraft() {
         }
     } catch (error) {
         console.error('Ошибка сохранения черновика:', error);
+        Toast.error('Не удалось сохранить черновик');
     }
 }
 
 async function runCode() {
     if (!window.windowEditor) {
-        Swal.fire('Ошибка', 'Редактор кода не инициализирован!', 'error');
+        Toast.error('Редактор кода не инициализирован');
         return;
     }
 
@@ -50,7 +51,7 @@ async function runCode() {
     const labId = urlParams.get('id');
 
     if (!labId) {
-        Swal.fire('Ошибка', 'Не удалось определить ID лабораторной работы!', 'error');
+        Toast.error('Не удалось определить ID лабораторной работы');
         return;
     }
 
@@ -109,7 +110,7 @@ async function runCode() {
 
 async function submitCode() {
     if (!window.windowEditor) {
-        Swal.fire('Ошибка', 'Редактор кода не инициализирован!', 'error');
+        Toast.error('Редактор кода не инициализирован');
         return;
     }
 
@@ -117,7 +118,7 @@ async function submitCode() {
     const labId = urlParams.get('id');
 
     if (!labId) {
-        Swal.fire('Ошибка', 'Не удалось определить ID лабораторной работы!', 'error');
+        Toast.error('Не удалось определить ID лабораторной работы');
         return;
     }
 

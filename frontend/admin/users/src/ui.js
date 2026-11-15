@@ -152,7 +152,7 @@ async function approveStudent(userId) {
     });
 
     if (response.ok) {
-        Swal.fire({ title: 'Успешно', text: 'Доступ студенту предоставлен', icon: 'success', confirmButtonColor: '#10b981', timer: 1500 });
+        Toast.success('Доступ студенту предоставлен');
         loadPendingStudents();
     }
 }
@@ -185,7 +185,7 @@ async function openCreateGroupModal() {
         });
 
         if (response.ok) {
-            Swal.fire('Успешно!', `Группа "${groupName}" создана`, 'success');
+            Toast.success(`Группа "${groupName}" создана`);
             loadGroups();
         }
     }
@@ -311,7 +311,7 @@ async function changeUserGroup(userId, currentGroupId, userName) {
         });
 
         if (response.ok) {
-            Swal.fire({ title: 'Успешно!', text: 'Академическая группа пользователя обновлена', icon: 'success', confirmButtonColor: '#10b981', timer: 1500 });
+            Toast.success('Академическая группа пользователя обновлена');
             
             const currentGroupFilter = document.getElementById('group-select')?.value || 'all';
             loadGroupStudents(currentGroupFilter);
@@ -392,7 +392,7 @@ async function changeUserRole(userId, currentRole, userName) {
         });
 
         if (response.ok) {
-            Swal.fire({ title: 'Успешно!', text: 'Роль пользователя обновлена', icon: 'success', confirmButtonColor: '#10b981', timer: 1500 });
+            Toast.success('Роль пользователя обновлена');
             
             const currentGroup = document.getElementById('group-select')?.value || 'all';
             loadGroupStudents(currentGroup);

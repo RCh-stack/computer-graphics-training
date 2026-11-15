@@ -111,15 +111,9 @@ function initReviewModalEvents() {
                     window.reloadGradebookData();
                 }
 
-                Swal.fire({
-                    title: 'Сохранено!',
-                    text: 'Результат проверки сохранен и доступен студенту',
-                    icon: 'success',
-                    confirmButtonText: 'ОК',
-                    confirmButtonColor: '#10b981'
-                });
+                Toast.success('Результат проверки сохранен и доступен студенту');
             } else {
-                Swal.fire('Ошибка', data.message || 'Не удалось сохранить результат проверки', 'error');
+                Toast.error(data.message || 'Не удалось сохранить результат проверки');
             }
         } catch (error) {
             console.error('Ошибка сохранения статуса:', error);

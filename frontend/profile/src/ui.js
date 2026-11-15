@@ -354,11 +354,11 @@ async function handleProfileUpdate(e) {
 
             localStorage.setItem('user', JSON.stringify(localUser));
 
-            Swal.fire({ title: 'Сохранено!', text: 'Данные профиля обновлены', icon: 'success', confirmButtonColor: '#10b981' });
+            Toast.success('Данные профиля обновлены');
 
             updateHeaderProfile();
         } else {
-            Swal.fire({ title: 'Ошибка', text: result.message || 'Не удалось обновить данные', icon: 'error' });
+            Toast.error(result.message || 'Не удалось обновить данные');
         }
     } catch (error) {
         console.error(error);
@@ -385,10 +385,10 @@ async function handlePasswordChange(e) {
         const result = await response.json();
 
         if (result.status === 'success') {
-            Swal.fire({ title: 'Успешно!', text: 'Пароль успешно изменен', icon: 'success', confirmButtonColor: '#10b981' });
+            Toast.success('Пароль успешно изменен');
             document.getElementById('password-form').reset();
         } else {
-            Swal.fire({ title: 'Ошибка', text: result.message || 'Неверный текущий пароль', icon: 'error' });
+            Toast.error(result.message || 'Неверный текущий пароль');
         }
     } catch (error) {
         console.error(error);

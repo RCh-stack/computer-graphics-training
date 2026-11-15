@@ -339,13 +339,13 @@ async function saveTest() {
         const data = await res.json();
 
         if (res.ok) {
-            Swal.fire({ title: 'Сохранено!', text: 'Тест успешно обновлен', icon: 'success', confirmButtonColor: '#f59e0b' });
+            Toast.success('Тест успешно обновлен');
         } else {
-            Swal.fire('Ошибка', data.message || 'Не удалось сохранить лабораторную работу', 'error');
+            Toast.error(data.message || 'Не удалось сохранить тест');
         }
     } catch (error) {
         console.error(error);
-        Swal.fire('Ошибка', 'Ошибка подключения к серверу', 'error');
+        Toast.error('Ошибка подключения к серверу');
     }
 }
 

@@ -285,17 +285,12 @@ async function saveLab() {
         const data = await res.json();
 
         if (res.ok) {
-            Swal.fire({ 
-                title: 'Сохранено!', 
-                text: 'Лабораторная работа успешно обновлена', 
-                icon: 'success', 
-                confirmButtonColor: '#10b981' 
-            });
+            Toast.success('Лабораторная работа успешно обновлена');
         } else {
-            Swal.fire('Ошибка', data.message || 'Не удалось сохранить лабораторную работу', 'error');
+            Toast.error(data.message || 'Не удалось сохранить лабораторную работу');
         }
     } catch (error) {
         console.error(error);
-        Swal.fire('Ошибка', 'Ошибка сети при сохранении', 'error');
+        Toast.error('Ошибка сети при сохранении');
     }
 }

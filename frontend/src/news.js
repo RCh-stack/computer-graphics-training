@@ -156,7 +156,7 @@ async function dismissNewsItem(id, cardElement) {
         if (cardElement) {
             cardElement.classList.remove('opacity-40', 'pointer-events-none');
         }
-        Swal.fire('Ошибка', error.message || 'Не удалось удалить уведомление', 'error');
+        Toast.error(error.message || 'Не удалось удалить уведомление');
     }
 }
 
@@ -194,7 +194,7 @@ async function clearAllNews() {
         }
     } catch (error) {
         console.error('Ошибка очистки ленты:', error);
-        Swal.fire('Ошибка', error.message || 'Не удалось очистить ленту уведомлений', 'error');
+        Toast.error(error.message || 'Не удалось очистить ленту уведомлений');
     }
 }
 
@@ -241,7 +241,7 @@ function initNewsEvents() {
         const link = linkInput.value;
 
         if (!title.trim() || !message.trim()) {
-            Swal.fire('Заполните поля', 'Укажите заголовок и текст сообщения', 'warning');
+            Toast.warning('Заполните поля', 'Укажите заголовок и текст сообщения');
             return;
         }
 
@@ -261,7 +261,7 @@ function initNewsEvents() {
                 messageInput.value = '';
                 linkInput.value = '';
                 closeModal();
-                Swal.fire('Опубликовано!', 'Объявление видно всем студентам', 'success');
+                Toast.success('Опубликовано!', 'Объявление видно всем студентам');
                 loadNewsFeed();
             }
         } catch (error) {

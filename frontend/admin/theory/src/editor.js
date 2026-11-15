@@ -199,20 +199,12 @@ async function saveLesson() {
         const data = await res.json();
 
         if (res.ok) {
-            Swal.fire({ 
-                title: 'Сохранено!', 
-                text: 'Страница успешно сохранена', 
-                icon: 'success', 
-                confirmButtonText: 'ОК',
-                confirmButtonColor: '#2563eb',
-                allowOutsideClick: false,
-                allowEscapeKey: false  
-            });
+            Toast.success('Страница успешно сохранена');
         } else {
-            Swal.fire({ title: 'Ошибка', text: data.message || 'Не удалось сохранить страницу', icon: 'error', confirmButtonText: 'ОК' });
+            Toast.error(data.message || 'Не удалось сохранить страницу');
         }
     } catch (error) {
         console.error(error);
-        Swal.fire({ title: 'Ошибка', text: 'Ошибка подключения к серверу', icon: 'error', confirmButtonText: 'ОК' });
+        Toast.error('Ошибка подключения к серверу');
     }
 }

@@ -96,7 +96,7 @@ async function createNewTest() {
             window.location.href = `test-workspace.html?id=${data.testId}`;
         }
         else {
-            Swal.fire('Ошибка', 'Не удалось создать тест', 'error');
+            Toast.error('Не удалось создать новый тест');
         }
     }
 }
@@ -120,7 +120,7 @@ async function confirmDeleteTest(testId, testTitle) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
-            Swal.fire('Удалено!', 'Тест успешно удален', 'success');
+            Toast.success('Тест успешно удален');
             loadTests();
         }
     }

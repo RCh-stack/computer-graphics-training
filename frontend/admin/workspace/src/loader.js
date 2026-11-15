@@ -131,7 +131,7 @@ async function confirmDeleteLab(labId, labTitle) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
-            Swal.fire('Удалено!', 'Лабораторная работа удалена', 'success');
+            Toast.success('Лабораторная работа успешно удалена');
             loadLabs();
         }
     }
