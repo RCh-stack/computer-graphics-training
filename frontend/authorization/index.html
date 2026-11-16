@@ -7,14 +7,21 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-md w-full bg-[var(--bg-panel)] border border-gray-700 rounded-2xl shadow-2xl p-8 space-y-6">    
+<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen flex items-center justify-center p-4 transition-colors duration-200">
+    <div class="relative max-w-md w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-8 space-y-6 transition-colors duration-200">       
+        <button type="button" id="theme-toggle"
+            title="Переключить тему оформления"
+            aria-label="Переключить тему оформления"
+            class="absolute top-4 right-4 w-9 h-9 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-muted)] hover:text-pink-400 hover:border-pink-500/40 flex items-center justify-center transition cursor-pointer">
+            <i id="theme-icon" class="fa-solid fa-sun text-sm"></i>
+        </button>
+
         <div class="text-center space-y-2">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-500/10 mb-2">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-3xl"></i>
             </div>
             <h1 class="text-2xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></h1>
-            <p id="form-subtitle" class="text-sm text-gray-400">Вход в систему обучения Ray и Path Tracing</p>
+            <p id="form-subtitle" class="text-sm text-[var(--text-muted)]">Вход в систему обучения Ray и Path Tracing</p>
         </div>
 
         <div id="alert-box" class="hidden text-sm rounded-xl p-3 flex items-center space-x-2">
@@ -24,19 +31,19 @@
 
         <form id="login-form" class="auth-form space-y-4">
             <div>
-                <label for="login-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email / Логин</label>
+                <label for="login-email" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Email / Логин</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-envelope"></i>
                     </span>
                     <input type="email" id="login-email" required placeholder="student@edu.ru" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
             <div>
                 <div class="flex justify-between items-center mb-1">
-                    <label for="login-password" class="block text-xs font-semibold uppercase text-gray-400">Пароль</label>
+                    <label for="login-password" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Пароль</label>
                     <button type="button" onclick="showForm('reset')" class="text-xs text-pink-400 hover:underline">Забыли пароль?</button>
                 </div>
 
@@ -45,7 +52,7 @@
                         <i class="fa-solid fa-lock"></i>
                     </span>
                     <input type="password" id="login-password" required placeholder="••••••••" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
@@ -55,19 +62,18 @@
                 <i class="fa-solid fa-arrow-right text-sm"></i>
             </button>
 
-            <div class="text-center pt-2 text-xs text-gray-400">
+            <div class="text-center pt-2 text-xs text-[var(--text-muted)]">
                 Нет аккаунта? <button type="button" onclick="showForm('register')" class="text-pink-400 font-semibold hover:underline">Зарегистрироваться</button>
             </div>
         </form>
 
         <form id="two-factor-step" class="auth-form hidden space-y-4">
             <div class="text-center space-y-1">
-                <div
-                    class="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center mx-auto mb-2">
+                <div class="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center mx-auto mb-2">
                     <i class="fa-solid fa-shield-halved text-xl"></i>
                 </div>
                 <h3 class="text-base font-bold text-[var(--text-main)]">Двухфакторная аутентификация</h3>
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-[var(--text-muted)]">
                     Введите 6-значный код из приложения Google Authenticator
                 </p>
             </div>
@@ -75,14 +81,14 @@
             <div>
                 <input type="text" id="login-2fa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
                     placeholder="000000"
-                    class="w-full px-4 py-3 bg-[var(--bg-card)] border border-gray-700 rounded-xl text-center text-xl font-mono tracking-[0.4em] text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
+                    class="w-full px-4 py-3 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl text-center text-xl font-mono tracking-[0.4em] text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
                     required />
             </div>
         
             <label class="flex items-center space-x-2.5 cursor-pointer select-none pt-1">
                 <input type="checkbox" id="remember-device-checkbox"
-                    class="w-4 h-4 rounded border-gray-600 text-pink-600 focus:ring-pink-500 bg-[var(--bg-card)]" />
-                <span class="text-xs text-gray-400">
+                    class="w-4 h-4 rounded border-gray-600 text-pink-600 focus:ring-pink-500 bg-[var(--bg-panel)]" />
+                <span class="text-xs text-[var(--text-muted)]">
                     Не запрашивать код на этом устройстве 7 дней
                 </span>
             </label>
@@ -93,7 +99,7 @@
             </button>
         
             <button type="button" id="btn-back-to-login"
-                class="w-full py-2 text-xs text-gray-400 hover:text-[var(--text-main)] transition">
+                class="w-full py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] transition">
                 ← Вернуться к вводу пароля
             </button>
         </form>
@@ -101,36 +107,36 @@
         <form id="register-form" class="auth-form hidden space-y-4">
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label for="reg-first-name" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Имя</label>
+                    <label for="reg-first-name" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Имя</label>
                     <input type="text" id="reg-first-name" required placeholder="Иван" 
-                           class="w-full px-3 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full px-3 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
                 <div>
-                    <label for="reg-last-name" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Фамилия</label>
+                    <label for="reg-last-name" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Фамилия</label>
                     <input type="text" id="reg-last-name" required placeholder="Иванов" 
-                           class="w-full px-3 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full px-3 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
             <div>
-                <label for="reg-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Email</label>
+                <label for="reg-email" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Email</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-envelope"></i>
                     </span>
                     <input type="email" id="reg-email" required placeholder="student@edu.ru" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
             <div>
-                <label for="reg-password" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Пароль</label>
+                <label for="reg-password" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Пароль</label>
                 <div class="relative">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                         <i class="fa-solid fa-lock"></i>
                     </span>
                     <input type="password" id="reg-password" required minlength="6" placeholder="Минимум 6 символов" 
-                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
             </div>
 
@@ -140,7 +146,7 @@
                 <i class="fa-solid fa-user-plus text-sm"></i>
             </button>
 
-            <div class="text-center pt-2 text-xs text-gray-400">
+            <div class="text-center pt-2 text-xs text-[var(--text-muted)]">
                 Уже зарегистрированы? <button type="button" onclick="showForm('login')" class="text-pink-400 font-semibold hover:underline">Войти</button>
             </div>
         </form>
@@ -148,13 +154,13 @@
         <form id="reset-form" class="auth-form hidden space-y-4">           
             <div id="reset-step-1" class="space-y-4">
                 <div>
-                    <label for="reset-email" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Ваш Email</label>
+                    <label for="reset-email" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Ваш Email</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
                             <i class="fa-solid fa-envelope"></i>
                         </span>
                         <input type="email" id="reset-email" required placeholder="student@edu.ru" 
-                               class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                               class="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                     </div>
                 </div>
 
@@ -166,15 +172,15 @@
 
             <div id="reset-step-2" class="hidden space-y-4">
                 <div>
-                    <label for="reset-code" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Код подтверждения (6 цифр)</label>
+                    <label for="reset-code" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Код подтверждения (6 цифр)</label>
                     <input type="text" id="reset-code" maxlength="6" placeholder="123456" 
-                           class="w-full px-4 py-2.5 text-center font-mono text-lg tracking-widest bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 transition">
+                           class="w-full px-4 py-2.5 text-center font-mono text-lg tracking-widest bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 transition">
                 </div>
 
                 <div>
-                    <label for="reset-new-password" class="block text-xs font-semibold uppercase text-gray-400 mb-1">Новый пароль</label>
+                    <label for="reset-new-password" class="block text-xs font-semibold uppercase text-[var(--text-muted)] mb-1">Новый пароль</label>
                     <input type="password" id="reset-new-password" minlength="6" placeholder="••••••••" 
-                           class="w-full px-4 py-2.5 bg-[var(--bg-card)] border border-gray-700 rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
+                           class="w-full px-4 py-2.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl focus:outline-none focus:border-pink-500 text-sm transition">
                 </div>
 
                 <button type="submit" 
@@ -183,15 +189,16 @@
                 </button>
             </div>
 
-            <div class="text-center pt-2 text-xs text-gray-400">
+            <div class="text-center pt-2 text-xs text-[var(--text-muted)]">
                 Вспомнили пароль? <button type="button" onclick="showForm('login')" class="text-pink-400 font-semibold hover:underline">Вернуться ко входу</button>
             </div>
         </form>
 
     </div>
 
-    <script src="src/ui.js"></script>
+    <script src="../src/theme.js"></script>
     <script src="../src/toast.js"></script>
+    <script src="src/ui.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>

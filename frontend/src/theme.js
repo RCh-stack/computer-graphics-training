@@ -1,4 +1,3 @@
-
 (function initTheme() {
     const savedTheme = localStorage.getItem('theme');
 
@@ -20,13 +19,17 @@ function updateThemeUI(isDark) {
 
         if (themeText) {
             themeText.textContent = isDark ? 'Тёмная тема' : 'Светлая тема';
-        } else {
+        } else if (!themeIcon) {
             btn.textContent = isDark ? 'Тёмная' : 'Светлая';
         }
 
         if (themeIcon) {
-            themeIcon.className = isDark ? 'fa-solid fa-moon w-5' : 'fa-solid fa-sun w-5';
+            themeIcon.className = isDark
+                ? 'fa-solid fa-moon text-sm text-indigo-400'
+                : 'fa-solid fa-sun text-sm text-amber-400';
         }
+
+        btn.title = isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему';
     });
 
     if (window.monaco && window.monaco.editor) {
