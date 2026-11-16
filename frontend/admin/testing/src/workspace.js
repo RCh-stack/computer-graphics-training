@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     initEvents();
+    initMathEditorModalEvents();
     loadTestDetails();
 });
 
@@ -8,6 +9,7 @@ const testId = new URLSearchParams(window.location.search).get('id');
 let questionsState = [];
 let activeQIndex = 0;
 let activeInputTarget = null;
+let isTestLoaded = false;
 
 function initEvents() {
     document.getElementById('btn-save-test')?.addEventListener('click', saveTest);
@@ -42,11 +44,40 @@ function initEvents() {
     });
 }
 
+function setEditorLoadingState(isLoading) {
+    const navList = document.getElementById('questions-nav-list');
+    const editorCard = document.getElementById('question-editor-card');
+    const emptyState = document.getElementById('editor-empty-state');
+    const saveBtn = document.getElementById('btn-save-test');
+
+    if (saveBtn) saveBtn.disabled = isLoading;
+
+    if (isLoading) {
+        if (navList && window.Skeleton) {
+            Skeleton.render(navList, Skeleton.questionPalette(6));
+        }
+        emptyState?.classList.add('hidden');
+        editorCard?.classList.add('hidden');
+
+        if (editorCard && editorCard.parentElement && !document.getElementById('question-editor-skeleton') && window.Skeleton) {
+            const skeletonWrapper = document.createElement('div');
+            skeletonWrapper.id = 'question-editor-skeleton';
+            skeletonWrapper.className = editorCard.className.replace('hidden', '');
+            skeletonWrapper.innerHTML = Skeleton.testQuestionEditor();
+            editorCard.parentElement.insertBefore(skeletonWrapper, editorCard);
+        }
+    } else {
+        document.getElementById('question-editor-skeleton')?.remove();
+    }
+}
+
 async function loadTestDetails() {
     if (!testId) {
         window.location.href = 'index.html';
         return;
     }
+
+    setEditorLoadingState(true);
 
     const token = localStorage.getItem('authToken');
 
@@ -56,7 +87,7 @@ async function loadTestDetails() {
         });
         const data = await res.json();
 
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
             const { test, questions } = data;
             document.getElementById('test-title').value = test.title || '';
             document.getElementById('test-description').value = test.description || '';
@@ -86,7 +117,7 @@ async function loadTestDetails() {
                     id: q.id,
                     type: qType,
                     questionText: q.question_text || '',
-                    options: parsedOptions, // [{ id: 'opt_1', text: '...' }]
+                    options: parsedOptions,
                     correctAnswer: q.correct_answer || '',
                     explanation: q.explanation || '',
                     codeSnippet: codeSnippet,
@@ -94,12 +125,19 @@ async function loadTestDetails() {
                 };
             });
 
+            isTestLoaded = true;
+            setEditorLoadingState(false);
+
             activeQIndex = 0;
             renderQuestionsNav();
             renderActiveQuestionEditor();
+        } else {
+            throw new Error(data.message || 'Не удалось загрузить тест');
         }
     } catch (err) {
         console.error('Ошибка загрузки теста:', err);
+        setEditorLoadingState(false);
+        window.Toast?.error('Ошибка загрузки', 'Не удалось загрузить параметры теста');
     }
 }
 
@@ -157,8 +195,8 @@ function renderQuestionsNav() {
 
     container.innerHTML = questionsState.map((q, idx) => {
         const isActive = idx === activeQIndex;
-        const btnClass = isActive 
-            ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-md shadow-amber-600/30' 
+        const btnClass = isActive
+            ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-md shadow-amber-600/30'
             : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-amber-500/50';
 
         return `
@@ -209,6 +247,7 @@ function renderActiveQuestionEditor() {
 
         optionsContainer.innerHTML = q.options.map((opt, optIndex) => {
             const isChecked = q.correctAnswer === opt.id;
+            const safeOptText = String(opt.text || '').replace(/"/g, '"');
 
             return `
                 <div class="option-input-row flex items-center gap-2" data-optid="${opt.id}">
@@ -218,8 +257,8 @@ function renderActiveQuestionEditor() {
                            ${isChecked ? 'checked' : ''} 
                            class="accent-amber-500 cursor-pointer w-4 h-4">
                     <input type="text" 
-                           id = opt_${optIndex + 1}
-                           value="${opt.text || ''}" 
+                           id="opt_${optIndex + 1}"
+                           value="${safeOptText}" 
                            class="option-text-input flex-1 px-3 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-amber-500" 
                            placeholder="Вариант ${optIndex + 1}">
                     <button type="button" onclick="openMathEditorFor('opt_${optIndex + 1}')" 
@@ -261,8 +300,20 @@ function addNewQuestion() {
     renderActiveQuestionEditor();
 }
 
-function deleteActiveQuestion() {
+async function deleteActiveQuestion() {
     if (questionsState.length === 0) return;
+
+    const confirmRes = await Swal.fire({
+        title: `Удалить вопрос №${activeQIndex + 1}?`,
+        text: 'Вопрос будет удален из теста после нажатия «Сохранить».',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Удалить',
+        cancelButtonText: 'Отмена',
+        confirmButtonColor: '#ef4444'
+    });
+
+    if (!confirmRes.isConfirmed) return;
 
     questionsState.splice(activeQIndex, 1);
     if (activeQIndex >= questionsState.length) {
@@ -271,6 +322,7 @@ function deleteActiveQuestion() {
 
     renderQuestionsNav();
     renderActiveQuestionEditor();
+    window.Toast?.info('Вопрос удален', 'Не забудьте сохранить изменения теста');
 }
 
 function addOptionToActiveQuestion() {
@@ -299,7 +351,15 @@ function removeOptionFromActiveQuestion(optIndex) {
 }
 
 async function saveTest() {
+    if (!isTestLoaded) return;
+
     syncDOMToActiveQuestion();
+
+    const saveBtn = document.getElementById('btn-save-test');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
 
     const token = localStorage.getItem('authToken');
 
@@ -329,9 +389,9 @@ async function saveTest() {
     try {
         const res = await fetch(`/api/v1/admin/tests/${testId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
         });
@@ -346,6 +406,11 @@ async function saveTest() {
     } catch (error) {
         console.error(error);
         Toast.error('Ошибка подключения к серверу');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
     }
 }
 
@@ -355,7 +420,7 @@ window.openMathEditorFor = function(target) {
     } else {
         activeInputTarget = target;
     }
-    
+
     if (!activeInputTarget) {
         console.warn('Целевое поле для вставки формулы не найдено');
         return;
@@ -376,10 +441,6 @@ window.insertSymbol = function(latexSnippet) {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    initMathEditorModalEvents();
-});
-
 function initMathEditorModalEvents() {
     const modal = document.getElementById('math-editor-modal');
     const btnInsert = document.getElementById('btn-insert-math');
@@ -390,6 +451,9 @@ function initMathEditorModalEvents() {
 
     btnClose?.addEventListener('click', closeModal);
     btnCancel?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
 
     btnInsert?.addEventListener('click', () => {
         const mathField = document.getElementById('formula-input-field');

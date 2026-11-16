@@ -8,16 +8,36 @@ let userAnswers = {};
 let timerInterval = null;
 let timeRemaining = 0;
 let testStartTime = null;
+let isSubmittingTest = false;
+
+function renderWorkspaceSkeletons() {
+    if (!window.Skeleton) return;
+
+    Skeleton.render('#questions-navigation-grid', Skeleton.questionPalette(10));
+    Skeleton.render('#options-container', Skeleton.questionOptions(4));
+
+    const qTextElem = document.getElementById('question-text');
+    if (qTextElem) {
+        qTextElem.innerHTML = `
+            <div aria-hidden="true" class="space-y-2.5 animate-pulse">
+                <div class="h-4 w-5/6 rounded bg-gray-500/20"></div>
+                <div class="h-4 w-2/3 rounded bg-gray-500/15"></div>
+            </div>
+        `;
+    }
+}
 
 async function initTestWorkspace() {
     const urlParams = new URLSearchParams(window.location.search);
     const testId = urlParams.get('id');
 
     if (!testId) {
-        Swal.fire({ title: 'Ошибка', text: 'Не указан идентификатор теста', icon: 'error', confirmButtonText: 'ОК' });
+        await Swal.fire({ title: 'Ошибка', text: 'Не указан идентификатор теста', icon: 'error', confirmButtonText: 'ОК' });
         window.location.href = 'index.html';
         return;
     }
+
+    renderWorkspaceSkeletons();
 
     try {
         const token = localStorage.getItem('authToken');
@@ -31,10 +51,10 @@ async function initTestWorkspace() {
         });
 
         if (!response.ok) throw new Error('Ошибка загрузки теста');
-        
+
         const data = await response.json();
         currentTest = data.test;
-        
+
         document.getElementById('test-title').textContent = currentTest.title;
         timeRemaining = currentTest.time_limit * 60;
         testStartTime = new Date(Date.now()).toISOString();
@@ -46,7 +66,7 @@ async function initTestWorkspace() {
 
     } catch (error) {
         console.error('Ошибка инициализации workspace:', error);
-        Swal.fire({ title: 'Ошибка', text: 'Не удалось загрузить данные теста', icon: 'error', confirmButtonText: 'ОК' });
+        await Swal.fire({ title: 'Ошибка', text: 'Не удалось загрузить данные теста', icon: 'error', confirmButtonText: 'ОК' });
         window.location.href = 'index.html';
     }
 }
@@ -59,10 +79,10 @@ function startTimer() {
 
         if (timeRemaining <= 0) {
             clearInterval(timerInterval);
-            Swal.fire({ 
-                title: 'Время истекло!', 
-                text: 'Отведенное время закончилось. Ваши ответы будут автоматически отправлены.', 
-                icon: 'info', 
+            Swal.fire({
+                title: 'Время истекло!',
+                text: 'Отведенное время закончилось. Ваши ответы будут автоматически отправлены.',
+                icon: 'info',
                 confirmButtonText: 'ОК',
                 allowOutsideClick: false
             }).then(() => {
@@ -86,12 +106,12 @@ function renderQuestionsGrid() {
     currentTest.questions.forEach((t, idx) => {
         const btn = document.createElement('button');
         btn.dataset.index = idx;
-        
+
         const isAnswered = userAnswers[t.id] !== undefined && userAnswers[t.id] !== '';
         const isActive = idx === currentQuestionIndex;
 
         let classes = 'h-9 w-full rounded-lg text-xs font-bold transition flex items-center justify-center ';
-        
+
         if (isActive) {
             classes += 'ring-2 ring-pink-500 border-transparent bg-pink-600/20 text-pink-400 ';
         } else if (isAnswered) {
@@ -114,12 +134,12 @@ function renderQuestionsGrid() {
 
 function renderCurrentQuestion() {
     const q = currentTest.questions[currentQuestionIndex];
-    
+
     document.getElementById('question-number-badge').textContent = `Вопрос ${currentQuestionIndex + 1} из ${currentTest.questions.length}`;
-    
+
     const qTextElem = document.getElementById('question-text');
     qTextElem.innerHTML = q.question_text;
-    
+
     if (typeof window.renderMathInElement === 'function') {
         window.renderMathInElement(qTextElem, {
             delimiters: [
@@ -132,7 +152,7 @@ function renderCurrentQuestion() {
 
     const mediaContainer = document.getElementById('question-media-container');
     mediaContainer.innerHTML = '';
-    
+
     if (q.code_snippet) {
         mediaContainer.classList.remove('hidden');
         mediaContainer.innerHTML = `
@@ -151,7 +171,7 @@ function renderCurrentQuestion() {
 
     document.getElementById('btn-prev-q').disabled = currentQuestionIndex === 0;
     const nextBtn = document.getElementById('btn-next-q');
-    
+
     if (currentQuestionIndex === currentTest.questions.length - 1) {
         nextBtn.textContent = 'Завершить →';
         nextBtn.classList.replace('bg-blue-600', 'bg-pink-600');
@@ -211,7 +231,7 @@ function renderInteractiveOptions(question) {
                 placeholder="Например: ray tracing"
                 class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
             >
-        `;    
+        `;
         optionsContainer.appendChild(wrapper);
 
         const input = wrapper.querySelector('#text-answer-input');
@@ -296,6 +316,8 @@ function setupNavigationListeners() {
 }
 
 async function confirmAndSubmitTest() {
+    if (isSubmittingTest) return;
+
     const result = await Swal.fire({
         title: 'Завершение тестирования',
         html: 'Вы уверены, что хотите завершить тестирование и отправить ответы?',
@@ -312,7 +334,11 @@ async function confirmAndSubmitTest() {
 }
 
 async function submitTest() {
-    clearInterval(timerInterval);
+    if (isSubmittingTest) return;
+    isSubmittingTest = true;
+
+    const finishBtn = document.getElementById('btn-finish-test');
+    if (finishBtn) finishBtn.disabled = true;
 
     try {
         const token = localStorage.getItem('authToken');
@@ -323,7 +349,7 @@ async function submitTest() {
                 'Content-Type': 'application/json',
                 'Authorization': token ? `Bearer ${token}` : ''
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 answers: userAnswers,
                 startedIn: testStartTime
             })
@@ -331,6 +357,7 @@ async function submitTest() {
 
         if (!response.ok) throw new Error('Не удалось завершить тестирование');
 
+        clearInterval(timerInterval);
         const result = await response.json();
 
         await showTestResultModal({
@@ -343,10 +370,12 @@ async function submitTest() {
         window.location.href = 'index.html';
     } catch (error) {
         console.error('Ошибка проверки теста:', error);
-        Swal.fire({ title: 'Ошибка', text: 'Не удалось сохранить ответы к тесту', icon: 'error', confirmButtonText: 'ОК' });
+        window.Toast?.error('Ошибка отправки', 'Не удалось сохранить ответы. Проверьте соединение и повторите попытку.', { duration: 5000 });
+    } finally {
+        isSubmittingTest = false;
+        if (finishBtn) finishBtn.disabled = false;
     }
 }
-
 
 function escapeHtml(text) {
     return text

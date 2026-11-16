@@ -9,6 +9,10 @@ async function loadNewsFeed() {
     const feedContainer = document.getElementById('news-feed-list');
     if (!feedContainer) return;
 
+    if (window.Skeleton) {
+        Skeleton.render(feedContainer, Skeleton.newsFeed(3));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
         const res = await fetch('/api/v1/news', {

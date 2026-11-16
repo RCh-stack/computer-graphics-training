@@ -21,7 +21,7 @@ function initEvents() {
         const approveBtn = e.target.closest('.btn-approve-student');
         if (approveBtn) {
             const userId = approveBtn.dataset.userId;
-            approveStudent(userId);
+            approveStudent(userId, approveBtn);
         }
     });
 
@@ -64,7 +64,8 @@ function switchAdminTab(tabName) {
     } else if (tabName === 'groups') {
         document.getElementById('tab-groups').classList.remove('hidden');
         document.getElementById('tab-btn-groups').className = 'py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2';
-        loadGroupStudents();
+        const currentGroup = document.getElementById('group-select')?.value || 'all';
+        loadGroupStudents(currentGroup);
     } else if (tabName === 'teachers') {
         document.getElementById('tab-teachers').classList.remove('hidden');
         document.getElementById('tab-btn-teachers').className = 'py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2';
@@ -74,66 +75,83 @@ function switchAdminTab(tabName) {
 
 async function loadPendingStudents() {
     const token = localStorage.getItem('authToken');
-
-    const response = await fetch(`/api/v1/admin/users/pending-students`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        }
-    });
-
-    if (!response.ok) throw new Error('Не удалось загрузить список неподтвержденных заявок');
-
-    const data = await response.json();
-    if (data.status !== 'success') return;
-
-    cachedGroups = data.groups || [];
     const tbody = document.getElementById('pending-table-body');
     const badge = document.getElementById('pending-badge');
-    
-    if (badge) badge.innerText = data.students.length;
 
-    if (data.students.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="py-8 text-center text-[var(--text-main)]">
-                    <i class="fa-solid fa-circle-check text-emerald-400 text-xl mb-2"></i>
-                    <p>Нет новых заявок на регистрацию</p>
-                </td>
-            </tr>`;
-        return;
+    if (tbody && window.Skeleton) {
+        Skeleton.render(tbody, Skeleton.userTableRows(4, 5));
+    }
+    if (badge) {
+        badge.innerHTML = `<span aria-hidden="true" class="inline-block w-3 h-3 rounded bg-pink-500/30 animate-pulse"></span>`;
     }
 
-    const groupOptionsHtml = cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    try {
+        const response = await fetch(`/api/v1/admin/users/pending-students`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
 
-    tbody.innerHTML = data.students.map(student => {
-        const regDate = new Date(student.created_at).toLocaleDateString('ru-RU');
+        if (!response.ok) throw new Error('Не удалось загрузить список неподтвержденных заявок');
 
-        return `
-            <tr class="hover:bg-gray-800/30 transition">
-                <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">
-                    ${student.first_name || ''} ${student.last_name || ''}
-                </td>
-                <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${student.email}</td>
-                <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
-                <td class="py-3.5 px-4 text-center">
-                    <select id="group-select-${student.id}" class="bg-[var(--bg-panel)] border border-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pink-500">
-                        <option value="">Без группы</option>
-                        ${groupOptionsHtml}
-                    </select>
-                </td>
-                <td class="py-3.5 px-4 text-right">
-                    <button onclick="approveStudent('${student.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition">
-                        Одобрить
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+        const data = await response.json();
+        if (data.status !== 'success') return;
+
+        cachedGroups = data.groups || [];
+        if (badge) badge.innerText = data.students.length;
+
+        if (!tbody) return;
+
+        if (data.students.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-[var(--text-main)]">
+                        <i class="fa-solid fa-circle-check text-emerald-400 text-xl mb-2"></i>
+                        <p>Нет новых заявок на регистрацию</p>
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        const groupOptionsHtml = cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+        tbody.innerHTML = data.students.map(student => {
+            const regDate = new Date(student.created_at).toLocaleDateString('ru-RU');
+
+            return `
+                <tr class="hover:bg-gray-800/30 transition">
+                    <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">
+                        ${student.first_name || ''} ${student.last_name || ''}
+                    </td>
+                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${student.email}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
+                    <td class="py-3.5 px-4 text-center">
+                        <select id="group-select-${student.id}" class="bg-[var(--bg-panel)] border border-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pink-500">
+                            <option value="">Без группы</option>
+                            ${groupOptionsHtml}
+                        </select>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        <button type="button" data-user-id="${student.id}" class="btn-approve-student px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition">
+                            Одобрить
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки заявок:', error);
+        if (badge) badge.innerText = '—';
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-400 text-xs">Не удалось загрузить заявки на регистрацию</td></tr>`;
+        }
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список новых заявок');
+    }
 }
 
-async function approveStudent(userId) {
+async function approveStudent(userId, btnEl) {
     const select = document.getElementById(`group-select-${userId}`);
     const groupId = select ? select.value : null;
 
@@ -142,18 +160,37 @@ async function approveStudent(userId) {
 
     const token = localStorage.getItem('authToken');
 
-    const response = await fetch(`/api/v1/admin/users/approve`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({ userId, groupId, groupName })
-    });
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.classList.add('opacity-60', 'cursor-not-allowed');
+    }
 
-    if (response.ok) {
-        Toast.success('Доступ студенту предоставлен');
-        loadPendingStudents();
+    try {
+        const response = await fetch(`/api/v1/admin/users/approve`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({ userId, groupId, groupName })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+            Toast.success('Доступ студенту предоставлен');
+            loadPendingStudents();
+        } else {
+            Toast.error(data.message || 'Не удалось одобрить заявку');
+        }
+    } catch (error) {
+        console.error('Ошибка одобрения заявки:', error);
+        Toast.error('Ошибка соединения с сервером');
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
     }
 }
 
@@ -175,18 +212,28 @@ async function openCreateGroupModal() {
     if (groupName) {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/admin/users/groups`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : ''
-            },
-            body: JSON.stringify({ name: groupName })
-        });
+        try {
+            const response = await fetch(`/api/v1/admin/users/groups`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({ name: groupName })
+            });
 
-        if (response.ok) {
-            Toast.success(`Группа "${groupName}" создана`);
-            loadGroups();
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                Toast.success(`Группа "${groupName}" создана`);
+                loadGroups();
+                loadPendingStudents();
+            } else {
+                Toast.error(data.message || 'Не удалось создать группу');
+            }
+        } catch (error) {
+            console.error('Ошибка создания группы:', error);
+            Toast.error('Ошибка соединения при создании группы');
         }
     }
 }
@@ -194,80 +241,103 @@ async function openCreateGroupModal() {
 async function loadGroups() {
     const token = localStorage.getItem('authToken');
 
-    const response = await fetch(`/api/v1/admin/users/groups`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+    try {
+        const response = await fetch(`/api/v1/admin/users/groups`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+
+        if (!response.ok) throw new Error('Не удалось загрузить список групп');
+
+        const data = await response.json();
+        if (data.status === 'success') {
+            cachedGroups = data.groups || [];
+
+            const select = document.getElementById('group-select');
+            if (!select) return;
+
+            select.innerHTML = `<option value="all">Все группы</option><option value="unassigned">Без группы</option>` +
+                cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
         }
-    });
-
-    if (!response.ok) throw new Error('Не удалось загрузить список групп');
-
-    const data = await response.json();
-    if (data.status === 'success') {
-        cachedGroups = data.groups || [];
-
-        const select = document.getElementById('group-select');
-        if (!select) return;
-
-        select.innerHTML = `<option value="all">Все группы</option><option value="unassigned">Без группы</option>` +
-            cachedGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки групп:', error);
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список групп');
     }
 }
 
 async function loadGroupStudents(groupId = 'all') {
     const token = localStorage.getItem('authToken');
-
-    const response = await fetch(`/api/v1/admin/users/students?groupId=${groupId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        }
-    });
-
-    if (!response.ok) throw new Error('Не удалось загрузить список студентов');
-
-    const data = await response.json();
     const tbody = document.getElementById('students-table-body');
+    const groupSelect = document.getElementById('group-select');
 
-    if (!data.students || data.students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-[var(--text-main)]">Студенты не найдены</td></tr>`;
-        return;
+    if (groupSelect) groupSelect.disabled = true;
+    if (tbody && window.Skeleton) {
+        Skeleton.render(tbody, Skeleton.userTableRows(5, 5));
     }
 
-    tbody.innerHTML = data.students.map(s => {
-        const fullName = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Без имени';
-        const isTeacher = s.role === 'TEACHER';
+    try {
+        const response = await fetch(`/api/v1/admin/users/students?groupId=${groupId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
 
-        const roleBadge = isTeacher 
-            ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20"><i class="fa-solid fa-user-shield mr-1"></i> Преподаватель</span>`
-            : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-800 text-[var(--text-muted)] border border-gray-700"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
+        if (!response.ok) throw new Error('Не удалось загрузить список студентов');
 
-        return `
-            <tr class="hover:bg-gray-600/30 transition">
-                <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">${fullName}</td>
-                <td class="py-3.5 px-4">
-                    <span class="px-2 py-0.5 rounded bg-gray-800 border border-gray-700 text-xs font-semibold text-pink-400">
-                        ${s.group_name || '—'}
-                    </span>
-                </td>
-                <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${s.email}</td>
-                <td class="py-3.5 px-4 text-center">${roleBadge}</td>
-                <td class="py-3.5 px-4 text-right space-x-3">
-                    <button data-user-id="${s.id}" data-group-id="${s.group_id || ''}" data-user-name="${fullName}" 
-                            class="btn-change-group text-xs text-indigo-600 hover:text-indigo-500 hover:underline transition font-medium">
-                        Изменить группу
-                    </button>
-                    <button data-user-id="${s.id}" data-user-role="${s.role}" data-user-name="${fullName}" 
-                            class="btn-change-role text-xs text-pink-600 hover:text-pink-500 hover:underline transition font-medium">
-                        Изменить роль
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+        const data = await response.json();
+        if (!tbody) return;
+
+        if (!data.students || data.students.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-[var(--text-main)]">Студенты не найдены</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.students.map(s => {
+            const fullName = `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Без имени';
+            const safeName = fullName.replace(/"/g, '"');
+            const isTeacher = s.role === 'TEACHER';
+
+            const roleBadge = isTeacher
+                ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20"><i class="fa-solid fa-user-shield mr-1"></i> Преподаватель</span>`
+                : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-800 text-[var(--text-muted)] border border-gray-700"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
+
+            return `
+                <tr class="hover:bg-gray-600/30 transition">
+                    <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">${fullName}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2 py-0.5 rounded bg-gray-800 border border-gray-700 text-xs font-semibold text-pink-400">
+                            ${s.group_name || '—'}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${s.email}</td>
+                    <td class="py-3.5 px-4 text-center">${roleBadge}</td>
+                    <td class="py-3.5 px-4 text-right space-x-3">
+                        <button data-user-id="${s.id}" data-group-id="${s.group_id || ''}" data-user-name="${safeName}" 
+                                class="btn-change-group text-xs text-indigo-600 hover:text-indigo-500 hover:underline transition font-medium">
+                            Изменить группу
+                        </button>
+                        <button data-user-id="${s.id}" data-user-role="${s.role}" data-user-name="${safeName}" 
+                                class="btn-change-role text-xs text-pink-600 hover:text-pink-500 hover:underline transition font-medium">
+                            Изменить роль
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки студентов:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400 text-xs">Не удалось загрузить список студентов</td></tr>`;
+        }
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список студентов');
+    } finally {
+        if (groupSelect) groupSelect.disabled = false;
+    }
 }
 
 async function changeUserGroup(userId, currentGroupId, userName) {
@@ -301,68 +371,91 @@ async function changeUserGroup(userId, currentGroupId, userName) {
         const selectedGroup = cachedGroups.find(g => String(g.id) === String(selectedGroupId));
         const groupName = selectedGroup ? selectedGroup.name : 'Без группы';
 
-        const response = await fetch(`/api/v1/admin/users/group`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : ''
-            },
-            body: JSON.stringify({ userId, groupId: selectedGroupId, groupName })
-        });
+        try {
+            const response = await fetch(`/api/v1/admin/users/group`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({ userId, groupId: selectedGroupId, groupName })
+            });
 
-        if (response.ok) {
-            Toast.success('Академическая группа пользователя обновлена');
-            
-            const currentGroupFilter = document.getElementById('group-select')?.value || 'all';
-            loadGroupStudents(currentGroupFilter);
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                Toast.success('Академическая группа пользователя обновлена');
+
+                const currentGroupFilter = document.getElementById('group-select')?.value || 'all';
+                loadGroupStudents(currentGroupFilter);
+            } else {
+                Toast.error(data.message || 'Не удалось изменить группу');
+            }
+        } catch (error) {
+            console.error('Ошибка смены группы:', error);
+            Toast.error('Ошибка соединения при смене группы');
         }
     }
 }
 
 async function loadTeachers() {
     const token = localStorage.getItem('authToken');
-
-    const response = await fetch(`/api/v1/admin/users/teachers`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-        }
-    });
-
-    if (!response.ok) throw new Error('Не удалось загрузить список преподавателей');
-
-    const data = await response.json();
     const tbody = document.getElementById('teachers-table-body');
 
-    if (!data.teachers || data.teachers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-[var(--text-main)]">Преподаватели не найдены</td></tr>`;
-        return;
+    if (tbody && window.Skeleton) {
+        Skeleton.render(tbody, Skeleton.userTableRows(4, 4));
     }
 
-    tbody.innerHTML = data.teachers.map(t => {
-        const fullName = `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Без имени';
-        const regDate = new Date(t.created_at).toLocaleDateString('ru-RU');
+    try {
+        const response = await fetch(`/api/v1/admin/users/teachers`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
 
-        return `
-            <tr class="hover:bg-gray-800/30 transition">
-                <td class="py-3.5 px-4 font-semibold text-[var(--text-main)] flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 text-xs font-bold flex items-center justify-center border border-pink-500/30">
-                        ${fullName.charAt(0).toUpperCase()}
-                    </div>
-                    <span>${fullName}</span>
-                </td>
-                <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${t.email}</td>
-                <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
-                <td class="py-3.5 px-4 text-right">
-                    <button data-user-id="${t.id}" data-user-name="${fullName}" 
-                            class="btn-demote-teacher px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition">
-                        Снять права
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
+        if (!response.ok) throw new Error('Не удалось загрузить список преподавателей');
+
+        const data = await response.json();
+        if (!tbody) return;
+
+        if (!data.teachers || data.teachers.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-[var(--text-main)]">Преподаватели не найдены</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.teachers.map(t => {
+            const fullName = `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Без имени';
+            const safeName = fullName.replace(/"/g, '"');
+            const regDate = new Date(t.created_at).toLocaleDateString('ru-RU');
+
+            return `
+                <tr class="hover:bg-gray-800/30 transition">
+                    <td class="py-3.5 px-4 font-semibold text-[var(--text-main)] flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 text-xs font-bold flex items-center justify-center border border-pink-500/30">
+                            ${fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <span>${fullName}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${t.email}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
+                    <td class="py-3.5 px-4 text-right">
+                        <button data-user-id="${t.id}" data-user-name="${safeName}" 
+                                class="btn-demote-teacher px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition">
+                            Снять права
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки преподавателей:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-400 text-xs">Не удалось загрузить список преподавателей</td></tr>`;
+        }
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список преподавателей');
+    }
 }
 
 async function changeUserRole(userId, currentRole, userName) {
@@ -382,21 +475,30 @@ async function changeUserRole(userId, currentRole, userName) {
     if (result.isConfirmed) {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/admin/users/role`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': token ? `Bearer ${token}` : ''
-            },
-            body: JSON.stringify({ userId: userId, role: newRole })
-        });
+        try {
+            const response = await fetch(`/api/v1/admin/users/role`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({ userId: userId, role: newRole })
+            });
 
-        if (response.ok) {
-            Toast.success('Роль пользователя обновлена');
-            
-            const currentGroup = document.getElementById('group-select')?.value || 'all';
-            loadGroupStudents(currentGroup);
-            loadTeachers();
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok) {
+                Toast.success('Роль пользователя обновлена');
+
+                const currentGroup = document.getElementById('group-select')?.value || 'all';
+                loadGroupStudents(currentGroup);
+                loadTeachers();
+            } else {
+                Toast.error(data.message || 'Не удалось изменить роль пользователя');
+            }
+        } catch (error) {
+            console.error('Ошибка смены роли:', error);
+            Toast.error('Ошибка соединения при смене роли');
         }
     }
 }

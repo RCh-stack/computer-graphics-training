@@ -35,14 +35,21 @@ function initEvents() {
 
 async function loadChaptersTree() {
     const token = localStorage.getItem('authToken');
+    const container = document.getElementById('chapters-tree-container');
+    if (!container) return;
+
+    if (window.Skeleton) {
+        Skeleton.render(container, Skeleton.ebookChaptersTree(3, 2));
+    }
 
     try {
         const res = await fetch('/api/v1/admin/ebook/chapters', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        if (!res.ok) throw new Error('Не удалось загрузить структуру учебника');
+
         const data = await res.json();
-        const container = document.getElementById('chapters-tree-container');
 
         if (!data.chapters || data.chapters.length === 0) {
             container.innerHTML = `<div class="p-12 border border-dashed border-[var(--border-color)] rounded-2xl text-center text-[var(--text-main)] text-xs">Главы учебника пока не созданы.</div>`;
@@ -51,6 +58,7 @@ async function loadChaptersTree() {
 
         container.innerHTML = data.chapters.map((ch, idx) => {
             const lessons = Array.isArray(ch.lessons) ? ch.lessons : [];
+            const safeChTitle = String(ch.title || '').replace(/"/g, '"');
 
             return `
                 <div class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden">
@@ -60,7 +68,7 @@ async function loadChaptersTree() {
                                 ${ch.order || idx + 1}
                             </span>
                             <h3 class="font-bold text-sm text-[var(--text-main)]">${ch.title}</h3>
-                            <button data-chapter-id="${ch.id}" data-chapter-title="${ch.title}" class="btn-edit-chapter text-[var(--text-main)] hover:text-blue-300 text-xs ml-1" title="Переименовать раздел">
+                            <button data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-edit-chapter text-[var(--text-main)] hover:text-blue-300 text-xs ml-1" title="Переименовать раздел">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
                         </div>
@@ -69,32 +77,35 @@ async function loadChaptersTree() {
                             <button data-chapter-id="${ch.id}" class="btn-create-lesson px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-semibold transition border border-blue-500/30 flex items-center gap-1">
                                 <i class="fa-solid fa-plus text-[10px]"></i> Страница
                             </button>
-                            <button data-chapter-id="${ch.id}" data-chapter-title="${ch.title}" class="btn-delete-chapter text-red-600 hover:text-red-600 p-1.5 text-xs">
+                            <button data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-delete-chapter text-red-600 hover:text-red-400 p-1.5 text-xs">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="p-2 divide-y divide-gray-600/40">
-                        ${lessons.length === 0 
+                        ${lessons.length === 0
                             ? `<div class="p-3 text-center text-xs text-[var(--text-main)]">В этой главе еще нет статей</div>`
-                            : lessons.map(les => `
-                                <div class="p-3 hover:bg-[var(--bg-card)] transition flex justify-between items-center rounded-xl">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[11px] font-mono text-blue-300 font-semibold px-1.5 py-0.5 rounded bg-blue-500/10">№ ${les.order || 0}</span>
-                                        <span class="text-xs font-medium text-[var(--text-main)]">${les.title}</span>
-                                    </div>
+                            : lessons.map(les => {
+                                const safeLesTitle = String(les.title || '').replace(/"/g, '"');
+                                return `
+                                    <div class="p-3 hover:bg-[var(--bg-card)] transition flex justify-between items-center rounded-xl">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] font-mono text-blue-300 font-semibold px-1.5 py-0.5 rounded bg-blue-500/10">№ ${les.order || 0}</span>
+                                            <span class="text-xs font-medium text-[var(--text-main)]">${les.title}</span>
+                                        </div>
 
-                                    <div class="flex items-center gap-3">
-                                        <a href="editor.html?id=${les.id}" class="text-xs text-blue-400 hover:underline flex items-center gap-1 font-semibold">
-                                            <i class="fa-solid fa-pen-to-square"></i> Редактировать
-                                        </a>
-                                        <button data-lesson-id="${les.id}" data-lesson-title="${les.title}" class="btn-delete-lesson text-xs text-red-600 hover:text-red-300">
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
+                                        <div class="flex items-center gap-3">
+                                            <a href="editor.html?id=${les.id}" class="text-xs text-blue-400 hover:underline flex items-center gap-1 font-semibold">
+                                                <i class="fa-solid fa-pen-to-square"></i> Редактировать
+                                            </a>
+                                            <button data-lesson-id="${les.id}" data-lesson-title="${safeLesTitle}" class="btn-delete-lesson text-xs text-red-600 hover:text-red-300">
+                                                <i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            `).join('')
+                                `;
+                            }).join('')
                         }
                     </div>
                 </div>
@@ -102,6 +113,8 @@ async function loadChaptersTree() {
         }).join('');
     } catch (error) {
         console.error(error);
+        container.innerHTML = `<div class="p-12 border border-dashed border-rose-500/30 rounded-2xl text-center text-rose-400 text-xs">Не удалось загрузить структуру учебника. Проверьте подключение к серверу.</div>`;
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить главы учебника');
     }
 }
 
@@ -121,12 +134,23 @@ async function createChapter() {
     });
 
     if (title) {
-        const res = await fetch('/api/v1/admin/ebook/chapters', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ title })
-        });
-        if (res.ok) loadChaptersTree();
+        try {
+            const res = await fetch('/api/v1/admin/ebook/chapters', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title })
+            });
+            if (res.ok) {
+                Toast.success('Раздел учебника создан');
+                loadChaptersTree();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                Toast.error(data.message || 'Не удалось создать раздел');
+            }
+        } catch (error) {
+            console.error(error);
+            Toast.error('Ошибка соединения при создании раздела');
+        }
     }
 }
 
@@ -146,12 +170,23 @@ async function editChapter(chapterId, currentTitle) {
     });
 
     if (newTitle && newTitle !== currentTitle) {
-        const res = await fetch(`/api/v1/admin/ebook/chapters/${chapterId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ title: newTitle })
-        });
-        if (res.ok) loadChaptersTree();
+        try {
+            const res = await fetch(`/api/v1/admin/ebook/chapters/${chapterId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title: newTitle })
+            });
+            if (res.ok) {
+                Toast.success('Название раздела обновлено');
+                loadChaptersTree();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                Toast.error(data.message || 'Не удалось переименовать раздел');
+            }
+        } catch (error) {
+            console.error(error);
+            Toast.error('Ошибка соединения при обновлении раздела');
+        }
     }
 }
 
@@ -171,16 +206,23 @@ async function createLesson(chapterId) {
     });
 
     if (title) {
-        const res = await fetch('/api/v1/admin/ebook/lessons', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ chapterId, title })
-        });
+        try {
+            const res = await fetch('/api/v1/admin/ebook/lessons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ chapterId, title })
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (data.status === 'success') {
-            window.location.href = `editor.html?id=${data.lessonId}`;
+            if (res.ok && data.status === 'success') {
+                window.location.href = `editor.html?id=${data.lessonId}`;
+            } else {
+                Toast.error(data.message || 'Не удалось создать страницу');
+            }
+        } catch (error) {
+            console.error(error);
+            Toast.error('Ошибка соединения при создании страницы');
         }
     }
 }
@@ -199,13 +241,21 @@ async function confirmDeleteChapter(chapterId, title) {
     });
 
     if (res.isConfirmed) {
-        const response = await fetch(`/api/v1/admin/ebook/chapters/${chapterId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-            Toast.success('Раздел учебника успешно удален');
-            loadChaptersTree();
+        try {
+            const response = await fetch(`/api/v1/admin/ebook/chapters/${chapterId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                Toast.success('Раздел учебника успешно удален');
+                loadChaptersTree();
+            } else {
+                const data = await response.json().catch(() => ({}));
+                Toast.error(data.message || 'Не удалось удалить раздел');
+            }
+        } catch (error) {
+            console.error(error);
+            Toast.error('Ошибка соединения при удалении раздела');
         }
     }
 }
@@ -224,13 +274,21 @@ async function confirmDeletelesson(lessonId, title) {
     });
 
     if (res.isConfirmed) {
-        const response = await fetch(`/api/v1/admin/ebook/lessons/${lessonId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-            Toast.success('Страница учебника успешно удалена');
-            loadChaptersTree();
+        try {
+            const response = await fetch(`/api/v1/admin/ebook/lessons/${lessonId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                Toast.success('Страница учебника успешно удалена');
+                loadChaptersTree();
+            } else {
+                const data = await response.json().catch(() => ({}));
+                Toast.error(data.message || 'Не удалось удалить страницу');
+            }
+        } catch (error) {
+            console.error(error);
+            Toast.error('Ошибка соединения при удалении страницы');
         }
     }
 }

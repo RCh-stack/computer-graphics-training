@@ -9,9 +9,13 @@ let currentLessonState = {
 };
 let scrollTimer = null;
 
-async function loadCourseManifest() {
+async function loadCourseManifest(silent = false) {
     const menuContainer = document.getElementById('course-menu');
-    
+
+    if (!silent && menuContainer && window.Skeleton) {
+        Skeleton.render(menuContainer, Skeleton.courseMenu(2, 3));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
 
@@ -24,19 +28,19 @@ async function loadCourseManifest() {
         });
 
         if (!response.ok) throw new Error('Не удалось загрузить оглавление курса.');
-        
+
         const data = await response.json();
-        
+
         updateOverallProgressUI(data.overallProgress || 0);
 
         renderSidebarMenu(data.chapters || [], menuContainer);
 
-        if (!currentLessonState.id && data.chapters[0]?.lessons[0]) {
+        if (!currentLessonState.id && data.chapters?.[0]?.lessons?.[0]) {
             loadLesson(data.chapters[0].lessons[0].id);
         }
     } catch (error) {
         console.error('Ошибка загрузки меню:', error);
-        if (menuContainer) {
+        if (!silent && menuContainer) {
             menuContainer.innerHTML = `<div class="text-red-400 p-2 text-xs">Ошибка загрузки меню</div>`;
         }
     }
@@ -67,9 +71,9 @@ function renderSidebarMenu(chapters, container) {
                 const lessonLink = document.createElement('a');
                 lessonLink.href = '#';
                 lessonLink.dataset.lessonId = lesson.id;
-                
-                const checkIcon = lesson.isCompleted 
-                    ? `<span class="text-emerald-400 font-bold ml-auto text-xs">✓</span>` 
+
+                const checkIcon = lesson.isCompleted
+                    ? `<span class="text-emerald-400 font-bold ml-auto text-xs">✓</span>`
                     : `<span class="text-gray-600 ml-auto text-xs">○</span>`;
 
                 lessonLink.className = 'lesson-link flex items-center justify-between p-2 rounded-xl hover:bg-[var(--bg-card)] text-[var(--text-muted)] transition text-xs gap-2';
@@ -84,11 +88,16 @@ function renderSidebarMenu(chapters, container) {
             });
         }
     });
+
+    if (currentLessonState.id) {
+        updateActiveMenuItem(currentLessonState.id);
+    }
 }
 
 async function loadLesson(lessonId) {
     const contentContainer = document.getElementById('lesson-content');
-    
+    const sidebarContainer = document.getElementById('widget-sidebar-container');
+
     if (scrollTimer) {
         clearTimeout(scrollTimer);
         scrollTimer = null;
@@ -96,6 +105,14 @@ async function loadLesson(lessonId) {
 
     currentLessonState.id = lessonId;
     updateActiveMenuItem(lessonId);
+
+    if (sidebarContainer) {
+        sidebarContainer.innerHTML = '';
+    }
+
+    if (contentContainer && window.Skeleton) {
+        Skeleton.render(contentContainer, Skeleton.lessonArticle());
+    }
 
     try {
         const token = localStorage.getItem('authToken');
@@ -111,12 +128,12 @@ async function loadLesson(lessonId) {
         if (!response.ok) throw new Error('Ошибка загрузки данных урока');
 
         const data = await response.json();
-        
+
         if (data.status === 'success' && data.lesson) {
             currentLessonState.isCompleted = Boolean(data.lesson.isCompleted);
-            
+
             renderLessonContent(data.lesson, contentContainer);
-            
+
             if (!currentLessonState.isCompleted) {
                 checkAutoCompletion();
             }
@@ -128,6 +145,7 @@ async function loadLesson(lessonId) {
         if (contentContainer) {
             contentContainer.innerHTML = `<div class="text-red-400 p-4 text-xs">Не удалось загрузить материал урока.</div>`;
         }
+        window.Toast?.error('Ошибка загрузки', 'Не удалось открыть материал урока');
     }
 }
 
@@ -168,12 +186,12 @@ function renderLessonContent(lesson, container) {
 
     const footerBlock = document.createElement('div');
     footerBlock.className = 'border-t border-[var(--border-color)] pt-6 mt-8 flex justify-center';
-    
+
     renderCompletionButton(footerBlock, lesson.id, currentLessonState.isCompleted);
     wrapper.appendChild(footerBlock);
 
     container.appendChild(wrapper);
-    container.scrollTop = 0; // Сброс скролла наверх
+    container.scrollTop = 0;
 }
 
 function renderCompletionButton(container, lessonId, isCompleted) {
@@ -207,6 +225,9 @@ async function updateLessonCompletion(lessonId, targetStatus) {
         scrollTimer = null;
     }
 
+    const btn = document.getElementById('btn-toggle-completion');
+    if (btn) btn.disabled = true;
+
     const token = localStorage.getItem('authToken');
     try {
         const res = await fetch(`/api/v1/ebook/lessons/${lessonId}/progress`, {
@@ -221,13 +242,25 @@ async function updateLessonCompletion(lessonId, targetStatus) {
         if (res.ok) {
             currentLessonState.isCompleted = targetStatus;
 
-            await loadCourseManifest();
+            await loadCourseManifest(true);
 
             const footer = document.querySelector('#lesson-content .border-t');
             if (footer) renderCompletionButton(footer, lessonId, targetStatus);
+
+            if (targetStatus) {
+                window.Toast?.success('Урок отмечен как изученный');
+            } else {
+                window.Toast?.info('Отметка об изучении снята');
+            }
+        } else {
+            window.Toast?.error('Не удалось обновить статус урока');
         }
     } catch (err) {
         console.error('Ошибка сохранения статуса урока:', err);
+        window.Toast?.error('Ошибка соединения при сохранении прогресса');
+    } finally {
+        const currentBtn = document.getElementById('btn-toggle-completion');
+        if (currentBtn) currentBtn.disabled = false;
     }
 }
 

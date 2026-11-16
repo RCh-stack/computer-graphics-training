@@ -92,7 +92,9 @@
                                 <i class="fa-solid fa-book"></i>
                             </div>
 
-                            <div class="text-2xl font-extrabold mt-2" id="stat-lessons-count">0 / 0</div>
+                            <div class="text-2xl font-extrabold mt-2" id="stat-lessons-count">
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-blue-400/20 animate-pulse align-middle"></span>
+                            </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
@@ -101,7 +103,9 @@
                                 <i class="fa-solid fa-flask"></i>
                             </div>
 
-                            <div class="text-2xl font-extrabold mt-2" id="stat-labs-count">0 / 0</div>
+                            <div class="text-2xl font-extrabold mt-2" id="stat-labs-count">
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-emerald-400/20 animate-pulse align-middle"></span>
+                            </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
@@ -110,7 +114,9 @@
                                 <i class="fa-solid fa-list-check"></i>
                             </div>
 
-                            <div class="text-2xl font-extrabold mt-2" id="stat-tests-count">0 / 0</div>
+                            <div class="text-2xl font-extrabold mt-2" id="stat-tests-count">
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-amber-400/20 animate-pulse align-middle"></span>
+                            </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-pink-500/10 border border-pink-500/20">
@@ -119,7 +125,9 @@
                                 <i class="fa-solid fa-award"></i>
                             </div>
 
-                            <div class="text-2xl font-extrabold mt-2" id="stat-avg-grade">0%</div>
+                            <div class="text-2xl font-extrabold mt-2" id="stat-avg-grade">
+                                <span aria-hidden="true" class="inline-block h-7 w-14 rounded-lg bg-pink-400/20 animate-pulse align-middle"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -194,8 +202,29 @@
                                 </thead>
 
                                 <tbody id="history-table-body" class="divide-y divide-gray-700/40 text-[var(--text-main)]">
-                                    <tr>
-                                        <td colspan="4" class="py-6 text-center text-[var(--text-main)]">Загрузка истории...</td>
+                                    <tr aria-hidden="true" class="animate-pulse">
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-52 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                    </tr>
+                                    <tr aria-hidden="true" class="animate-pulse">
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-44 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                    </tr>
+                                    <tr aria-hidden="true" class="animate-pulse">
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-60 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                    </tr>
+                                    <tr aria-hidden="true" class="animate-pulse">
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-48 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -341,6 +370,7 @@
         </div>
     </main>
 
+    <script src="../src/skeleton.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/two-factor.js"></script>
     <script src="../src/ui.js"></script>

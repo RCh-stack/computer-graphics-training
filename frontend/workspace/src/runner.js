@@ -1,6 +1,6 @@
 document.getElementById('btn-save-draft')?.addEventListener('click', saveDraft);
 document.getElementById('btn-run')?.addEventListener('click', runCode);
-document.getElementById('btn-submit')?.addEventListener('click', submitCode)
+document.getElementById('btn-submit')?.addEventListener('click', submitCode);
 
 async function saveDraft() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -9,13 +9,16 @@ async function saveDraft() {
     const selectedLang = document.getElementById('language-select')?.value || 'cpp';
 
     if (!code.trim()) {
-        Toast.info('Код не может быть пустым');
+        Toast.warning('Код не может быть пустым');
         return;
     }
 
+    const btnSave = document.getElementById('btn-save-draft');
+    if (btnSave) btnSave.disabled = true;
+
     try {
         const token = localStorage.getItem('authToken');
-        
+
         const res = await fetch('/api/v1/labs/save', {
             method: 'POST',
             headers: {
@@ -25,19 +28,23 @@ async function saveDraft() {
             body: JSON.stringify({ lab_id: labId, student_code: code, language: selectedLang })
         });
 
+        const data = await res.json().catch(() => ({}));
+
         if (res.ok) {
-            Swal.fire({
-                title: 'Сохранено!',
-                text: 'Черновик успешно сохранен',
-                icon: 'success',
-                timer: 1500
-            }).then((result) => {
-                location.reload();     
-            });
+            Toast.success('Черновик сохранён');
+
+            const statusContainer = document.getElementById('teacher-feedback-banner');
+            if (statusContainer && statusContainer.classList.contains('hidden') && typeof setupSubmissionState === 'function') {
+                setupSubmissionState({ status: 'DRAFT' });
+            }
+        } else {
+            Toast.error(data.message || 'Не удалось сохранить черновик');
         }
     } catch (error) {
         console.error('Ошибка сохранения черновика:', error);
-        Toast.error('Не удалось сохранить черновик');
+        Toast.error('Ошибка соединения при сохранении черновика');
+    } finally {
+        if (btnSave) btnSave.disabled = false;
     }
 }
 
@@ -55,14 +62,18 @@ async function runCode() {
         return;
     }
 
-    const code = window.windowEditor.getValue();   
+    const code = window.windowEditor.getValue();
     const btnRun = document.getElementById('btn-run');
     const wasmBadge = document.getElementById('wasm-status');
 
     const selectedLang = document.getElementById('language-select')?.value || 'cpp';
-    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' }; 
+    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' };
 
     setRunBtnLoading(true, btnRun, wasmBadge);
+
+    if (window.Skeleton) {
+        Skeleton.render('#tests-container', Skeleton.labTestCases(3));
+    }
 
     try {
         const token = localStorage.getItem('authToken');
@@ -83,7 +94,7 @@ async function runCode() {
 
         const result = await response.json();
 
-         if (response.ok) {
+        if (response.ok) {
             await showLabResultModal({
                 isSubmit: false,
                 isPassed: result.all_passed,
@@ -103,6 +114,7 @@ async function runCode() {
     } catch (error) {
         console.error('Ошибка при отправке кода:', error);
         showErrorInUI('Не удалось связаться с сервером проверки.');
+        Toast.error('Ошибка соединения', 'Сервер проверки недоступен');
     } finally {
         setRunBtnLoading(false, btnRun, wasmBadge);
     }
@@ -122,12 +134,12 @@ async function submitCode() {
         return;
     }
 
-    const code = window.windowEditor.getValue();   
+    const code = window.windowEditor.getValue();
     const btnSubmit = document.getElementById('btn-submit');
     const wasmBadge = document.getElementById('wasm-status');
 
     const selectedLang = document.getElementById('language-select')?.value || 'cpp';
-    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' }; 
+    const langConfig = SUPPORTED_LANGUAGES[selectedLang] || { compiler: 'g++-15' };
 
     setSubmitBtnLoading(true, btnSubmit, wasmBadge);
 
@@ -148,16 +160,16 @@ async function submitCode() {
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Ошибка сервера: ${response.status}`);
-        }
+        const result = await response.json().catch(() => ({}));
 
-        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || `Ошибка сервера: ${response.status}`);
+        }
 
         if (result.status === 'compile_error') {
             Swal.fire({
                 title: 'Ошибка компиляции',
-                html: `<pre class="text-left text-xs bg-gray-950 p-3 rounded-xl border border-gray-700 font-mono text-red-400 overflow-x-auto max-h-60">${result.compile_output || 'Не удалось скомпилировать код.'}</pre><p class="text-xs text-gray-400 mt-2">Код сохранен как черновик.</p>`,
+                html: `<pre class="text-left text-xs bg-gray-950 p-3 rounded-xl border border-gray-700 font-mono text-red-400 overflow-x-auto max-h-60">${escapeHtml(result.compile_output || 'Не удалось скомпилировать код.')}</pre><p class="text-xs text-gray-400 mt-2">Код сохранен как черновик.</p>`,
                 icon: 'error',
                 confirmButtonColor: '#ec4899'
             });
@@ -173,12 +185,13 @@ async function submitCode() {
             compileError: submission.compile_output
         });
 
-        if(submission.all_passed)
+        if (submission.all_passed) {
             window.location.href = 'index.html';
-
+        }
     } catch (error) {
         console.error('Ошибка при отправке кода:', error);
         showErrorInUI('Не удалось связаться с сервером проверки.');
+        Toast.error('Ошибка отправки', error.message || 'Не удалось отправить решение');
     } finally {
         setSubmitBtnLoading(false, btnSubmit, wasmBadge);
     }
@@ -211,7 +224,7 @@ function setSubmitBtnLoading(isLoading, btnSubmit) {
 function handleExecutionResult(result) {
     const testsContainer = document.getElementById('tests-container');
     const testsCountBadge = document.getElementById('tests-status-count');
-    
+
     if (!testsContainer) return;
 
     if (result.status === 'compile_error') {
@@ -220,7 +233,7 @@ function handleExecutionResult(result) {
                 <div class="font-bold text-rose-200 flex items-center space-x-1">
                     <span>❌ Ошибка компиляции</span>
                 </div>
-                <pre class="font-mono text-[10px] text-black whitespace-pre-wrap overflow-x-auto bg-black/40 p-2 rounded">${escapeHtml(result.compile_output)}</pre>
+                <pre class="font-mono text-[10px] text-rose-200 whitespace-pre-wrap overflow-x-auto bg-black/40 p-2 rounded">${escapeHtml(result.compile_output)}</pre>
             </div>
         `;
         if (testsCountBadge) testsCountBadge.textContent = '0 Passed';
@@ -229,7 +242,7 @@ function handleExecutionResult(result) {
 
     if (result.status === 'success' && Array.isArray(result.tests)) {
         const passedCount = result.tests.filter(t => t.passed).length;
-        
+
         if (testsCountBadge) {
             testsCountBadge.textContent = `${passedCount} / ${result.tests.length} Passed`;
         }
@@ -272,8 +285,8 @@ function showErrorInUI(message) {
 
 function escapeHtml(str) {
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"');
 }

@@ -219,9 +219,36 @@
             </div>
 
             <div id="news-feed-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                <div class="text-center text-xs text-[var(--text-muted)] py-6">Загрузка ленты...</div>
+                <div aria-hidden="true" class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start space-x-3 animate-pulse">
+                    <div class="w-8 h-8 rounded-lg bg-gray-500/15 shrink-0 mt-0.5"></div>
+                    <div class="flex-1 min-w-0 space-y-2.5 py-0.5">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-2 w-2/3">
+                                <div class="h-4 w-20 rounded bg-gray-500/20 shrink-0"></div>
+                                <div class="h-4 w-44 rounded bg-gray-500/15"></div>
+                            </div>
+                            <div class="h-3 w-20 rounded bg-gray-500/15 shrink-0"></div>
+                        </div>
+                        <div class="h-3 w-full rounded bg-gray-500/15"></div>
+                        <div class="h-3 w-3/4 rounded bg-gray-500/10"></div>
+                    </div>
+                </div>
+
+                <div aria-hidden="true" class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start space-x-3 animate-pulse">
+                    <div class="w-8 h-8 rounded-lg bg-gray-500/15 shrink-0 mt-0.5"></div>
+                    <div class="flex-1 min-w-0 space-y-2.5 py-0.5">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-2 w-2/3">
+                                <div class="h-4 w-24 rounded bg-gray-500/20 shrink-0"></div>
+                                <div class="h-4 w-36 rounded bg-gray-500/15"></div>
+                            </div>
+                            <div class="h-3 w-20 rounded bg-gray-500/15 shrink-0"></div>
+                        </div>
+                        <div class="h-3 w-5/6 rounded bg-gray-500/15"></div>
+                        <div class="h-3 w-2/3 rounded bg-gray-500/10"></div>
+                    </div>
+                </div>
             </div>
-        </div>           
         </section>
     </main>
 
@@ -265,6 +292,7 @@
 
     <script src="src/ui.js"></script>
     <script src="src/auth.js"></script>
+    <script src="src/skeleton.js"></script>
     <script src="src/news.js"></script>
     <script src="src/toast.js"></script>
     <script src="src/theme.js"></script>

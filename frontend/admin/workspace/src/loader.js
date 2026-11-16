@@ -17,13 +17,21 @@ function initEvents() {
 
 async function loadLabs() {
     const token = localStorage.getItem('authToken');
-    
+    const grid = document.getElementById('labs-grid');
+    if (!grid) return;
+
+    if (window.Skeleton) {
+        Skeleton.render(grid, Skeleton.labCards(4));
+    }
+
     try {
         const res = await fetch('/api/v1/admin/labs', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+
+        if (!res.ok) throw new Error('Не удалось загрузить лабораторные работы');
+
         const data = await res.json();
-        const grid = document.getElementById('labs-grid');
 
         if (!data.labs || data.labs.length === 0) {
             grid.innerHTML = `<div class="col-span-full py-12 text-center text-[var(--text-main)]">Лабораторные работы пока не созданы.</div>`;
@@ -31,11 +39,12 @@ async function loadLabs() {
         }
 
         grid.innerHTML = data.labs.map(lab => {
-            const lockBadge = lab.is_unlocked 
+            const lockBadge = lab.is_unlocked
                 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-lock-open mr-1"></i> Доступна</span>`
                 : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20"><i class="fa-solid fa-lock mr-1"></i> Заблокирована</span>`;
 
             const testCasesCount = Array.isArray(lab.test_cases) ? lab.test_cases.length : 0;
+            const safeTitle = String(lab.title || '').replace(/"/g, '"');
 
             return `
                 <div class="bg-[var(--bg-card)] border border-gray-700/80 rounded-2xl p-5 hover:border-emerald-500/50 transition-all flex flex-col justify-between space-y-4">
@@ -57,7 +66,7 @@ async function loadLabs() {
                         <a href="lab-workspace.html?id=${lab.id}" class="flex-1 text-center py-2 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-500 hover:text-white font-semibold rounded-xl text-xs transition border border-emerald-500/30">
                             <i class="fa-solid fa-pen-to-square mr-1"></i> Редактировать
                         </a>
-                        <button data-lab-id="${lab.id}" data-lab-title="${lab.title}" class="btn-delete-lab px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs transition">
+                        <button data-lab-id="${lab.id}" data-lab-title="${safeTitle}" class="btn-delete-lab px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs transition">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -66,6 +75,8 @@ async function loadLabs() {
         }).join('');
     } catch (err) {
         console.error(err);
+        grid.innerHTML = `<div class="col-span-full py-12 text-center text-rose-400 text-xs">Не удалось загрузить список лабораторных работ. Проверьте подключение к серверу.</div>`;
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список лабораторных работ');
     }
 }
 
@@ -85,29 +96,36 @@ async function createNewLab() {
     });
 
     if (title) {
-        const res = await fetch('/api/v1/admin/labs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-                title,
-                description: 'Описание работы...',
-                difficulty: 'Средний',
-                isUnlocked: true,
-                order: 1,
-                templateCode: '#include <iostream>\n\nint main() {\n    // Ваш код здесь\n    return 0;\n}',
-                taskJson: {
-                    title: title,
-                    instruction: 'Реализуйте требуемые функции в заголовочном файле.',
-                    requirements: ['Использовать C++20']
-                },
-                testCases: [
-                    { id: 1, name: 'Тест №1', input: '1 2', timeout_ms: 1000, expected_output: '3' }
-                ]
-            })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            window.location.href = `lab-workspace.html?id=${data.labId}`;
+        try {
+            const res = await fetch('/api/v1/admin/labs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    title,
+                    description: 'Описание работы...',
+                    difficulty: 'Средний',
+                    isUnlocked: true,
+                    order: 1,
+                    templateCode: '#include <iostream>\n\nint main() {\n    // Ваш код здесь\n    return 0;\n}',
+                    taskJson: {
+                        title: title,
+                        instruction: 'Реализуйте требуемые функции в заголовочном файле.',
+                        requirements: ['Использовать C++20']
+                    },
+                    testCases: [
+                        { id: 1, name: 'Тест №1', input: '1 2', timeout_ms: 1000, expected_output: '3' }
+                    ]
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                window.location.href = `lab-workspace.html?id=${data.labId}`;
+            } else {
+                Toast.error(data.message || 'Не удалось создать лабораторную работу');
+            }
+        } catch (err) {
+            console.error(err);
+            Toast.error('Ошибка соединения при создании лабораторной работы');
         }
     }
 }
@@ -126,13 +144,21 @@ async function confirmDeleteLab(labId, labTitle) {
     });
 
     if (res.isConfirmed) {
-        const response = await fetch(`/api/v1/admin/labs/${labId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-            Toast.success('Лабораторная работа успешно удалена');
-            loadLabs();
+        try {
+            const response = await fetch(`/api/v1/admin/labs/${labId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                Toast.success('Лабораторная работа успешно удалена');
+                loadLabs();
+            } else {
+                const data = await response.json().catch(() => ({}));
+                Toast.error(data.message || 'Не удалось удалить лабораторную работу');
+            }
+        } catch (err) {
+            console.error(err);
+            Toast.error('Ошибка соединения при удалении лабораторной работы');
         }
     }
 }

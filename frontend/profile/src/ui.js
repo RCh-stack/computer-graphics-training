@@ -50,7 +50,7 @@ async function loadUserProfile() {
     try {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/users/profile`, {
+        const response = await fetch('/api/v1/users/profile', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,6 +71,10 @@ async function loadUserProfile() {
 }
 
 async function loadUserStats() {
+    if (window.Skeleton) {
+        Skeleton.render('#theory-chapters-list', Skeleton.chaptersList(3));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
 
@@ -100,6 +104,16 @@ async function loadUserStats() {
         renderTheoryChapters(theory.chapters);
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
+
+        ['stat-lessons-count', 'stat-labs-count', 'stat-tests-count', 'stat-avg-grade'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = '—';
+        });
+
+        const chaptersContainer = document.getElementById('theory-chapters-list');
+        if (chaptersContainer) {
+            chaptersContainer.innerHTML = `<p class="text-xs text-red-400 py-2">Не удалось загрузить прогресс по главам.</p>`;
+        }
     }
 }
 
@@ -151,7 +165,12 @@ function renderDoughnutChart(canvasId, passed, total, activeColor, label) {
 
 function renderTheoryChapters(chapters) {
     const container = document.getElementById('theory-chapters-list');
-    if (!container || !chapters || chapters.length === 0) return;
+    if (!container) return;
+
+    if (!chapters || chapters.length === 0) {
+        container.innerHTML = `<p class="text-xs text-[var(--text-muted)] py-2">Главы учебника пока не добавлены.</p>`;
+        return;
+    }
 
     container.innerHTML = chapters.map(ch => `
         <div class="space-y-1">
@@ -176,6 +195,10 @@ function toggleChaptersCollapse() {
 }
 
 async function loadUserHistory() {
+    if (window.Skeleton) {
+        Skeleton.render('#history-table-body', Skeleton.tableRows(4, 4));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
 
@@ -190,7 +213,7 @@ async function loadUserHistory() {
         if (!response.ok) throw new Error('Не удалось загрузить историю активности');
 
         const result = await response.json();
-        
+
         if (result.status === 'success' && result.data) {
             rawHistoryData = result.data;
             renderHistoryTable('all');
@@ -266,12 +289,12 @@ function renderHistoryTable(filter = 'all') {
         const isTest = item.type === 'test';
         const isLesson = item.type === 'lesson';
 
-        const typeBadge = isLab 
+        const typeBadge = isLab
             ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-flask"></i> Lab</span>`
             : isTest ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-list-check"></i> Test</span>`
             : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"><i class="fa-solid fa-book"></i> Lesson</span>`;
 
-        const titleHTML = (isLesson && item.chapterTitle) 
+        const titleHTML = (isLesson && item.chapterTitle)
             ? `<div>
                 <div class="font-medium text-[var(--text-main)]">${item.title}</div>
                 <div class="text-[10px] text-[var(--text-muted)] opacity-80 font-normal">${item.chapterTitle}</div>
@@ -362,6 +385,7 @@ async function handleProfileUpdate(e) {
         }
     } catch (error) {
         console.error(error);
+        Toast.error('Ошибка соединения с сервером');
     }
 }
 
@@ -392,6 +416,7 @@ async function handlePasswordChange(e) {
         }
     } catch (error) {
         console.error(error);
+        Toast.error('Ошибка соединения с сервером');
     }
 }
 

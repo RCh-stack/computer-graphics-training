@@ -9,6 +9,7 @@ const lessonId = new URLSearchParams(window.location.search).get('id');
 let quill = null;
 let currentOrder = 1;
 let widgetsState = [];
+let isLessonLoaded = false;
 
 const WIDGET_PRESETS = {
     RAY_SPHERE_2D: { t: 130, angle: 0, origin: { x: 30, y: 110 }, sphere: { r: 35, x: 180, y: 110 } },
@@ -45,6 +46,7 @@ function initEvents() {
             const idx = parseInt(removeBtn.dataset.index);
             widgetsState.splice(idx, 1);
             renderWidgets();
+            window.Toast?.info('Виджет удален', 'Не забудьте сохранить страницу');
             return;
         }
     });
@@ -64,12 +66,28 @@ function initEvents() {
     });
 }
 
+function setEditorLoadingState(isLoading) {
+    const titleInput = document.getElementById('lesson-title');
+    const saveBtn = document.getElementById('btn-save-lesson');
+    const addWidgetBtn = document.getElementById('btn-add-widget');
+
+    if (titleInput) titleInput.disabled = isLoading;
+    if (saveBtn) saveBtn.disabled = isLoading;
+    if (addWidgetBtn) addWidgetBtn.disabled = isLoading;
+    if (quill) quill.enable(!isLoading);
+
+    if (isLoading && window.Skeleton) {
+        Skeleton.render('#widgets-list-container', Skeleton.widgetCards(1));
+    }
+}
+
 async function loadLessonDetails() {
     if (!lessonId) {
         window.location.href = 'index.html';
         return;
     }
 
+    setEditorLoadingState(true);
     const token = localStorage.getItem('authToken');
 
     try {
@@ -78,25 +96,33 @@ async function loadLessonDetails() {
         });
         const data = await res.json();
 
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
             const art = data.lesson;
             document.getElementById('lesson-title').value = art.title || '';
             currentOrder = art.order || 1;
 
-            if (quill && art.content) {
-                quill.root.innerHTML = art.content;
+            if (quill) {
+                quill.root.innerHTML = art.content || '';
             }
 
             let wConfig = art.widgets_config;
             if (typeof wConfig === 'string') {
-                try { wConfig = JSON.parse(wConfig); } catch(e) { wConfig = []; }
+                try { wConfig = JSON.parse(wConfig); } catch (e) { wConfig = []; }
             }
             widgetsState = Array.isArray(wConfig) ? wConfig : [];
 
+            isLessonLoaded = true;
+            setEditorLoadingState(false);
             renderWidgets();
+        } else {
+            throw new Error(data.message || 'Не удалось загрузить статью');
         }
     } catch (error) {
         console.error('Ошибка загрузки статьи:', error);
+        setEditorLoadingState(false);
+        const container = document.getElementById('widgets-list-container');
+        if (container) container.innerHTML = '';
+        window.Toast?.error('Ошибка загрузки', 'Не удалось загрузить содержимое статьи');
     }
 }
 
@@ -141,7 +167,7 @@ function renderWidgets() {
 }
 
 function addNewWidget() {
-    syncWidgetsFromDOM();
+    if (!syncWidgetsFromDOM()) return;
     widgetsState.push({
         type: 'widget',
         widgetId: 'RAY_SPHERE_2D',
@@ -151,6 +177,8 @@ function addNewWidget() {
 }
 
 function syncWidgetsFromDOM() {
+    let isValid = true;
+
     document.querySelectorAll('.widget-card').forEach((card, idx) => {
         if (!widgetsState[idx]) return;
 
@@ -160,23 +188,36 @@ function syncWidgetsFromDOM() {
         let parsedConfig = {};
         try {
             parsedConfig = JSON.parse(textareaEl.value);
+            textareaEl.classList.remove('border-red-500');
         } catch {
-            parsedConfig = WIDGET_PRESETS[selectEl.value] || {};
+            isValid = false;
+            textareaEl.classList.add('border-red-500');
+            window.Toast?.warning(`Ошибка JSON в виджете №${idx + 1}`, 'Проверьте синтаксис параметров перед сохранением');
         }
 
-        widgetsState[idx] = {
-            type: 'widget',
-            widgetId: selectEl ? selectEl.value : 'RAY_SPHERE_2D',
-            config: parsedConfig
-        };
+        if (isValid) {
+            widgetsState[idx] = {
+                type: 'widget',
+                widgetId: selectEl ? selectEl.value : 'RAY_SPHERE_2D',
+                config: parsedConfig
+            };
+        }
     });
+
+    return isValid;
 }
 
 async function saveLesson() {
-    syncWidgetsFromDOM();
+    if (!isLessonLoaded) return;
+    if (!syncWidgetsFromDOM()) return;
+
+    const saveBtn = document.getElementById('btn-save-lesson');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
 
     const token = localStorage.getItem('authToken');
-
     const htmlContent = quill ? quill.root.innerHTML : '';
 
     const payload = {
@@ -189,9 +230,9 @@ async function saveLesson() {
     try {
         const res = await fetch(`/api/v1/admin/ebook/lessons/${lessonId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
         });
@@ -206,5 +247,10 @@ async function saveLesson() {
     } catch (error) {
         console.error(error);
         Toast.error('Ошибка подключения к серверу');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
     }
 }

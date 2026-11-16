@@ -35,6 +35,7 @@ function initGradebookTabs() {
         secLabs?.classList.remove('hidden');
         secTests?.classList.add('hidden');
         secTheory?.classList.add('hidden');
+        applyLiveSearchFilter();
     });
 
     btnTests?.addEventListener('click', () => {
@@ -45,6 +46,7 @@ function initGradebookTabs() {
         secTests?.classList.remove('hidden');
         secLabs?.classList.add('hidden');
         secTheory?.classList.add('hidden');
+        applyLiveSearchFilter();
     });
 
     btnTheory?.addEventListener('click', () => {
@@ -55,6 +57,7 @@ function initGradebookTabs() {
         secTheory?.classList.remove('hidden');
         secLabs?.classList.add('hidden');
         secTests?.classList.add('hidden');
+        applyLiveSearchFilter();
     });
 }
 
@@ -70,19 +73,56 @@ async function initGroupsFilter() {
         const data = await res.json();
 
         if (data.status === 'success' && Array.isArray(data.groups)) {
-            select.innerHTML = `<option value="">Все группы</option>` + 
+            select.innerHTML = `<option value="">Все группы</option>` +
                 data.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
 
             select.addEventListener('change', () => loadGradebookData());
         }
     } catch (err) {
         console.error('Ошибка загрузки групп:', err);
+        window.Toast?.error('Не удалось загрузить список учебных групп');
     }
+}
+
+function renderGradebookSkeletons() {
+    if (!window.Skeleton) return;
+
+    const pairs = [
+        { thead: 'theory-thead', tbody: 'theory-tbody' },
+        { thead: 'labs-thead', tbody: 'labs-tbody' },
+        { thead: 'tests-thead', tbody: 'tests-tbody' }
+    ];
+
+    pairs.forEach(({ thead, tbody }) => {
+        const theadEl = document.getElementById(thead);
+        const existingCols = theadEl ? theadEl.querySelectorAll('th').length : 0;
+        const dynamicCols = existingCols > 2 ? existingCols - 2 : 4;
+
+        if (theadEl && existingCols === 0) {
+            theadEl.innerHTML = `
+                <tr>
+                    <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
+                    <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
+                    ${Array.from({ length: dynamicCols }, () => `
+                        <th class="p-3 border-b border-[var(--border-color)] text-center">
+                            <span aria-hidden="true" class="inline-block h-3.5 w-14 rounded bg-gray-500/20 animate-pulse"></span>
+                        </th>
+                    `).join('')}
+                </tr>
+            `;
+        }
+
+        Skeleton.render(`#${tbody}`, Skeleton.gradebookRows(5, dynamicCols));
+    });
 }
 
 async function loadGradebookData() {
     const token = localStorage.getItem('authToken');
-    const groupId = document.getElementById('gradebook-group-select')?.value || '';
+    const groupSelect = document.getElementById('gradebook-group-select');
+    const groupId = groupSelect?.value || '';
+
+    if (groupSelect) groupSelect.disabled = true;
+    renderGradebookSkeletons();
 
     try {
         const [labsRes, labSubsRes, testsRes, testSubsRes, theoryRes] = await Promise.all([
@@ -92,6 +132,10 @@ async function loadGradebookData() {
             fetch(`/api/v1/admin/submissions/tests?groupId=${groupId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
             fetch(`/api/v1/admin/submissions/ebook?groupId=${groupId}`, { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
+
+        if (!labsRes.ok || !labSubsRes.ok || !testsRes.ok || !testSubsRes.ok || !theoryRes.ok) {
+            throw new Error('Ошибка получения данных ведомости с сервера');
+        }
 
         const labsData = await labsRes.json();
         const labSubsData = await labSubsRes.json();
@@ -131,9 +175,21 @@ async function loadGradebookData() {
         renderTheoryGradebook(theoryData.chapters || [], theoryData.rows || []);
         renderLabsGradebook(students, labs);
         renderTestsGradebook(students, tests);
+        applyLiveSearchFilter();
 
     } catch (error) {
         console.error('Ошибка загрузки данных ведомости:', error);
+
+        ['theory-tbody', 'labs-tbody', 'tests-tbody'].forEach(tbodyId => {
+            const tbody = document.getElementById(tbodyId);
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-400 text-xs">Не удалось загрузить данные ведомости. Проверьте соединение с сервером.</td></tr>`;
+            }
+        });
+
+        window.Toast?.error('Ошибка загрузки', 'Не удалось обновить данные ведомости');
+    } finally {
+        if (groupSelect) groupSelect.disabled = false;
     }
 }
 
@@ -229,7 +285,7 @@ function renderLabsGradebook(students, labs) {
             } else if (sub.status === 'SUBMITTED') {
                 badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20';
             } else {
-                badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)] hover:bg-[var(--bg-panel)]'
+                badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)] hover:bg-[var(--bg-panel)]';
             }
 
             return `
@@ -318,24 +374,34 @@ function renderTestsGradebook(students, tests) {
     }).join('');
 }
 
+function applyLiveSearchFilter() {
+    const searchInput = document.getElementById('gradebook-search-input');
+    const query = (searchInput?.value || '').toLowerCase().trim();
+    const activeTbody = document.querySelector(
+        '#section-theory-gradebook:not(.hidden) tbody, #section-labs-gradebook:not(.hidden) tbody, #section-tests-gradebook:not(.hidden) tbody'
+    );
+    if (!activeTbody) return;
+
+    activeTbody.querySelectorAll('tr').forEach(row => {
+        if (row.getAttribute('aria-hidden') === 'true') return;
+
+        const cells = row.querySelectorAll('td');
+        if (cells.length <= 1) return;
+
+        const studentText = cells[0]?.innerText.toLowerCase() || '';
+        if (!query || studentText.includes(query)) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
 function initLiveSearch() {
     const searchInput = document.getElementById('gradebook-search-input');
     if (!searchInput) return;
 
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        const activeTbody = document.querySelector('main div:not(.hidden) tbody');
-        if (!activeTbody) return;
-
-        activeTbody.querySelectorAll('tr').forEach(row => {
-            const studentText = row.querySelector('td')?.innerText.toLowerCase() || '';
-            if (studentText.includes(query)) {
-                row.classList.remove('hidden');
-            } else {
-                row.classList.add('hidden');
-            }
-        });
-    });
+    searchInput.addEventListener('input', applyLiveSearchFilter);
 }
 
 function initExportToExcel() {
@@ -345,23 +411,20 @@ function initExportToExcel() {
     btnExport.addEventListener('click', () => {
         const isTheoryActive = !document.getElementById('section-theory-gradebook')?.classList.contains('hidden');
         const isLabsActive = !document.getElementById('section-labs-gradebook')?.classList.contains('hidden');
-        const isTestsActive = !document.getElementById('section-tests-gradebook')?.classList.contains('hidden');
 
         let targetTableId = '';
         let tbodyId = '';
         let sheetName = '';
 
-        if(isTheoryActive) {
+        if (isTheoryActive) {
             targetTableId = 'theory-thead';
             tbodyId = 'theory-tbody';
             sheetName = 'Теория';
-        }
-        else if(isLabsActive) {
+        } else if (isLabsActive) {
             targetTableId = 'labs-thead';
             tbodyId = 'labs-tbody';
             sheetName = 'Лабораторные работы';
-        }
-        else {
+        } else {
             targetTableId = 'tests-thead';
             tbodyId = 'tests-tbody';
             sheetName = 'Тестирование';
@@ -379,11 +442,14 @@ function initExportToExcel() {
 
         const rowsData = [];
         tbody.querySelectorAll('tr').forEach(tr => {
-            if (tr.classList.contains('hidden')) return;
+            if (tr.classList.contains('hidden') || tr.getAttribute('aria-hidden') === 'true') return;
+
+            const cells = tr.querySelectorAll('td');
+            if (cells.length <= 1) return;
 
             const row = [];
-            tr.querySelectorAll('td').forEach(td => {
-                row.push(td.innerText.replace('\n', ' ').trim());
+            cells.forEach(td => {
+                row.push(td.innerText.replace(/\s+/g, ' ').trim());
             });
             if (row.length > 0) rowsData.push(row);
         });
@@ -395,7 +461,7 @@ function initExportToExcel() {
 
         const worksheetData = [headers, ...rowsData];
         const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-        
+
         const colWidths = headers.map(h => ({ wch: Math.max(h.length + 5, 15) }));
         worksheet['!cols'] = colWidths;
 
@@ -407,5 +473,6 @@ function initExportToExcel() {
         const fileName = `Ведомость_${sheetName}_${groupName}_${dateStr}.xlsx`;
 
         XLSX.writeFile(workbook, fileName);
+        Toast.success('Ведомость выгружена', fileName);
     });
 }

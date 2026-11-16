@@ -7,11 +7,26 @@ let allTests = [];
 let currentTestQuestionsData = [];
 let activeQuestionIndex = 0;
 
+function renderDashboardSkeletons() {
+    if (!window.Skeleton) return;
+
+    Skeleton.render('#tests-grid', Skeleton.testCards(4));
+
+    ['stat-total-tests', 'stat-passed-tests', 'stat-avg-score'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = `<span aria-hidden="true" class="inline-block h-7 w-12 rounded-lg bg-gray-500/20 animate-pulse align-middle"></span>`;
+        }
+    });
+}
+
 async function initDashboard() {
+    renderDashboardSkeletons();
+
     try {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/tests/`, {
+        const response = await fetch('/api/v1/tests/', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -32,7 +47,12 @@ async function initDashboard() {
 
     } catch (error) {
         console.error('Ошибка инициализации дашборда:', error);
+        ['stat-total-tests', 'stat-passed-tests', 'stat-avg-score'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+        });
         showErrorState();
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить список тестов');
     }
 }
 
@@ -60,7 +80,7 @@ function processTestStatuses(tests) {
 function renderStats(tests) {
     const totalCount = tests.length;
     const completedTests = tests.filter(q => q.completed && q.passed);
-    
+
     let avgScore = 0;
     if (completedTests.length > 0) {
         const totalScoreSum = completedTests.reduce((acc, test) => acc + test.score, 0);
@@ -88,8 +108,8 @@ function renderTestCards(testsToRender) {
     testsToRender.forEach(test => {
         const card = document.createElement('div');
         card.className = `bg-[var(--bg-panel)] border rounded-xl p-5 flex flex-col justify-between transition relative overflow-hidden ${
-            test.is_unlocked 
-                ? 'border-[var(--border-color)] hover:border-pink-500/50' 
+            test.is_unlocked
+                ? 'border-[var(--border-color)] hover:border-pink-500/50'
                 : 'border-[var(--border-color)] opacity-60 bg-gray-900/20'
         }`;
 
@@ -111,6 +131,8 @@ function renderTestCards(testsToRender) {
         } else {
             statusBadge = `<span class="text-xs px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">Доступен</span>`;
         }
+
+        const safeTitleAttr = String(test.title).replace(/'/g, "\\'").replace(/"/g, '"');
 
         card.innerHTML = `
             <div class="space-y-3">
@@ -147,7 +169,7 @@ function renderTestCards(testsToRender) {
 
                     ${test.completed ? `
                         <button 
-                            onclick="openTestAnalysis('${test.id}', '${test.title}')" 
+                            onclick="openTestAnalysis('${test.id}', '${safeTitleAttr}')" 
                             class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-[var(--bg-card)] hover:bg-gray-300/30 text-[var(--text-main)] border border-[var(--border-color)] flex items-center gap-1.5 cursor-pointer"
                             title="Разбор ошибок">
                             <i class="fa-solid fa-chart-pie text-pink-400"></i>
@@ -216,10 +238,25 @@ async function openTestAnalysis(testId, testTitle) {
     const questionTitle = document.getElementById('analysis-question-title');
     const statusBadge = document.getElementById('analysis-status-badge');
 
-    if (palette) palette.innerHTML = '';
-    if (optionsContainer) optionsContainer.innerHTML = '';
-    if (explanationText) explanationText.innerText = 'Загрузка данных...';
-    if (questionTitle) questionTitle.innerText = 'Загрузка вопроса...';
+    if (window.Skeleton) {
+        Skeleton.render(palette, Skeleton.questionPalette(8));
+        Skeleton.render(optionsContainer, Skeleton.questionOptions(4));
+    } else {
+        if (palette) palette.innerHTML = '';
+        if (optionsContainer) optionsContainer.innerHTML = '';
+    }
+
+    if (questionTitle) {
+        questionTitle.innerHTML = `<span aria-hidden="true" class="inline-block h-5 w-3/4 rounded bg-gray-500/20 animate-pulse"></span>`;
+    }
+    if (explanationText) {
+        explanationText.innerHTML = `
+            <div aria-hidden="true" class="space-y-2 animate-pulse">
+                <div class="h-3 w-full rounded bg-gray-500/15"></div>
+                <div class="h-3 w-4/5 rounded bg-gray-500/10"></div>
+            </div>
+        `;
+    }
     if (statusBadge) {
         statusBadge.innerText = '—';
         statusBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold border border-gray-700 bg-gray-800 text-gray-400';
@@ -248,6 +285,8 @@ async function openTestAnalysis(testId, testTitle) {
             document.getElementById('analysis-score').innerText = `${scorePercent}%`;
 
             if (currentTestQuestionsData.length === 0) {
+                if (palette) palette.innerHTML = '';
+                if (optionsContainer) optionsContainer.innerHTML = '';
                 if (questionTitle) questionTitle.innerText = 'В данном тестировании отсутствуют вопросы';
                 if (explanationText) explanationText.innerText = 'Для данного теста нет сохраненных вопросов.';
                 return;
@@ -256,13 +295,18 @@ async function openTestAnalysis(testId, testTitle) {
             renderQuestionsPalette();
             selectQuestionForAnalysis(0);
         } else {
+            if (palette) palette.innerHTML = '';
+            if (optionsContainer) optionsContainer.innerHTML = '';
             if (questionTitle) questionTitle.innerText = 'Результаты недоступны';
             if (explanationText) explanationText.innerText = data.message || 'Ошибка получения результатов теста.';
         }
     } catch (error) {
         console.error('Ошибка загрузки разбора теста:', error);
+        if (palette) palette.innerHTML = '';
+        if (optionsContainer) optionsContainer.innerHTML = '';
         if (questionTitle) questionTitle.innerText = 'Ошибка загрузки';
         if (explanationText) explanationText.innerText = 'Не удалось загрузить данные с сервера.';
+        window.Toast?.error('Ошибка загрузки', 'Не удалось загрузить разбор теста');
     }
 }
 
@@ -356,7 +400,7 @@ function renderOptionsAnalysis(q) {
             optionStyle = 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-semibold';
             badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Правильный ответ</span>`;
         }
-        
+
         if (isUserSelected && !isCorrectOpt) {
             optionStyle = 'bg-red-500/10 border-red-500/40 text-red-400 font-semibold';
             badgeHtml = `<span class="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">Ваш выбор</span>`;

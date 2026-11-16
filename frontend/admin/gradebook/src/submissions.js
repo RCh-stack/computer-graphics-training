@@ -15,7 +15,7 @@ function initReviewClickDelegation() {
         if (!btn) return;
 
         const subId = btn.dataset.submissionId;
-        
+
         let targetSubmission = null;
         if (window.currentSubmissionsMap) {
             for (const sub of window.currentSubmissionsMap.values()) {
@@ -84,13 +84,20 @@ function initReviewModalEvents() {
 
     document.getElementById('btn-close-review-modal')?.addEventListener('click', closeModal);
     document.getElementById('btn-cancel-review')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
 
-    document.getElementById('btn-save-review')?.addEventListener('click', async () => {
+    const saveBtn = document.getElementById('btn-save-review');
+    saveBtn?.addEventListener('click', async () => {
         if (!activeSubmissionId) return;
 
         const token = localStorage.getItem('authToken');
         const status = document.getElementById('review-status-select').value;
         const teacherComment = document.getElementById('review-comment-input').value;
+
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
 
         try {
             const res = await fetch(`/api/v1/admin/submissions/labs/${activeSubmissionId}/review`, {
@@ -106,7 +113,7 @@ function initReviewModalEvents() {
 
             if (res.ok) {
                 closeModal();
-                
+
                 if (typeof window.reloadGradebookData === 'function') {
                     window.reloadGradebookData();
                 }
@@ -117,6 +124,10 @@ function initReviewModalEvents() {
             }
         } catch (error) {
             console.error('Ошибка сохранения статуса:', error);
+            Toast.error('Ошибка соединения при сохранении проверки');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
         }
     });
 }
@@ -130,7 +141,7 @@ function initTestReviewClickDelegation() {
         if (!btn) return;
 
         const subId = btn.dataset.testSubmissionId;
-        
+
         let targetSubmission = null;
         if (window.currentTestSubmissionsMap) {
             for (const sub of window.currentTestSubmissionsMap.values()) {
@@ -156,16 +167,16 @@ function openTestReviewModal(sub) {
 
     const startDate = new Date(sub.started_in);
     const endDate = new Date(sub.completed_at);
-
     const diffMs = endDate.getTime() - startDate.getTime();
-    if (isNaN(diffMs) || diffMs < 0)
-       document.getElementById('test-review-duration').innerText = '0м 0с';
 
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-
-    document.getElementById('test-review-duration').innerText = `${mins}м ${secs}с`;
+    if (isNaN(diffMs) || diffMs < 0) {
+        document.getElementById('test-review-duration').innerText = '0м 0с';
+    } else {
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        document.getElementById('test-review-duration').innerText = `${mins}м ${secs}с`;
+    }
 
     const questionsList = sub.questionsBreakdown || [];
     renderQuestionsBreakdown(questionsList);
@@ -184,7 +195,7 @@ function renderQuestionsBreakdown(questions) {
 
     container.innerHTML = questions.map((q, idx) => {
         const isCorrect = q.isCorrect;
-        const statusBadge = isCorrect 
+        const statusBadge = isCorrect
             ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Верно</span>`
             : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Ошибка</span>`;
 
@@ -210,9 +221,11 @@ function renderQuestionsBreakdown(questions) {
     }).join('');
 }
 
-document.getElementById('btn-close-test-modal')?.addEventListener('click', () => {
-    document.getElementById('test-review-modal')?.classList.add('hidden');
-});
-document.getElementById('btn-cancel-test-review')?.addEventListener('click', () => {
-    document.getElementById('test-review-modal')?.classList.add('hidden');
+const testReviewModal = document.getElementById('test-review-modal');
+const closeTestReviewModal = () => testReviewModal?.classList.add('hidden');
+
+document.getElementById('btn-close-test-modal')?.addEventListener('click', closeTestReviewModal);
+document.getElementById('btn-cancel-test-review')?.addEventListener('click', closeTestReviewModal);
+testReviewModal?.addEventListener('click', (e) => {
+    if (e.target === testReviewModal) closeTestReviewModal();
 });
