@@ -194,15 +194,15 @@ function renderTestCaseNav() {
     counter.innerText = labState.testCases.length;
 
     if (labState.testCases.length === 0) {
-        container.innerHTML = `<span class="col-span-4 text-xs text-[var(--text-main)] text-center py-1">Пусто</span>`;
+        container.innerHTML = `<span class="col-span-4 text-xs text-[var(--text-muted)] text-center py-1">Пусто</span>`;
         return;
     }
 
     container.innerHTML = labState.testCases.map((tc, idx) => {
         const isActive = idx === activeTCIndex;
         const btnClass = isActive
-            ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-md shadow-emerald-600/30'
-            : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-emerald-500/50';
+            ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-md shadow-emerald-600/25'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-main)] border-[var(--border-color)] hover:border-emerald-500/50';
 
         return `
             <button type="button" data-index="${idx}" class="tc-nav-btn py-1.5 px-1 text-xs rounded-xl border transition text-center font-mono ${btnClass}">
@@ -286,8 +286,8 @@ function renderRequirements() {
         const safeReq = String(req || '').replace(/"/g, '"');
         return `
             <div class="flex items-center gap-2">
-                <input type="text" value="${safeReq}" class="req-input flex-1 px-2.5 py-1 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500" data-index="${idx}">
-                <button type="button" class="btn-remove-req text-[var(--text-main)] hover:text-red-400 text-xs px-1.5" data-index="${idx}">
+                <input type="text" value="${safeReq}" class="req-input ui-input flex-1 px-2.5 py-1" data-index="${idx}">
+                <button type="button" class="btn-remove-req text-[var(--text-muted)] hover:text-rose-500 text-xs px-1.5 transition" data-index="${idx}">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>

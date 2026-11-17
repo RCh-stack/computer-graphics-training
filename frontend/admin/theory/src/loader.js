@@ -52,7 +52,7 @@ async function loadChaptersTree() {
         const data = await res.json();
 
         if (!data.chapters || data.chapters.length === 0) {
-            container.innerHTML = `<div class="p-12 border border-dashed border-[var(--border-color)] rounded-2xl text-center text-[var(--text-main)] text-xs">Главы учебника пока не созданы.</div>`;
+            container.innerHTML = `<div class="p-12 border border-dashed border-[var(--border-strong)] rounded-2xl text-center text-[var(--text-muted)] text-xs">Главы учебника пока не созданы.</div>`;
             return;
         }
 
@@ -61,45 +61,45 @@ async function loadChaptersTree() {
             const safeChTitle = String(ch.title || '').replace(/"/g, '"');
 
             return `
-                <div class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden">
-                    <div class="p-4 bg-[var(--bg-card)] flex justify-between items-center border-b border-[var(--border-color)]">
+                <div class="ui-card overflow-hidden">
+                    <div class="p-4 bg-[var(--bg-elevated)] flex justify-between items-center ui-divider-b">
                         <div class="flex items-center gap-3">
-                            <span class="w-7 h-7 rounded-lg bg-blue-200/20 text-blue-400 font-mono font-bold text-xs flex items-center justify-center border border-blue-500/30">
+                            <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 font-mono font-bold text-xs flex items-center justify-center border border-blue-500/25">
                                 ${ch.order || idx + 1}
                             </span>
                             <h3 class="font-bold text-sm text-[var(--text-main)]">${ch.title}</h3>
-                            <button data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-edit-chapter text-[var(--text-main)] hover:text-blue-300 text-xs ml-1" title="Переименовать раздел">
+                            <button type="button" data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-edit-chapter text-[var(--text-muted)] hover:text-blue-500 text-xs ml-1 transition" title="Переименовать раздел">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <button data-chapter-id="${ch.id}" class="btn-create-lesson px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-semibold transition border border-blue-500/30 flex items-center gap-1">
+                            <button type="button" data-chapter-id="${ch.id}" class="btn-create-lesson ui-btn ui-btn-soft py-1.5 px-3">
                                 <i class="fa-solid fa-plus text-[10px]"></i> Страница
                             </button>
-                            <button data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-delete-chapter text-red-600 hover:text-red-400 p-1.5 text-xs">
+                            <button type="button" data-chapter-id="${ch.id}" data-chapter-title="${safeChTitle}" class="btn-delete-chapter text-[var(--text-muted)] hover:text-rose-500 p-1.5 text-xs transition" title="Удалить раздел">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="p-2 divide-y divide-gray-600/40">
+                    <div class="p-2 space-y-1">
                         ${lessons.length === 0
-                            ? `<div class="p-3 text-center text-xs text-[var(--text-main)]">В этой главе еще нет статей</div>`
+                            ? `<div class="p-4 text-center text-xs text-[var(--text-muted)]">В этой главе еще нет статей</div>`
                             : lessons.map(les => {
                                 const safeLesTitle = String(les.title || '').replace(/"/g, '"');
                                 return `
-                                    <div class="p-3 hover:bg-[var(--bg-card)] transition flex justify-between items-center rounded-xl">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[11px] font-mono text-blue-300 font-semibold px-1.5 py-0.5 rounded bg-blue-500/10">№ ${les.order || 0}</span>
+                                    <div class="p-3 hover:bg-[var(--bg-hover)] transition flex justify-between items-center rounded-xl">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-[11px] font-mono text-blue-500 font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20">№ ${les.order || 0}</span>
                                             <span class="text-xs font-medium text-[var(--text-main)]">${les.title}</span>
                                         </div>
 
                                         <div class="flex items-center gap-3">
-                                            <a href="editor.html?id=${les.id}" class="text-xs text-blue-400 hover:underline flex items-center gap-1 font-semibold">
+                                            <a href="editor.html?id=${les.id}" class="text-xs text-blue-500 hover:underline flex items-center gap-1.5 font-semibold">
                                                 <i class="fa-solid fa-pen-to-square"></i> Редактировать
                                             </a>
-                                            <button data-lesson-id="${les.id}" data-lesson-title="${safeLesTitle}" class="btn-delete-lesson text-xs text-red-600 hover:text-red-300">
+                                            <button type="button" data-lesson-id="${les.id}" data-lesson-title="${safeLesTitle}" class="btn-delete-lesson text-xs text-[var(--text-muted)] hover:text-rose-500 p-1 transition" title="Удалить страницу">
                                                 <i class="fa-solid fa-xmark"></i>
                                             </button>
                                         </div>
@@ -113,7 +113,7 @@ async function loadChaptersTree() {
         }).join('');
     } catch (error) {
         console.error(error);
-        container.innerHTML = `<div class="p-12 border border-dashed border-rose-500/30 rounded-2xl text-center text-rose-400 text-xs">Не удалось загрузить структуру учебника. Проверьте подключение к серверу.</div>`;
+        container.innerHTML = `<div class="p-12 border border-dashed border-rose-500/30 rounded-2xl text-center text-rose-500 text-xs">Не удалось загрузить структуру учебника. Проверьте подключение к серверу.</div>`;
         window.Toast?.error('Ошибка загрузки', 'Не удалось получить главы учебника');
     }
 }

@@ -5,25 +5,25 @@
     const VARIANTS = {
         success: {
             icon: 'fa-circle-check',
-            iconBox: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+            iconBox: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/25',
             hoverBorder: 'hover:border-emerald-500/40',
             progress: 'bg-emerald-500',
         },
         error: {
             icon: 'fa-circle-exclamation',
-            iconBox: 'text-red-400 bg-red-500/10 border-red-500/20',
-            hoverBorder: 'hover:border-red-500/40',
-            progress: 'bg-red-500',
+            iconBox: 'text-rose-500 bg-rose-500/10 border-rose-500/25',
+            hoverBorder: 'hover:border-rose-500/40',
+            progress: 'bg-rose-500',
         },
         warning: {
             icon: 'fa-triangle-exclamation',
-            iconBox: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+            iconBox: 'text-amber-500 bg-amber-500/10 border-amber-500/25',
             hoverBorder: 'hover:border-amber-500/40',
             progress: 'bg-amber-500',
         },
         info: {
             icon: 'fa-circle-info',
-            iconBox: 'text-pink-400 bg-pink-500/10 border-pink-500/20',
+            iconBox: 'text-pink-500 bg-pink-500/10 border-pink-500/25',
             hoverBorder: 'hover:border-pink-500/40',
             progress: 'bg-pink-500',
         },
@@ -99,7 +99,7 @@
         closeBtn.type = 'button';
         closeBtn.setAttribute('aria-label', 'Закрыть уведомление');
         closeBtn.className =
-            'w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-card)] transition shrink-0';
+            'w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] transition shrink-0 cursor-pointer';
         const closeIcon = document.createElement('i');
         closeIcon.className = 'fa-solid fa-xmark text-xs pointer-events-none';
         closeBtn.appendChild(closeIcon);

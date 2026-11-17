@@ -169,7 +169,7 @@ async function submitCode() {
         if (result.status === 'compile_error') {
             Swal.fire({
                 title: 'Ошибка компиляции',
-                html: `<pre class="text-left text-xs bg-gray-950 p-3 rounded-xl border border-gray-700 font-mono text-red-400 overflow-x-auto max-h-60">${escapeHtml(result.compile_output || 'Не удалось скомпилировать код.')}</pre><p class="text-xs text-gray-400 mt-2">Код сохранен как черновик.</p>`,
+                html: `<pre class="text-left text-xs bg-slate-950 p-3 rounded-xl border border-rose-500/25 font-mono text-rose-400 overflow-x-auto max-h-60">${escapeHtml(result.compile_output || 'Не удалось скомпилировать код.')}</pre><p class="text-xs opacity-75 mt-2">Код сохранен как черновик.</p>`,
                 icon: 'error',
                 confirmButtonColor: '#ec4899'
             });
@@ -229,11 +229,11 @@ function handleExecutionResult(result) {
 
     if (result.status === 'compile_error') {
         testsContainer.innerHTML = `
-            <div class="bg-rose-950/30 border border-rose-500/30 rounded-xl p-3 text-xs space-y-2">
-                <div class="font-bold text-rose-200 flex items-center space-x-1">
+            <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs space-y-2">
+                <div class="font-bold text-rose-500 flex items-center space-x-1">
                     <span>❌ Ошибка компиляции</span>
                 </div>
-                <pre class="font-mono text-[10px] text-rose-200 whitespace-pre-wrap overflow-x-auto bg-black/40 p-2 rounded">${escapeHtml(result.compile_output)}</pre>
+                <pre class="font-mono text-[10px] text-rose-300 whitespace-pre-wrap overflow-x-auto bg-slate-950 border border-rose-500/20 p-2.5 rounded-lg">${escapeHtml(result.compile_output)}</pre>
             </div>
         `;
         if (testsCountBadge) testsCountBadge.textContent = '0 Passed';
@@ -249,20 +249,20 @@ function handleExecutionResult(result) {
 
         testsContainer.innerHTML = result.tests.map(test => {
             const isPassed = test.passed;
-            const statusBg = isPassed ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20';
+            const statusBg = isPassed ? 'bg-emerald-500/10 border-emerald-500/25' : 'bg-rose-500/10 border-rose-500/25';
             const icon = isPassed ? '✓' : '✗';
-            const iconColor = isPassed ? 'text-emerald-400' : 'text-rose-400';
+            const iconColor = isPassed ? 'text-emerald-500' : 'text-rose-500';
 
             return `
-                <div class="bg-[var(--bg-panel)] border ${statusBg} rounded-xl p-2.5 flex flex-col space-y-1 text-xs">
+                <div class="border ${statusBg} rounded-xl p-2.5 flex flex-col space-y-1 text-xs">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
                             <span class="${iconColor} font-bold">${icon}</span>
-                            <span class="font-medium">${test.name}</span>
+                            <span class="font-medium text-[var(--text-main)]">${test.name}</span>
                         </div>
                         <span class="font-mono text-[10px] text-[var(--text-muted)]">${test.time_ms} ms</span>
                     </div>
-                    ${!isPassed && test.message ? `<div class="text-[11px] font-mono text-rose-400 pl-4">${escapeHtml(test.message)}</div>` : ''}
+                    ${!isPassed && test.message ? `<div class="text-[11px] font-mono text-rose-500 pl-4">${escapeHtml(test.message)}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -274,11 +274,11 @@ function showErrorInUI(message) {
     if (!testsContainer) return;
 
     testsContainer.innerHTML = `
-        <div class="bg-rose-950/30 border border-rose-500/30 rounded-xl p-3 text-xs space-y-2">
+        <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 text-xs space-y-2">
             <div class="font-bold text-rose-500 flex items-center space-x-1">
                 <span>⚠️ Ошибка подключения</span>
             </div>
-            <p class="font-bold text-[11px] text-rose-500 leading-relaxed">${escapeHtml(message)}</p>
+            <p class="font-medium text-[11px] text-rose-500 leading-relaxed">${escapeHtml(message)}</p>
         </div>
     `;
 }

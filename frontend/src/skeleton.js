@@ -14,7 +14,7 @@
     const Skeleton = {
         newsFeed(count = 3) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-color)] flex items-start space-x-3 animate-pulse">
+                <div aria-hidden="true" class="ui-subcard p-4 flex items-start space-x-3 animate-pulse">
                     <div class="w-8 h-8 rounded-lg bg-gray-500/15 shrink-0 mt-0.5"></div>
                     <div class="flex-1 min-w-0 space-y-2.5 py-0.5">
                         <div class="flex items-center justify-between gap-4">
@@ -71,7 +71,7 @@
 
         cardsGrid(count = 4) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-between space-y-5 animate-pulse">
+                <div aria-hidden="true" class="ui-card p-5 flex flex-col justify-between space-y-5 animate-pulse">
                     <div class="space-y-3">
                         <div class="w-11 h-11 rounded-xl bg-gray-500/15"></div>
                         <div class="h-5 w-3/4 rounded bg-gray-500/20"></div>
@@ -80,7 +80,7 @@
                             <div class="h-3 w-5/6 rounded bg-gray-500/10"></div>
                         </div>
                     </div>
-                    <div class="h-9 w-full rounded-lg bg-gray-500/15"></div>
+                    <div class="h-9 w-full rounded-xl bg-gray-500/15"></div>
                 </div>
             `);
         },
@@ -112,8 +112,8 @@
         lessonArticle() {
             return `
                 <div aria-hidden="true" class="max-w-2xl mx-auto space-y-6 pb-12 animate-pulse">
-                    <div class="border-b border-[var(--border-color)] pb-4 space-y-2.5">
-                        <div class="h-3 w-28 rounded bg-indigo-500/20"></div>
+                    <div class="ui-divider-b pb-4 space-y-2.5">
+                        <div class="h-3 w-28 rounded bg-blue-500/20"></div>
                         <div class="h-7 w-3/4 rounded-lg bg-gray-500/20"></div>
                     </div>
 
@@ -131,7 +131,7 @@
                         <div class="h-3.5 w-2/3 rounded bg-gray-500/10"></div>
                     </div>
 
-                    <div class="border-t border-[var(--border-color)] pt-6 mt-8 flex justify-center">
+                    <div class="ui-divider-t pt-6 mt-8 flex justify-center">
                         <div class="h-10 w-48 rounded-xl bg-gray-500/15"></div>
                     </div>
                 </div>
@@ -140,7 +140,7 @@
 
         testCards(count = 4) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-5 flex flex-col justify-between space-y-4 animate-pulse">
+                <div aria-hidden="true" class="ui-card p-5 flex flex-col justify-between space-y-4 animate-pulse">
                     <div class="space-y-3">
                         <div class="flex items-center justify-between gap-2">
                             <div class="h-5 w-16 rounded bg-gray-500/15"></div>
@@ -152,12 +152,12 @@
                             <div class="h-3 w-2/3 rounded bg-gray-500/10"></div>
                         </div>
                     </div>
-                    <div class="pt-4 border-t border-[var(--border-color)] flex items-center justify-between gap-2">
+                    <div class="pt-4 ui-divider-t flex items-center justify-between gap-2">
                         <div class="flex gap-3">
                             <div class="h-3.5 w-14 rounded bg-gray-500/15"></div>
                             <div class="h-3.5 w-14 rounded bg-gray-500/15"></div>
                         </div>
-                        <div class="h-8 w-20 rounded-lg bg-gray-500/20"></div>
+                        <div class="h-8 w-20 rounded-xl bg-gray-500/20"></div>
                     </div>
                 </div>
             `);
@@ -171,7 +171,7 @@
 
         questionOptions(count = 4) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="p-3.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex items-center gap-3 animate-pulse">
+                <div aria-hidden="true" class="ui-card p-3.5 flex items-center gap-3 animate-pulse">
                     <div class="w-4 h-4 rounded-full bg-gray-500/20 shrink-0"></div>
                     <div class="h-3.5 w-2/3 rounded bg-gray-500/15"></div>
                 </div>
@@ -180,7 +180,7 @@
 
         labCards(count = 4) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl p-5 flex flex-col justify-between space-y-4 animate-pulse">
+                <div aria-hidden="true" class="ui-card p-5 flex flex-col justify-between space-y-4 animate-pulse">
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <div class="h-6 w-28 rounded-lg bg-gray-500/20"></div>
@@ -192,7 +192,7 @@
                             <div class="h-3 w-5/6 rounded bg-gray-500/10"></div>
                         </div>
                     </div>
-                    <div class="pt-6 border-t border-[var(--border-color)] flex items-center justify-between">
+                    <div class="pt-6 ui-divider-t flex items-center justify-between">
                         <div class="h-5 w-16 rounded bg-gray-500/15"></div>
                         <div class="h-8 w-24 rounded-xl bg-gray-500/20"></div>
                     </div>
@@ -202,7 +202,7 @@
 
         labTestCases(count = 4) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-2.5 flex items-center justify-between animate-pulse">
+                <div aria-hidden="true" class="ui-subcard p-2.5 flex items-center justify-between animate-pulse">
                     <div class="flex items-center space-x-2 w-2/3">
                         <div class="w-2 h-2 rounded-full bg-gray-500/20 shrink-0"></div>
                         <div class="h-3.5 w-3/4 rounded bg-gray-500/15"></div>
@@ -215,18 +215,18 @@
         gradebookRows(rows = 5, dynamicCols = 4) {
             return repeat(rows, () => {
                 const metricCells = repeat(dynamicCols, () => `
-                    <td class="p-3 text-center">
+                    <td class="py-3 px-4 text-center">
                         <div class="h-6 w-16 mx-auto rounded-lg bg-gray-500/15"></div>
                     </td>
                 `);
 
                 return `
-                    <tr aria-hidden="true" class="border-b border-[var(--border-color)] animate-pulse">
-                        <td class="p-3">
+                    <tr aria-hidden="true" class="animate-pulse">
+                        <td class="py-3 px-4">
                             <div class="h-3.5 w-36 rounded bg-gray-500/20"></div>
                             <div class="h-2.5 w-44 rounded bg-gray-500/10 mt-1.5"></div>
                         </td>
-                        <td class="p-3">
+                        <td class="py-3 px-4">
                             <div class="h-3.5 w-20 rounded bg-gray-500/15"></div>
                         </td>
                         ${metricCells}
@@ -238,7 +238,7 @@
         testQuestionEditor() {
             return `
                 <div aria-hidden="true" class="space-y-4 animate-pulse">
-                    <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                    <div class="flex items-center justify-between ui-divider-b pb-3">
                         <div class="h-5 w-28 rounded bg-amber-500/20"></div>
                         <div class="h-7 w-24 rounded-lg bg-gray-500/15"></div>
                     </div>
@@ -274,8 +274,8 @@
                 `);
 
                 return `
-                    <div aria-hidden="true" class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden animate-pulse">
-                        <div class="p-4 flex justify-between items-center border-b border-[var(--border-color)]">
+                    <div aria-hidden="true" class="ui-card overflow-hidden animate-pulse">
+                        <div class="p-4 flex justify-between items-center ui-divider-b">
                             <div class="flex items-center gap-3 w-1/2">
                                 <div class="w-7 h-7 rounded-lg bg-blue-500/15 shrink-0"></div>
                                 <div class="h-4 w-2/3 rounded bg-gray-500/20"></div>
@@ -285,7 +285,7 @@
                                 <div class="h-7 w-7 rounded-lg bg-gray-500/15"></div>
                             </div>
                         </div>
-                        <div class="p-2 divide-y divide-gray-600/40">
+                        <div class="p-2 divide-y divide-[var(--border-color)]">
                             ${lessonsRows}
                         </div>
                     </div>
@@ -295,8 +295,8 @@
 
         widgetCards(count = 1) {
             return repeat(count, () => `
-                <div aria-hidden="true" class="bg-[var(--bg-panel)] p-3.5 rounded-xl border border-[var(--border-color)] space-y-3 animate-pulse">
-                    <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-2">
+                <div aria-hidden="true" class="ui-subcard p-3.5 space-y-3 animate-pulse">
+                    <div class="flex justify-between items-center ui-divider-b pb-2">
                         <div class="h-3.5 w-20 rounded bg-blue-500/20"></div>
                         <div class="h-3.5 w-14 rounded bg-gray-500/15"></div>
                     </div>
@@ -359,7 +359,7 @@
         labTestCaseEditor() {
             return `
                 <div aria-hidden="true" class="space-y-4 animate-pulse">
-                    <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                    <div class="flex items-center justify-between ui-divider-b pb-3">
                         <div class="h-5 w-24 rounded bg-emerald-500/20"></div>
                         <div class="h-7 w-20 rounded-lg bg-gray-500/15"></div>
                     </div>

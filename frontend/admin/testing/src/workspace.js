@@ -189,15 +189,15 @@ function renderQuestionsNav() {
     counter.innerText = questionsState.length;
 
     if (questionsState.length === 0) {
-        container.innerHTML = `<span class="col-span-4 text-xs text-gray-500 text-center py-2">Пусто</span>`;
+        container.innerHTML = `<span class="col-span-4 text-xs text-[var(--text-muted)] text-center py-2">Пусто</span>`;
         return;
     }
 
     container.innerHTML = questionsState.map((q, idx) => {
         const isActive = idx === activeQIndex;
         const btnClass = isActive
-            ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-md shadow-amber-600/30'
-            : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-amber-500/50';
+            ? 'bg-amber-600 text-white font-bold border-amber-500 shadow-md shadow-amber-600/25'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-main)] border-[var(--border-color)] hover:border-amber-500/50';
 
         return `
             <button type="button" data-index="${idx}" class="q-nav-btn py-2 px-1 text-xs rounded-xl border transition text-center font-mono ${btnClass}">
@@ -222,7 +222,7 @@ function renderActiveQuestionEditor() {
 
     const q = questionsState[activeQIndex];
 
-    document.getElementById('active-question-header').innerText = `Вопрос ${activeQIndex + 1}`;
+    document.getElementById('active-question-header').innerText = `Вопрос №${activeQIndex + 1}`;
     document.getElementById('q-text').value = q.questionText || '';
     document.getElementById('q-type').value = q.type || 'single_choice';
     document.getElementById('q-code-snippet').value = q.codeSnippet || '';
@@ -259,13 +259,13 @@ function renderActiveQuestionEditor() {
                     <input type="text" 
                            id="opt_${optIndex + 1}"
                            value="${safeOptText}" 
-                           class="option-text-input flex-1 px-3 py-1.5 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-amber-500" 
+                           class="option-text-input ui-input flex-1 px-3 py-1.5" 
                            placeholder="Вариант ${optIndex + 1}">
                     <button type="button" onclick="openMathEditorFor('opt_${optIndex + 1}')" 
                         class="p-1.5 text-amber-500 hover:text-amber-400 transition" title="Вставить формулу">
                         <i class="fa-solid fa-calculator"></i>
                     </button>
-                    <button type="button" class="btn-remove-option text-gray-500 hover:text-red-400 text-xs px-2" data-optindex="${optIndex}">
+                    <button type="button" class="btn-remove-option text-[var(--text-muted)] hover:text-rose-500 text-xs px-2 transition" data-optindex="${optIndex}">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>

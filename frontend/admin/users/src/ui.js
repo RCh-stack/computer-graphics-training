@@ -53,22 +53,25 @@ function switchAdminTab(tabName) {
     document.getElementById('tab-groups').classList.add('hidden');
     document.getElementById('tab-teachers').classList.add('hidden');
 
-    document.getElementById('tab-btn-pending').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
-    document.getElementById('tab-btn-groups').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
-    document.getElementById('tab-btn-teachers').className = 'py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2';
+    const inactiveTabClass = 'py-3 font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] border-b-2 border-transparent transition flex items-center gap-2 cursor-pointer';
+    const activeTabClass = 'py-3 font-semibold text-pink-500 border-b-2 border-pink-500 transition flex items-center gap-2 cursor-pointer';
+
+    document.getElementById('tab-btn-pending').className = inactiveTabClass;
+    document.getElementById('tab-btn-groups').className = inactiveTabClass;
+    document.getElementById('tab-btn-teachers').className = inactiveTabClass;
 
     if (tabName === 'pending') {
         document.getElementById('tab-pending').classList.remove('hidden');
-        document.getElementById('tab-btn-pending').className = 'py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2';
+        document.getElementById('tab-btn-pending').className = activeTabClass;
         loadPendingStudents();
     } else if (tabName === 'groups') {
         document.getElementById('tab-groups').classList.remove('hidden');
-        document.getElementById('tab-btn-groups').className = 'py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2';
+        document.getElementById('tab-btn-groups').className = activeTabClass;
         const currentGroup = document.getElementById('group-select')?.value || 'all';
         loadGroupStudents(currentGroup);
     } else if (tabName === 'teachers') {
         document.getElementById('tab-teachers').classList.remove('hidden');
-        document.getElementById('tab-btn-teachers').className = 'py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2';
+        document.getElementById('tab-btn-teachers').className = activeTabClass;
         loadTeachers();
     }
 }
@@ -107,8 +110,8 @@ async function loadPendingStudents() {
         if (data.students.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="py-8 text-center text-[var(--text-main)]">
-                        <i class="fa-solid fa-circle-check text-emerald-400 text-xl mb-2"></i>
+                    <td colspan="5" class="py-10 text-center text-[var(--text-muted)]">
+                        <i class="fa-solid fa-circle-check text-emerald-500 text-xl mb-2"></i>
                         <p>Нет новых заявок на регистрацию</p>
                     </td>
                 </tr>`;
@@ -121,20 +124,20 @@ async function loadPendingStudents() {
             const regDate = new Date(student.created_at).toLocaleDateString('ru-RU');
 
             return `
-                <tr class="hover:bg-gray-800/30 transition">
+                <tr class="transition">
                     <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">
                         ${student.first_name || ''} ${student.last_name || ''}
                     </td>
-                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${student.email}</td>
-                    <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-muted)] font-mono text-xs">${student.email}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-muted)]">${regDate}</td>
                     <td class="py-3.5 px-4 text-center">
-                        <select id="group-select-${student.id}" class="bg-[var(--bg-panel)] border border-gray-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pink-500">
+                        <select id="group-select-${student.id}" class="ui-select px-2.5 py-1.5">
                             <option value="">Без группы</option>
                             ${groupOptionsHtml}
                         </select>
                     </td>
                     <td class="py-3.5 px-4 text-right">
-                        <button type="button" data-user-id="${student.id}" class="btn-approve-student px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition">
+                        <button type="button" data-user-id="${student.id}" class="btn-approve-student ui-btn bg-emerald-600 hover:bg-emerald-500 text-white py-1.5 px-3 shadow-sm">
                             Одобрить
                         </button>
                     </td>
@@ -145,7 +148,7 @@ async function loadPendingStudents() {
         console.error('Ошибка загрузки заявок:', error);
         if (badge) badge.innerText = '—';
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-400 text-xs">Не удалось загрузить заявки на регистрацию</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-500 text-xs">Не удалось загрузить заявки на регистрацию</td></tr>`;
         }
         window.Toast?.error('Ошибка загрузки', 'Не удалось получить список новых заявок');
     }
@@ -293,7 +296,7 @@ async function loadGroupStudents(groupId = 'all') {
         if (!tbody) return;
 
         if (!data.students || data.students.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-[var(--text-main)]">Студенты не найдены</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-[var(--text-muted)]">Студенты не найдены</td></tr>`;
             return;
         }
 
@@ -303,26 +306,26 @@ async function loadGroupStudents(groupId = 'all') {
             const isTeacher = s.role === 'TEACHER';
 
             const roleBadge = isTeacher
-                ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20"><i class="fa-solid fa-user-shield mr-1"></i> Преподаватель</span>`
-                : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-800 text-[var(--text-muted)] border border-gray-700"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
+                ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-500 border border-pink-500/25"><i class="fa-solid fa-user-shield mr-1"></i> Преподаватель</span>`
+                : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border-color)]"><i class="fa-solid fa-user-graduate mr-1"></i> Студент</span>`;
 
             return `
-                <tr class="hover:bg-gray-600/30 transition">
+                <tr class="transition">
                     <td class="py-3.5 px-4 font-semibold text-[var(--text-main)]">${fullName}</td>
                     <td class="py-3.5 px-4">
-                        <span class="px-2 py-0.5 rounded bg-gray-800 border border-gray-700 text-xs font-semibold text-pink-400">
+                        <span class="px-2.5 py-0.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border-color)] text-xs font-semibold text-pink-500">
                             ${s.group_name || '—'}
                         </span>
                     </td>
-                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${s.email}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-muted)] font-mono text-xs">${s.email}</td>
                     <td class="py-3.5 px-4 text-center">${roleBadge}</td>
                     <td class="py-3.5 px-4 text-right space-x-3">
-                        <button data-user-id="${s.id}" data-group-id="${s.group_id || ''}" data-user-name="${safeName}" 
-                                class="btn-change-group text-xs text-indigo-600 hover:text-indigo-500 hover:underline transition font-medium">
+                        <button type="button" data-user-id="${s.id}" data-group-id="${s.group_id || ''}" data-user-name="${safeName}" 
+                                class="btn-change-group text-xs text-blue-500 hover:underline transition font-semibold cursor-pointer">
                             Изменить группу
                         </button>
-                        <button data-user-id="${s.id}" data-user-role="${s.role}" data-user-name="${safeName}" 
-                                class="btn-change-role text-xs text-pink-600 hover:text-pink-500 hover:underline transition font-medium">
+                        <button type="button" data-user-id="${s.id}" data-user-role="${s.role}" data-user-name="${safeName}" 
+                                class="btn-change-role text-xs text-pink-500 hover:underline transition font-semibold cursor-pointer">
                             Изменить роль
                         </button>
                     </td>
@@ -332,7 +335,7 @@ async function loadGroupStudents(groupId = 'all') {
     } catch (error) {
         console.error('Ошибка загрузки студентов:', error);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400 text-xs">Не удалось загрузить список студентов</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-500 text-xs">Не удалось загрузить список студентов</td></tr>`;
         }
         window.Toast?.error('Ошибка загрузки', 'Не удалось получить список студентов');
     } finally {
@@ -351,7 +354,7 @@ async function changeUserGroup(userId, currentGroupId, userName) {
     const { value: selectedGroupId, isConfirmed } = await Swal.fire({
         title: 'Смена академической группы',
         html: `
-            <p class="text-xs text-gray-400 mb-3">Выберите новую группу для студента <b>${userName}</b>:</p>
+            <p class="text-xs opacity-75 mb-3">Выберите новую группу для студента <b>${userName}</b>:</p>
             <select id="swal-group-select" class="swal2-input text-xs w-full focus:outline-none" style="display: flex; height: 2.5rem; margin: 0 auto;">
                 ${optionsHtml}
             </select>
@@ -421,7 +424,7 @@ async function loadTeachers() {
         if (!tbody) return;
 
         if (!data.teachers || data.teachers.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-[var(--text-main)]">Преподаватели не найдены</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-[var(--text-muted)]">Преподаватели не найдены</td></tr>`;
             return;
         }
 
@@ -431,18 +434,18 @@ async function loadTeachers() {
             const regDate = new Date(t.created_at).toLocaleDateString('ru-RU');
 
             return `
-                <tr class="hover:bg-gray-800/30 transition">
-                    <td class="py-3.5 px-4 font-semibold text-[var(--text-main)] flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 text-xs font-bold flex items-center justify-center border border-pink-500/30">
+                <tr class="transition">
+                    <td class="py-3.5 px-4 font-semibold text-[var(--text-main)] flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-pink-500/15 text-pink-500 text-xs font-bold flex items-center justify-center border border-pink-500/25 shrink-0">
                             ${fullName.charAt(0).toUpperCase()}
                         </div>
                         <span>${fullName}</span>
                     </td>
-                    <td class="py-3.5 px-4 text-[var(--text-main)] font-mono text-xs">${t.email}</td>
-                    <td class="py-3.5 px-4 text-[var(--text-main)]">${regDate}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-muted)] font-mono text-xs">${t.email}</td>
+                    <td class="py-3.5 px-4 text-[var(--text-muted)]">${regDate}</td>
                     <td class="py-3.5 px-4 text-right">
-                        <button data-user-id="${t.id}" data-user-name="${safeName}" 
-                                class="btn-demote-teacher px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-xs font-medium transition">
+                        <button type="button" data-user-id="${t.id}" data-user-name="${safeName}" 
+                                class="btn-demote-teacher ui-btn ui-btn-danger py-1 px-3">
                             Снять права
                         </button>
                     </td>
@@ -452,7 +455,7 @@ async function loadTeachers() {
     } catch (error) {
         console.error('Ошибка загрузки преподавателей:', error);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-400 text-xs">Не удалось загрузить список преподавателей</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-rose-500 text-xs">Не удалось загрузить список преподавателей</td></tr>`;
         }
         window.Toast?.error('Ошибка загрузки', 'Не удалось получить список преподавателей');
     }
@@ -464,7 +467,7 @@ async function changeUserRole(userId, currentRole, userName) {
 
     const result = await Swal.fire({
         title: 'Изменение роли',
-        html: `Вы уверены, что хотите назначить пользователю <b>${userName}</b> роль <b class="text-pink-400">${roleTitle}</b>?`,
+        html: `Вы уверены, что хотите назначить пользователю <b>${userName}</b> роль <b class="text-pink-500">${roleTitle}</b>?`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Да, изменить',

@@ -5,57 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VirtualLab — Демонстрация RayTracing C++ WebAssembly</title>
     <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] h-screen overflow-hidden flex flex-col font-sans select-none">
-    <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0">
+<body class="h-screen overflow-hidden flex flex-col font-sans select-none">
+    <header class="ui-header h-14 px-4 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-4">
-            <a href="../index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold hover:opacity-80 transition">
-                <span>←</span>
-                <span>Главная</span>
+            <a href="index.html" class="ui-btn ui-btn-secondary py-1.5 px-2.5">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Модули</span>
             </a>
 
             <div class="h-4 w-px bg-[var(--border-color)]"></div>
 
             <div class="flex items-center space-x-2">
-                <span class="w-3 h-3 rounded-full bg-[var(--accent)] animate-pulse"></span>
-                <h1 class="text-base font-extrabold tracking-wide text-[var(--text-main)]">RayLab <span class="text-xs font-normal text-indigo-400">Studio</span></h1>
+                <span class="w-2.5 h-2.5 rounded-full bg-[var(--accent)] animate-pulse"></span>
+                <h1 class="text-base font-extrabold tracking-wide text-[var(--text-main)]">
+                    RayLab <span class="text-xs font-semibold text-pink-500">Studio</span>
+                </h1>
             </div>
         </div>
 
-        <div class="flex items-center space-x-4">
-            <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
-                Светлая
-            </button>
-            <div id="wasm-status" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        <div class="flex items-center space-x-3">
+            <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
+
+            <div id="wasm-status" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 Загрузка Wasm...
             </div>
-            <div id="render-time" class="text-xs font-mono text-green-400 bg-gray-950 px-3 py-1 rounded-lg border border-gray-800">
+
+            <div id="render-time" class="ui-subcard text-xs font-mono text-emerald-500 font-semibold px-3 py-1">
                 Время рендера: -- ms
             </div>
-            <button id="btn-force-render" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
-                Обновить кадр
+
+            <button id="btn-force-render" type="button" class="ui-btn ui-btn-primary py-1.5 px-3">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Обновить кадр</span>
             </button>
         </div>
     </header>
 
     <div class="flex-1 flex overflow-hidden">
         <aside class="w-64 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex flex-col justify-between shrink-0">
-            <div class="p-3 space-y-4 overflow-y-auto">
+            <div class="p-3.5 space-y-4 overflow-y-auto">
                 <div class="space-y-2">
-                    <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">Добавить на сцену</div>
+                    <div class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Добавить на сцену</div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button id="btn-add-sphere" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-pink-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                        <button id="btn-add-sphere" type="button" class="ui-btn ui-btn-secondary text-pink-500 py-2 px-3">
                             <span>+ Сфера</span>
                         </button>
 
-                        <button id="btn-add-light" class="bg-[var(--bg-panel)] hover:bg-gray-200 text-amber-500 border border-gray-700/80 rounded-xl py-2 px-3 text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                        <button id="btn-add-light" type="button" class="ui-btn ui-btn-secondary text-amber-500 py-2 px-3">
                             <span>+ Источник</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="space-y-2">
-                    <div class="flex justify-between items-center text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">
+                    <div class="flex justify-between items-center text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
                         <span>Объекты сцены</span>
                         <span id="outliner-count" class="text-pink-500 font-mono">0</span>
                     </div>
@@ -63,8 +68,8 @@
                     <div id="outliner-list" class="space-y-1 max-h-[300px] overflow-y-auto pr-1"></div>
                 </div>
 
-                <div class="space-y-3 pt-3 border-t border-gray-800">
-                    <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">Камера и Фон</div>
+                <div class="space-y-3 pt-3 ui-divider-t">
+                    <div class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Камера и Фон</div>
                     <div>
                         <div class="flex justify-between text-xs font-mono text-[var(--text-main)] mb-1">
                             <span>FOV (радианы):</span>
@@ -75,8 +80,8 @@
                     </div>
 
                     <div>
-                        <label class="text-xs font-mono text-[var(--text-main)] block mb-1">Цвет фона:</label>
-                        <div class="flex items-center space-x-3 bg-[var(--bg-panel)] p-1.5 rounded-xl border border-gray-800">
+                        <label class="text-xs font-mono text-[var(--text-muted)] block mb-1">Цвет фона:</label>
+                        <div class="ui-subcard flex items-center space-x-3 p-1.5">
                             <input type="color" id="param-bg-color" value="#33b2cc" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded">
                             <span id="val-bg-color" class="text-xs font-mono text-[var(--text-main)] uppercase">#33b2cc</span>
                         </div>
@@ -87,42 +92,42 @@
 
         <main class="flex-1 bg-[var(--bg-main)] flex flex-col justify-between overflow-hidden relative p-4">
             <div class="flex-1 flex items-center justify-center overflow-hidden">
-                <div class="relative border border-gray-800/80 rounded-2xl bg-black shadow-2xl overflow-hidden max-w-full max-h-full flex items-center justify-center">
+                <div class="relative border border-[var(--border-color)] rounded-2xl bg-black shadow-2xl overflow-hidden max-w-full max-h-full flex items-center justify-center">
                     <canvas id="test-canvas" width="1168" height="638" class="max-w-full max-h-full object-contain block"></canvas>
                 </div>
             </div>
 
-            <div class="mt-4 bg-[var(--bg-panel)] border border-black rounded-2xl p-4 space-y-3 shrink-0">
+            <div class="mt-4 ui-card p-4 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
-                        <span id="step-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-[var(--bg-card)] text-pink-500 border border-black">
+                        <span id="step-badge" class="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-pink-500/10 text-pink-500 border border-pink-500/20">
                             Шаг 0 из 5
                         </span>
                         <h2 id="step-title" class="text-sm font-bold text-[var(--text-main)]">0. BACKGROUND</h2>
                     </div>
 
                     <div class="flex items-center space-x-2">
-                        <button id="btn-prev-step" class="bg-[var(--bg-panel)] hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold py-1.5 px-3 rounded-lg border border-black text-pink-500 transition">
+                        <button id="btn-prev-step" type="button" class="ui-btn ui-btn-secondary py-1.5 px-3 text-pink-500">
                             ← Назад
                         </button>
-                        <button id="btn-next-step" class="bg-[var(--bg-panel)] hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold py-1.5 px-3 rounded-lg border border-black text-pink-500 transition">
+                        <button id="btn-next-step" type="button" class="ui-btn ui-btn-secondary py-1.5 px-3 text-pink-500">
                             Вперед →
                         </button>
                     </div>
                 </div>
 
-                <div id="step-desc" class="text-xs text-[var(--text-main)] bg-[var(--bg-card)] p-3 rounded-xl border border-gray-800/80 leading-relaxed font-mono">
+                <div id="step-desc" class="ui-subcard text-xs text-[var(--text-main)] p-3 leading-relaxed font-mono">
                     Загрузка информации о шаге...
                 </div>
             </div>
         </main>
 
-        <aside class="w-72 bg-[var(--bg-panel)] border-l border-gray-800 p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
+        <aside class="w-72 bg-[var(--bg-panel)] border-l border-[var(--border-color)] p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
             <div id="inspector-container" class="space-y-4">
-                <div class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider pb-2 border-b border-gray-800">
+                <div class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider pb-2 ui-divider-b">
                     Свойства объекта
                 </div>
-                <div id="inspector-content" class="text-xs text-[var(--text-main)] text-center py-8">
+                <div id="inspector-content" class="text-xs text-[var(--text-muted)] text-center py-8">
                     Выберите объект в списке слева для настройки его параметров.
                 </div>
             </div>

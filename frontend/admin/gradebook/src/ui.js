@@ -22,10 +22,10 @@ function initGradebookTabs() {
     const secLabs = document.getElementById('section-labs-gradebook');
     const secTests = document.getElementById('section-tests-gradebook');
 
-    const activeClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-emerald-400 border-emerald-500 flex items-center gap-2';
-    const activeTestClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-amber-500 border-amber-500 flex items-center gap-2';
-    const activeTheoryClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-blue-400 border-blue-500 flex items-center gap-2';
-    const inactiveClass = 'px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-main)] hover:text-[var(--text-main)] flex items-center gap-2';
+    const activeClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-emerald-500 border-emerald-500 flex items-center gap-2 transition';
+    const activeTestClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-amber-500 border-amber-500 flex items-center gap-2 transition';
+    const activeTheoryClass = 'px-4 py-2.5 text-xs font-bold border-b-2 text-blue-500 border-blue-500 flex items-center gap-2 transition';
+    const inactiveClass = 'px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-2 transition';
 
     btnLabs?.addEventListener('click', () => {
         btnLabs.className = activeClass;
@@ -101,10 +101,10 @@ function renderGradebookSkeletons() {
         if (theadEl && existingCols === 0) {
             theadEl.innerHTML = `
                 <tr>
-                    <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
-                    <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
+                    <th class="py-3 px-4">Студент</th>
+                    <th class="py-3 px-4">Группа</th>
                     ${Array.from({ length: dynamicCols }, () => `
-                        <th class="p-3 border-b border-[var(--border-color)] text-center">
+                        <th class="py-3 px-4 text-center">
                             <span aria-hidden="true" class="inline-block h-3.5 w-14 rounded bg-gray-500/20 animate-pulse"></span>
                         </th>
                     `).join('')}
@@ -183,7 +183,7 @@ async function loadGradebookData() {
         ['theory-tbody', 'labs-tbody', 'tests-tbody'].forEach(tbodyId => {
             const tbody = document.getElementById(tbodyId);
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-400 text-xs">Не удалось загрузить данные ведомости. Проверьте соединение с сервером.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-500 text-xs">Не удалось загрузить данные ведомости. Проверьте соединение с сервером.</td></tr>`;
             }
         });
 
@@ -201,14 +201,14 @@ function renderTheoryGradebook(chapters, rows) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
-            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
-            ${chapters.map(ch => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${ch.title}">Глава №${ch.order || ch.id}</th>`).join('')}
+            <th class="py-3 px-4">Студент</th>
+            <th class="py-3 px-4">Группа</th>
+            ${chapters.map(ch => `<th class="py-3 px-4 text-center" title="${ch.title}">Глава №${ch.order || ch.id}</th>`).join('')}
         </tr>
     `;
 
     if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${chapters.length + 2}" class="p-8 text-center text-[var(--text-main)]">Данные освоения теории отсутствуют</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${chapters.length + 2}" class="p-8 text-center text-[var(--text-muted)]">Данные освоения теории отсутствуют</td></tr>`;
         return;
     }
 
@@ -217,15 +217,15 @@ function renderTheoryGradebook(chapters, rows) {
             const chData = r.chapters[ch.id] || { percent: 0, completed: 0, total: 0 };
             const percent = chData.percent;
 
-            let badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)]';
+            let badgeStyle = 'bg-[var(--bg-elevated)] text-[var(--text-muted)] border-[var(--border-color)]';
             if (percent === 100) {
-                badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                badgeStyle = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25';
             } else if (percent > 0) {
-                badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+                badgeStyle = 'bg-blue-500/10 text-blue-500 border-blue-500/25';
             }
 
             return `
-                <td class="p-3 text-center">
+                <td class="py-3 px-4 text-center">
                     <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${badgeStyle} inline-block" title="Пройдено ${chData.completed} из ${chData.total} уроков">
                         ${percent}%
                     </span>
@@ -234,12 +234,12 @@ function renderTheoryGradebook(chapters, rows) {
         }).join('');
 
         return `
-            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
-                <td class="p-3 font-semibold text-[var(--text-main)]">
+            <tr>
+                <td class="py-3 px-4 font-semibold text-[var(--text-main)]">
                     ${r.name}
-                    <div class="text-[10px] font-normal text-[var(--text-main)]">${r.email}</div>
+                    <div class="text-[10px] font-normal text-[var(--text-muted)]">${r.email}</div>
                 </td>
-                <td class="p-3 text-[var(--text-main)] font-medium">${r.groupName}</td>
+                <td class="py-3 px-4 text-[var(--text-muted)] font-medium">${r.groupName}</td>
                 ${chapterCells}
             </tr>
         `;
@@ -254,14 +254,14 @@ function renderLabsGradebook(students, labs) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
-            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
-            ${labs.map(l => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${l.title}">Лаб №${l.order || l.id}</th>`).join('')}
+            <th class="py-3 px-4">Студент</th>
+            <th class="py-3 px-4">Группа</th>
+            ${labs.map(l => `<th class="py-3 px-4 text-center" title="${l.title}">Лаб №${l.order || l.id}</th>`).join('')}
         </tr>
     `;
 
     if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${labs.length + 2}" class="p-8 text-center text-[var(--text-main)]">Отправленные лабораторные работы отсутствуют</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${labs.length + 2}" class="p-8 text-center text-[var(--text-muted)]">Отправленные лабораторные работы отсутствуют</td></tr>`;
         return;
     }
 
@@ -271,28 +271,28 @@ function renderLabsGradebook(students, labs) {
             const sub = window.currentSubmissionsMap.get(key);
 
             if (!sub) {
-                return `<td class="p-3 text-center text-[var(--text-main)]">—</td>`;
+                return `<td class="py-3 px-4 text-center text-[var(--text-subtle)]">—</td>`;
             }
 
             let badgeStyle = '';
 
             if (sub.status === 'PASSED') {
-                badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
+                badgeStyle = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25 hover:bg-emerald-500/20';
             } else if (sub.status === 'REVISION') {
-                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20';
+                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/25 hover:bg-amber-500/20';
             } else if (sub.status === 'REJECTED') {
-                badgeStyle = 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
+                badgeStyle = 'bg-rose-500/10 text-rose-500 border-rose-500/25 hover:bg-rose-500/20';
             } else if (sub.status === 'SUBMITTED') {
-                badgeStyle = 'bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20';
+                badgeStyle = 'bg-blue-500/10 text-blue-500 border-blue-500/25 hover:bg-blue-500/20';
             } else {
-                badgeStyle = 'bg-[var(--bg-panel)] text-[var(--text-main)] border-[var(--border-color)] hover:bg-[var(--bg-panel)]';
+                badgeStyle = 'bg-[var(--bg-elevated)] text-[var(--text-main)] border-[var(--border-color)] hover:bg-[var(--bg-hover)]';
             }
 
             return `
-                <td class="p-3 text-center">
+                <td class="py-3 px-4 text-center">
                     <button type="button" 
                         data-submission-id="${sub.id}" 
-                        class="btn-open-review px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${badgeStyle} transition shadow-sm inline-flex items-center gap-1 cursor-pointer">
+                        class="btn-open-review px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${badgeStyle} transition inline-flex items-center gap-1 cursor-pointer">
                         <span>${sub.status}</span>
                         <i class="fa-solid fa-pen text-[9px] opacity-70"></i>
                     </button>
@@ -301,12 +301,12 @@ function renderLabsGradebook(students, labs) {
         }).join('');
 
         return `
-            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
-                <td class="p-3 font-semibold text-[var(--text-main)]">
+            <tr>
+                <td class="py-3 px-4 font-semibold text-[var(--text-main)]">
                     ${st.name}
-                    <div class="text-[10px] font-normal text-[var(--text-main)]">${st.email}</div>
+                    <div class="text-[10px] font-normal text-[var(--text-muted)]">${st.email}</div>
                 </td>
-                <td class="p-3 text-[var(--text-main)] font-medium">${st.groupName}</td>
+                <td class="py-3 px-4 text-[var(--text-muted)] font-medium">${st.groupName}</td>
                 ${labCells}
             </tr>
         `;
@@ -320,14 +320,14 @@ function renderTestsGradebook(students, tests) {
 
     thead.innerHTML = `
         <tr>
-            <th class="p-3 border-b border-[var(--border-color)]">Студент</th>
-            <th class="p-3 border-b border-[var(--border-color)]">Группа</th>
-            ${tests.map(t => `<th class="p-3 border-b border-[var(--border-color)] text-center" title="${t.title}">Тест №${t.order || t.id}</th>`).join('')}
+            <th class="py-3 px-4">Студент</th>
+            <th class="py-3 px-4">Группа</th>
+            ${tests.map(t => `<th class="py-3 px-4 text-center" title="${t.title}">Тест №${t.order || t.id}</th>`).join('')}
         </tr>
     `;
 
     if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${tests.length + 2}" class="p-8 text-center text-[var(--text-main)]">Пройденные тесты отсутствуют</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${tests.length + 2}" class="p-8 text-center text-[var(--text-muted)]">Пройденные тесты отсутствуют</td></tr>`;
         return;
     }
 
@@ -337,23 +337,23 @@ function renderTestsGradebook(students, tests) {
             const sub = window.currentTestSubmissionsMap.get(key);
 
             if (!sub) {
-                return `<td class="p-3 text-center text-[var(--text-main)]">—</td>`;
+                return `<td class="py-3 px-4 text-center text-[var(--text-subtle)]">—</td>`;
             }
 
             const score = sub.score_percent || 0;
-            let badgeStyle = 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20';
+            let badgeStyle = 'bg-rose-500/10 text-rose-500 border-rose-500/25 hover:bg-rose-500/20';
 
             if (score >= 80) {
-                badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20';
+                badgeStyle = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25 hover:bg-emerald-500/20';
             } else if (score >= 50) {
-                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20';
+                badgeStyle = 'bg-amber-500/10 text-amber-500 border-amber-500/25 hover:bg-amber-500/20';
             }
 
             return `
-                <td class="p-3 text-center">
+                <td class="py-3 px-4 text-center">
                     <button type="button" 
                         data-test-submission-id="${sub.id}" 
-                        class="btn-open-test-review px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${badgeStyle} transition shadow-sm inline-flex items-center gap-1 cursor-pointer">
+                        class="btn-open-test-review px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${badgeStyle} transition inline-flex items-center gap-1 cursor-pointer">
                         <span>${score}%</span>
                         <i class="fa-solid fa-eye text-[9px] opacity-70"></i>
                     </button>
@@ -362,12 +362,12 @@ function renderTestsGradebook(students, tests) {
         }).join('');
 
         return `
-            <tr class="border-b border-[var(--border-color)] hover:bg-[var(--bg-panel)] transition">
-                <td class="p-3 font-semibold text-[var(--text-main)]">
+            <tr>
+                <td class="py-3 px-4 font-semibold text-[var(--text-main)]">
                     ${st.name}
-                    <div class="text-[10px] font-normal text-[var(--text-main)]">${st.email}</div>
+                    <div class="text-[10px] font-normal text-[var(--text-muted)]">${st.email}</div>
                 </td>
-                <td class="p-3 text-[var(--text-main)] font-medium">${st.groupName}</td>
+                <td class="py-3 px-4 text-[var(--text-muted)] font-medium">${st.groupName}</td>
                 ${testCells}
             </tr>
         `;

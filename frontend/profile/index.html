@@ -7,36 +7,36 @@
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+<body class="font-sans min-h-screen">
+    <header class="ui-header">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../index.html" class="flex items-center space-x-3 cursor-pointer">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
-                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span></span>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-500">Edu</span></span>
             </a>
 
             <div class="relative">
-                <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[var(--bg-card)] border border-transparent hover:border-[var(--border-color)] transition">
-                    <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center border border-pink-500/30" id="user-avatar">
+                <button id="profile-menu-btn" class="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border-color)] transition">
+                    <div class="w-9 h-9 rounded-xl bg-pink-500/15 text-pink-500 font-bold flex items-center justify-center border border-pink-500/25" id="user-avatar">
                         U
                     </div>
 
                     <div class="hidden sm:block text-left">
                         <div id="user-name" class="text-sm font-semibold leading-tight text-[var(--text-main)]">Студент</div>
-                        <div id="user-role" class="text-[11px] text-[var(--text-main)] capitalize">Пользователь</div>
+                        <div id="user-role" class="text-[11px] text-[var(--text-muted)] capitalize">Пользователь</div>
                     </div>
 
-                    <i class="fa-solid fa-chevron-down text-xs text-[var(--text-main)] ml-1"></i>
+                    <i class="fa-solid fa-chevron-down text-xs text-[var(--text-muted)] ml-1"></i>
                 </button>
 
                 <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-2xl shadow-2xl py-2 z-50 divide-y divide-gray-700/50">
                     <div class="px-4 py-2.5">
-                        <p id="dropdown-user-email" class="text-xs text-[var(--text-main)] truncate">student@edu.ru</p>
+                        <p id="dropdown-user-email" class="text-xs text-[var(--text-muted)] truncate">student@edu.ru</p>
                     </div>
 
                     <div class="py-1">
-                        <a href="../index.html" class="flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-400 transition">
-                            <i class="fa-solid fa-house w-5 text-[var(--text-main)]"></i>
+                        <a href="../index.html" class="flex items-center px-4 py-2 text-sm text-[var(--text-main)] hover:bg-pink-500/10 hover:text-pink-500 transition">
+                            <i class="fa-solid fa-house w-5 text-[var(--text-muted)]"></i>
                             <span>Главная</span>
                         </a>
 
@@ -46,8 +46,8 @@
                     </div>
 
                     <div class="py-1">
-                        <button id="logout-btn" class="w-full flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition">
-                            <i class="fa-solid fa-right-from-bracket w-5 text-red-400"></i>
+                        <button id="logout-btn" class="w-full flex items-center px-4 py-2 text-sm text-rose-500 hover:bg-rose-500/10 transition">
+                            <i class="fa-solid fa-right-from-bracket w-5 text-rose-500"></i>
                             <span>Выйти из аккаунта</span>
                         </button>
                     </div>
@@ -58,107 +58,104 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8">      
         <div class="flex flex-col md:flex-row gap-8">         
-            <aside class="w-full md:w-64 space-y-2">
-                <button onclick="switchTab('tab-overview')" id="btn-tab-overview" 
-                    class="tab-btn active w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition border bg-pink-500/10 text-pink-400 border-pink-500/20">
-                    <i class="fa-solid fa-chart-pie w-5"></i>
+            <aside class="w-full md:w-64 space-y-2 shrink-0">
+                <button type="button" onclick="switchTab('tab-overview')" id="btn-tab-overview" class="tab-btn ui-sidebar-tab active">
+                    <i class="fa-solid fa-chart-pie"></i>
                     <span>Статистика</span>
                 </button>
 
-                <button onclick="switchTab('tab-settings')" id="btn-tab-settings" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent border-[var(--border-color)] hover:bg-[var(--bg-card)] text-[var(--text-main)]">
-                    <i class="fa-solid fa-user-gear w-5"></i>
+                <button type="button" onclick="switchTab('tab-settings')" id="btn-tab-settings" class="tab-btn ui-sidebar-tab">
+                    <i class="fa-solid fa-user-gear"></i>
                     <span>Личные данные</span>
                 </button>
 
-                <button onclick="switchTab('tab-security')" id="btn-tab-security" 
-                    class="tab-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition border border-transparent border-[var(--border-color)] hover:bg-[var(--bg-card)] text-[var(--text-main)]">
-                    <i class="fa-solid fa-shield-halved w-5"></i>
+                <button type="button" onclick="switchTab('tab-security')" id="btn-tab-security" class="tab-btn ui-sidebar-tab">
+                    <i class="fa-solid fa-shield-halved"></i>
                     <span>Безопасность</span>
                 </button>
             </aside>
 
-            <section class="flex-1 bg-[var(--bg-panel)] p-6 rounded-2xl border border-[var(--border-color)]">              
+            <section class="flex-1 ui-card p-6">              
                 <div id="tab-overview" class="tab-content space-y-6">
-                    <div class="border-b border-[var(--border-color)] pb-4">
+                    <div class="ui-divider-b pb-4">
                         <h2 class="text-xl font-bold">Успеваемость и прогресс</h2>
-                        <p class="text-xs text-[var(--text-main)] mt-1">Сводка выполненных лабораторных работ и пройденных тестов</p>
+                        <p class="text-xs text-[var(--text-muted)] mt-1">Сводка выполненных лабораторных работ и пройденных тестов</p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                            <div class="flex items-center justify-between text-xs text-blue-400 font-medium">
+                            <div class="flex items-center justify-between text-xs text-blue-500 font-semibold">
                                 <span>Изучено уроков</span>
                                 <i class="fa-solid fa-book"></i>
                             </div>
 
                             <div class="text-2xl font-extrabold mt-2" id="stat-lessons-count">
-                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-blue-400/20 animate-pulse align-middle"></span>
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-blue-500/15 animate-pulse align-middle"></span>
                             </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                            <div class="flex items-center justify-between text-xs text-emerald-400 font-medium">
+                            <div class="flex items-center justify-between text-xs text-emerald-500 font-semibold">
                                 <span>Выполнено лабораторных</span>
                                 <i class="fa-solid fa-flask"></i>
                             </div>
 
                             <div class="text-2xl font-extrabold mt-2" id="stat-labs-count">
-                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-emerald-400/20 animate-pulse align-middle"></span>
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-emerald-500/15 animate-pulse align-middle"></span>
                             </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                            <div class="flex items-center justify-between text-xs text-amber-400 font-medium">
+                            <div class="flex items-center justify-between text-xs text-amber-500 font-semibold">
                                 <span>Пройдено тестов</span>
                                 <i class="fa-solid fa-list-check"></i>
                             </div>
 
                             <div class="text-2xl font-extrabold mt-2" id="stat-tests-count">
-                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-amber-400/20 animate-pulse align-middle"></span>
+                                <span aria-hidden="true" class="inline-block h-7 w-16 rounded-lg bg-amber-500/15 animate-pulse align-middle"></span>
                             </div>
                         </div>
 
                         <div class="p-4 rounded-xl bg-pink-500/10 border border-pink-500/20">
-                            <div class="flex items-center justify-between text-xs text-pink-400 font-medium">
+                            <div class="flex items-center justify-between text-xs text-pink-500 font-semibold">
                                 <span>Средний результат</span>
                                 <i class="fa-solid fa-award"></i>
                             </div>
 
                             <div class="text-2xl font-extrabold mt-2" id="stat-avg-grade">
-                                <span aria-hidden="true" class="inline-block h-7 w-14 rounded-lg bg-pink-400/20 animate-pulse align-middle"></span>
+                                <span aria-hidden="true" class="inline-block h-7 w-14 rounded-lg bg-pink-500/15 animate-pulse align-middle"></span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
-                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Теория</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                        <div class="ui-subcard flex flex-col items-center p-5">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-muted)] uppercase tracking-wider">Теория</h3>
                             <div class="w-44 h-44 relative">
                                 <canvas id="theoryChart"></canvas>
                             </div>
                         </div>
                         
-                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
-                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Лабораторные работы</h3>
+                        <div class="ui-subcard flex flex-col items-center p-5">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-muted)] uppercase tracking-wider">Лабораторные работы</h3>
                             <div class="w-44 h-44 relative">
                                 <canvas id="labsChart"></canvas>
                             </div>
                         </div>
 
-                        <div class="flex flex-col items-center p-5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)]">
-                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-main)] uppercase tracking-wider">Тестирование</h3>
+                        <div class="ui-subcard flex flex-col items-center p-5">
+                            <h3 class="text-xs font-semibold mb-4 text-[var(--text-muted)] uppercase tracking-wider">Тестирование</h3>
                             <div class="w-44 h-44 relative">
                                 <canvas id="testsChart"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] overflow-hidden">
+                    <div class="ui-subcard overflow-hidden">
                         <button type="button" onclick="toggleChaptersCollapse()" 
-                            class="w-full p-4 flex items-center justify-between text-left hover:bg-[var(--bg-panel)] transition">
+                            class="w-full p-4 flex items-center justify-between text-left hover:bg-[var(--bg-hover)] transition">
                             <div class="flex items-center space-x-2">
-                                <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                                <i class="fa-solid fa-layer-group text-blue-500"></i>
                                 <span class="text-xs font-semibold uppercase tracking-wider text-[var(--text-main)]">
                                     Детализация прогресса по главам учебника
                                 </span>
@@ -166,65 +163,65 @@
                             <i id="collapse-icon" class="fa-solid fa-chevron-down text-xs text-[var(--text-muted)] transition-transform duration-300"></i>
                         </button>
 
-                        <div id="theory-chapters-collapse" class="hidden px-4 pb-4 pt-1 border-t border-[var(--border-color)]">
+                        <div id="theory-chapters-collapse" class="hidden px-4 pb-4 pt-1 ui-divider-t">
                             <div id="theory-chapters-list" class="space-y-3 pt-2"></div>
                         </div>
                     </div>
 
-                    <div class="pt-4 space-y-4">
-                        <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                    <div class="pt-2 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3 ui-divider-b pb-3">
                             <h3 class="text-base font-bold flex items-center gap-2 text-[var(--text-main)]">
-                                <i class="fa-solid fa-clock-rotate-left text-pink-400"></i>
+                                <i class="fa-solid fa-clock-rotate-left text-pink-500"></i>
                                 <span>История активности</span>
                             </h3>
 
-                            <div class="flex bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-color)] text-xs">
+                            <div class="ui-segmented text-xs">
                                 <button id="history-filter-all" onclick="filterHistory('all')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-pink-400 bg-pink-500/10 border border-pink-500/20 transition">Все</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-pink-500 bg-pink-500/10 border border-pink-500/20 transition">Все</button>
                                 <button id="history-filter-theory" onclick="filterHistory('theory')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Теория</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition">Теория</button>
                                 <button id="history-filter-labs" onclick="filterHistory('labs')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Лабораторные</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition">Лабораторные</button>
                                 <button id="history-filter-tests" onclick="filterHistory('tests')" 
-                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition">Тесты</button>
+                                    class="px-3 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition">Тесты</button>
                             </div>
                         </div>
 
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs border-collapse">
+                        <div class="ui-table-wrap">
+                            <table class="ui-table">
                                 <thead>
-                                    <tr class="border-b border-[var(--border-color)] text-[var(--text-main)] uppercase tracking-wider font-semibold">
-                                        <th class="py-3 px-3">Тип</th>
-                                        <th class="py-3 px-3">Название урока / работы / теста</th>
-                                        <th class="py-3 px-3 text-center">Оценка</th>
-                                        <th class="py-3 px-3 text-right">Дата сдачи</th>
+                                    <tr>
+                                        <th class="py-3 px-4">Тип</th>
+                                        <th class="py-3 px-4">Название урока / работы / теста</th>
+                                        <th class="py-3 px-4 text-center">Оценка</th>
+                                        <th class="py-3 px-4 text-right">Дата сдачи</th>
                                     </tr>
                                 </thead>
 
-                                <tbody id="history-table-body" class="divide-y divide-gray-700/40 text-[var(--text-main)]">
+                                <tbody id="history-table-body">
                                     <tr aria-hidden="true" class="animate-pulse">
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-52 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-52 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
                                     </tr>
                                     <tr aria-hidden="true" class="animate-pulse">
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-44 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-44 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
                                     </tr>
                                     <tr aria-hidden="true" class="animate-pulse">
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-60 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-60 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
                                     </tr>
                                     <tr aria-hidden="true" class="animate-pulse">
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-48 rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
-                                        <td class="py-3.5 px-3"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-20 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-48 rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-12 mx-auto rounded bg-gray-500/15"></div></td>
+                                        <td class="py-3.5 px-4"><div class="h-3.5 w-24 ml-auto rounded bg-gray-500/15"></div></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -233,32 +230,31 @@
                 </div>
 
                 <div id="tab-settings" class="tab-content hidden space-y-6">
-                    <div class="border-b border-[var(--border-color)] pb-4">
+                    <div class="ui-divider-b pb-4">
                         <h2 class="text-xl font-bold">Личные данные</h2>
-                        <p class="text-xs text-[var(--text-main)] mt-1">Редактирование имя и фамилии профиля</p>
+                        <p class="text-xs text-[var(--text-muted)] mt-1">Редактирование имени и фамилии профиля</p>
                     </div>
 
                     <form id="profile-form" class="space-y-4 max-w-md">
                         <div>
-                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Имя</label>
+                            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Имя</label>
                             <input type="text" id="input-first-name" required
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="ui-input w-full px-4 py-2.5 text-sm">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Фамилия</label>
+                            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Фамилия</label>
                             <input type="text" id="input-last-name" required
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
+                                class="ui-input w-full px-4 py-2.5 text-sm">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Email (недоступно для редактирования)</label>
+                            <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Email (недоступно для редактирования)</label>
                             <input type="email" id="input-email" disabled
-                                class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm opacity-50 cursor-not-allowed">
+                                class="ui-input w-full px-4 py-2.5 text-sm opacity-50 cursor-not-allowed">
                         </div>
 
-                        <button type="submit" 
-                            class="px-5 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-pink-600/20">
+                        <button type="submit" class="ui-btn ui-btn-primary py-2.5 px-5 text-sm">
                             Сохранить изменения
                         </button>
                     </form>
@@ -266,42 +262,41 @@
 
                 <div id="tab-security" class="tab-content hidden space-y-8">
                     <div class="space-y-6">
-                        <div class="border-b border-[var(--border-color)] pb-4">
+                        <div class="ui-divider-b pb-4">
                             <h2 class="text-xl font-bold">Безопасность</h2>
-                            <p class="text-xs text-[var(--text-main)] mt-1">Изменение текущего пароля от аккаунта</p>
+                            <p class="text-xs text-[var(--text-muted)] mt-1">Изменение текущего пароля от аккаунта</p>
                         </div>
 
                         <form id="password-form" class="space-y-4 max-w-md">
                             <div>
-                                <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Текущий пароль</label>
+                                <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Текущий пароль</label>
                                 <input type="password" id="input-old-password" required
-                                    class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
+                                    class="ui-input w-full px-4 py-2.5 text-sm">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-medium text-[var(--text-main)] mb-1.5">Новый пароль</label>
+                                <label class="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Новый пароль</label>
                                 <input type="password" id="input-new-password" required minlength="6"
-                                    class="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-sm focus:outline-none focus:border-pink-500 transition">
+                                    class="ui-input w-full px-4 py-2.5 text-sm">
                             </div>
 
-                            <button type="submit" 
-                                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold transition shadow-lg shadow-emerald-600/20">
+                            <button type="submit" class="ui-btn bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 px-5 text-sm shadow-lg shadow-emerald-600/20">
                                 Обновить пароль
                             </button>
                         </form>
                     </div>
 
-                    <div class="pt-6 border-t border-[var(--border-color)]">
-                        <div class="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 space-y-4">
+                    <div class="pt-6 ui-divider-t">
+                        <div class="ui-subcard p-6 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div class="flex items-start space-x-3">
-                                    <div class="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center shrink-0 mt-0.5">
+                                    <div class="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/25 text-pink-500 flex items-center justify-center shrink-0 mt-0.5">
                                         <i class="fa-solid fa-shield-halved text-lg"></i>
                                     </div>
                                     <div>
                                         <div class="flex flex-wrap items-center gap-2">
                                             <h3 class="text-base font-bold text-[var(--text-main)]">Двухфакторная аутентификация (2FA)</h3>
-                                            <span id="2fa-status-badge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20 font-medium">
+                                            <span id="2fa-status-badge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-500/10 text-[var(--text-muted)] border border-[var(--border-color)] font-medium">
                                                 Загрузка...
                                             </span>
                                         </div>
@@ -312,17 +307,17 @@
                                 </div>
 
                                 <div class="shrink-0">
-                                    <button type="button" id="btn-setup-2fa" class="hidden px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-pink-600/20 transition">
-                                        <i class="fa-solid fa-qrcode mr-1.5"></i> Подключить 2FA
+                                    <button type="button" id="btn-setup-2fa" class="hidden ui-btn ui-btn-primary">
+                                        <i class="fa-solid fa-qrcode"></i> Подключить 2FA
                                     </button>
 
-                                    <button type="button" id="btn-disable-2fa" class="hidden px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold transition">
-                                        <i class="fa-solid fa-lock-open mr-1.5"></i> Отключить 2FA
+                                    <button type="button" id="btn-disable-2fa" class="hidden ui-btn ui-btn-danger">
+                                        <i class="fa-solid fa-lock-open"></i> Отключить 2FA
                                     </button>
                                 </div>
                             </div>
 
-                            <div id="2fa-setup-panel" class="hidden pt-4 border-t border-[var(--border-color)] space-y-4">
+                            <div id="2fa-setup-panel" class="hidden pt-4 ui-divider-t space-y-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                                     <div class="flex flex-col items-center justify-center p-4 bg-white rounded-2xl w-fit mx-auto shadow-inner">
                                         <img id="2fa-qr-image" src="" alt="QR-код для Google Authenticator" class="w-44 h-44 object-contain" />
@@ -336,8 +331,8 @@
                                             </p>
 
                                             <div class="flex items-center gap-2 pt-1">
-                                                <code id="2fa-manual-secret" class="px-2.5 py-1.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-lg text-xs font-mono text-pink-400 select-all"></code>
-                                                <button type="button" id="btn-copy-2fa-secret" class="px-2.5 py-1.5 bg-[var(--bg-panel)] hover:bg-gray-800 border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-muted)] hover:text-white transition" title="Скопировать ключ">
+                                                <code id="2fa-manual-secret" class="px-2.5 py-1.5 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-lg text-xs font-mono text-pink-500 select-all"></code>
+                                                <button type="button" id="btn-copy-2fa-secret" class="ui-btn ui-btn-secondary py-1.5 px-2.5" title="Скопировать ключ">
                                                     <i class="fa-regular fa-copy"></i>
                                                 </button>
                                             </div>
@@ -349,13 +344,13 @@
                                             </label>
 
                                             <div class="flex flex-wrap items-center gap-2">
-                                                <input type="text" id="2fa-confirm-code" inputmode="numeric" maxlength="6" placeholder="123456" class="w-36 px-3 py-2 bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl text-center font-mono text-sm tracking-widest text-[var(--text-main)] focus:outline-none focus:border-pink-500"/>
+                                                <input type="text" id="2fa-confirm-code" inputmode="numeric" maxlength="6" placeholder="123456" class="ui-input w-36 px-3 py-2 text-center font-mono text-sm tracking-widest"/>
                                                 
-                                                <button type="button" id="btn-confirm-enable-2fa" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition">
+                                                <button type="button" id="btn-confirm-enable-2fa" class="ui-btn bg-emerald-600 hover:bg-emerald-500 text-white">
                                                     Активировать
                                                 </button>
 
-                                                <button type="button" id="btn-cancel-setup-2fa" class="px-3 py-2 bg-[var(--bg-panel)] hover:bg-gray-800 text-[var(--text-muted)] rounded-xl text-xs transition">
+                                                <button type="button" id="btn-cancel-setup-2fa" class="ui-btn ui-btn-secondary">
                                                     Отмена
                                                 </button>
                                             </div>

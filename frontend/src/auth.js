@@ -183,8 +183,8 @@ function setupAdminModeToggle() {
 
     selector.classList.remove('hidden');
 
-    const activeBtnClass = 'px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-pink-600 text-white shadow-md';
-    const inactiveBtnClass = 'px-4 py-1.5 rounded-lg text-xs font-semibold transition text-gray-400 hover:text-[var(--text-main)]';
+    const activeBtnClass = 'px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-pink-600 text-white shadow-sm cursor-pointer';
+    const inactiveBtnClass = 'px-4 py-1.5 rounded-lg text-xs font-semibold transition text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer';
 
     btnStudent.addEventListener('click', () => {
         btnStudent.className = activeBtnClass;

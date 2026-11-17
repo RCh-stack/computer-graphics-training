@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Ошибка загрузки данных лабораторной работы:', error);
         const instrText = document.getElementById('lab-instruction-text');
         if (instrText) {
-            instrText.innerHTML = `<span class="text-rose-400">Не удалось загрузить условие лабораторной работы.</span>`;
+            instrText.innerHTML = `<span class="text-rose-500">Не удалось загрузить условие лабораторной работы.</span>`;
         }
         const testsContainer = document.getElementById('tests-container');
         if (testsContainer) testsContainer.innerHTML = '';
@@ -146,10 +146,10 @@ function renderWorkspaceUI(lab) {
     const testsContainer = document.getElementById('tests-container');
     if (testsContainer && lab.test_cases) {
         testsContainer.innerHTML = lab.test_cases.map(test => `
-            <div class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-2.5 flex items-center justify-between text-xs">
+            <div class="ui-subcard p-2.5 flex items-center justify-between text-xs">
                 <div class="flex items-center space-x-2">
-                    <span class="text-[var(--text-main)] font-bold">•</span>
-                    <span class="font-medium">${test.name}</span>
+                    <span class="text-[var(--text-muted)] font-bold">•</span>
+                    <span class="font-medium text-[var(--text-main)]">${test.name}</span>
                 </div>
                 <span class="font-mono text-[10px] text-[var(--text-muted)]">${test.timeout_ms}ms</span>
             </div>
@@ -268,20 +268,20 @@ function setupSubmissionState(userSubmission) {
     let bannerStyle = '';
 
     if (status === 'PASSED') {
-        bannerStyle = 'bg-emerald-500/10 border-emerald-400/30 text-emerald-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-400/20 text-emerald-400">✅ Принято</span>`;
+        bannerStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-500">✅ Принято</span>`;
     } else if (status === 'REVISION') {
-        bannerStyle = 'bg-amber-500/10 border-amber-400/30 text-amber-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-400/20 text-amber-400">⚠️ На доработку</span>`;
+        bannerStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-500">⚠️ На доработку</span>`;
     } else if (status === 'REJECTED') {
-        bannerStyle = 'bg-red-500/10 border-red-400/30 text-red-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-400/20 text-red-400">❌ Отклонено</span>`;
+        bannerStyle = 'bg-rose-500/10 border-rose-500/30 text-rose-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-500/15 text-rose-500">❌ Отклонено</span>`;
     } else if (status === 'SUBMITTED') {
-        bannerStyle = 'bg-blue-500/10 border-blue-400/30 text-blue-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-400/20 text-blue-400">🔎 На проверке</span>`;
+        bannerStyle = 'bg-blue-500/10 border-blue-500/30 text-blue-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-500/15 text-blue-500">🔎 На проверке</span>`;
     } else {
-        bannerStyle = 'bg-gray-500/10 border-gray-400/30 text-gray-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-gray-400/20 text-gray-400">📝 Черновик</span>`;
+        bannerStyle = 'bg-[var(--bg-elevated)] border-[var(--border-color)] text-[var(--text-muted)]';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-500/15 text-[var(--text-muted)]">📝 Черновик</span>`;
     }
 
     statusContainer.className = `p-3 rounded-xl border text-xs space-y-2 ${bannerStyle}`;

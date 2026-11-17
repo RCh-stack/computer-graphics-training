@@ -59,7 +59,6 @@ function triggerRender() {
     timerDiv.innerText = `Время рендера: ${(t1 - t0).toFixed(1)} ms`;
 }
 
-// Привязка глобальных кнопок
 document.getElementById('btn-add-sphere').addEventListener('click', () => {
     const newId = "sp_" + Date.now();
     const defaultPreset = MATERIAL_PRESETS.matte;
@@ -113,13 +112,12 @@ btnNext.addEventListener('click', () => {
 
 document.getElementById('btn-force-render').addEventListener('click', triggerRender);
 fovInput.addEventListener('input', triggerRender);
-bgColorInput.addEventListener('input', triggerRender);
+bgColorInput.addEventListener('change', triggerRender);
 
-// Инициализация модуля Emscripten
 window.Module = {
     onRuntimeInitialized: function() {
         statusDiv.innerText = "✓ Wasm Готов";
-        statusDiv.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-500/10 text-green-400 border border-green-500/20";
+        statusDiv.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20";
         
         try {
             cppRayTracer = new Module.RayTracer(WIDTH, HEIGHT);
@@ -128,8 +126,8 @@ window.Module = {
             triggerRender();
         } catch (err) {
             console.error(err);
-            statusDiv.innerText = "Ошибка Wasm Биндинга";
-            statusDiv.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20";
+            statusDiv.innerText = "Ошибка Wasm Build";
+            statusDiv.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20";
         }
     }
 };

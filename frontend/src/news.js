@@ -24,7 +24,7 @@ async function loadNewsFeed() {
             allNewsItems = data.news;
             renderNewsFeed(allNewsItems);
         } else {
-            feedContainer.innerHTML = `<div class="text-center text-xs text-red-400 py-4">Не удалось загрузить новости</div>`;
+            feedContainer.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Не удалось загрузить новости</div>`;
         }
     } catch (err) {
         console.error('Ошибка загрузки ленты новостей:', err);
@@ -67,25 +67,25 @@ function createNewsCardHTML(item) {
     });
 
     let iconType = 'fa-bell';
-    let iconClass = 'text-pink-400 bg-pink-500/10 border-pink-500/20';
-    let typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20">Уведомление</span>';
+    let iconClass = 'text-pink-500 bg-pink-500/10 border-pink-500/25';
+    let typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-pink-500/10 text-pink-500 border border-pink-500/25">Уведомление</span>';
 
     if (item.type === 'LAB_STATUS') {
         iconType = 'fa-flask';
-        iconClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Лабораторная</span>';
+        iconClass = 'text-emerald-500 bg-emerald-500/10 border-emerald-500/25';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">Лабораторная</span>';
     } else if (item.type === 'NEW_TEST') {
         iconType = 'fa-list-check';
-        iconClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Тест</span>';
+        iconClass = 'text-amber-500 bg-amber-500/10 border-amber-500/25';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/25">Тест</span>';
     } else if (item.type === 'NEW_LESSON') {
         iconType = 'fa-book';
-        iconClass = 'text-blue-400 bg-blue-500/10 border-blue-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Урок</span>';
+        iconClass = 'text-blue-500 bg-blue-500/10 border-blue-500/25';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/25">Урок</span>';
     } else if (!isPersonal) {
         iconType = 'fa-bullhorn';
-        iconClass = 'text-red-400 bg-red-500/10 border-red-500/20';
-        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">Объявление</span>';
+        iconClass = 'text-rose-500 bg-rose-500/10 border-rose-500/25';
+        typeBadge = '<span class="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/25">Объявление</span>';
     }
 
     const dismissTitle = isPersonal ? 'Удалить уведомление' : 'Скрыть объявление из ленты';
@@ -100,7 +100,7 @@ function createNewsCardHTML(item) {
                 <div class="flex items-start justify-between gap-2">
                     <div class="flex flex-wrap items-center gap-2">
                         ${typeBadge}
-                        <h4 class="text-xs font-bold text-[var(--text-main)] group-hover:text-pink-400 transition">${item.title}</h4>
+                        <h4 class="text-xs font-bold text-[var(--text-main)] group-hover:text-pink-500 transition">${item.title}</h4>
                     </div>
 
                     <div class="flex items-center space-x-2 shrink-0">
@@ -110,7 +110,7 @@ function createNewsCardHTML(item) {
                             data-dismiss-id="${item.id}"
                             title="${dismissTitle}"
                             aria-label="${dismissTitle}"
-                            class="btn-dismiss-news w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition opacity-80 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100"
+                            class="btn-dismiss-news w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition opacity-80 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 cursor-pointer"
                         >
                             <i class="fa-solid fa-xmark text-xs pointer-events-none"></i>
                         </button>
@@ -121,7 +121,7 @@ function createNewsCardHTML(item) {
 
                 ${item.link ? `
                     <div class="pt-1">
-                        <a href="${item.link}" class="inline-flex items-center space-x-1 text-[11px] text-pink-400 hover:underline font-semibold">
+                        <a href="${item.link}" class="inline-flex items-center space-x-1 text-[11px] text-pink-500 hover:underline font-semibold">
                             <span>Перейти</span>
                             <i class="fa-solid fa-arrow-right text-[9px]"></i>
                         </a>
@@ -173,7 +173,7 @@ async function clearAllNews() {
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#db2777',
-        cancelButtonColor: '#374151',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Да, очистить',
         cancelButtonText: 'Отмена'
     });

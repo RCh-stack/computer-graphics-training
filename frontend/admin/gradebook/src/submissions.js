@@ -60,17 +60,19 @@ function renderTestDetailsList(tests) {
     if (!container) return;
 
     if (tests.length === 0) {
-        container.innerHTML = `<div class="p-3 text-center text-[11px] text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация юнит-тестов отсутствует</div>`;
+        container.innerHTML = `<div class="ui-subcard p-3 text-center text-[11px] text-[var(--text-muted)]">Детализация юнит-тестов отсутствует</div>`;
         return;
     }
 
     container.innerHTML = tests.map((t, idx) => {
         const isPassed = t.passed || t.success;
         const icon = isPassed ? '✓' : '✕';
-        const colorClass = isPassed ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-red-400 border-red-500/20 bg-red-500/5';
+        const colorClass = isPassed
+            ? 'text-emerald-500 border-emerald-500/25 bg-emerald-500/10'
+            : 'text-rose-500 border-rose-500/25 bg-rose-500/10';
 
         return `
-            <div class="p-2 rounded-xl border ${colorClass} text-xs flex justify-between items-center">
+            <div class="p-2.5 rounded-xl border ${colorClass} text-xs flex justify-between items-center font-medium">
                 <span>${idx + 1}: ${t.name || 'Проверка условий'}</span>
                 <span class="font-mono font-bold">${icon}</span>
             </div>
@@ -189,30 +191,30 @@ function renderQuestionsBreakdown(questions) {
     if (!container) return;
 
     if (questions.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-xs text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация вопросов недоступна</div>`;
+        container.innerHTML = `<div class="ui-subcard p-4 text-center text-xs text-[var(--text-muted)]">Детализация вопросов недоступна</div>`;
         return;
     }
 
     container.innerHTML = questions.map((q, idx) => {
         const isCorrect = q.isCorrect;
         const statusBadge = isCorrect
-            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Верно</span>`
-            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Ошибка</span>`;
+            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 shrink-0">Верно</span>`
+            : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/25 shrink-0">Ошибка</span>`;
 
         return `
-            <div class="p-3.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl space-y-2 text-xs">
+            <div class="ui-subcard p-3.5 space-y-2 text-xs">
                 <div class="flex justify-between items-start gap-2">
                     <span class="font-bold text-[var(--text-main)]">№${idx + 1}. ${q.questionText || 'Вопрос'}</span>
                     ${statusBadge}
                 </div>
 
-                <div class="space-y-1 pt-1 border-t border-[var(--border-color)] text-[11px]">
-                    <div class="${isCorrect ? 'text-emerald-600' : 'text-red-600'} font-medium">
-                        <span class="text-[var(--text-main)]">Ответ студента:</span> ${q.userAnswer}
+                <div class="space-y-1 pt-1.5 ui-divider-t text-[11px]">
+                    <div class="${isCorrect ? 'text-emerald-500' : 'text-rose-500'} font-medium">
+                        <span class="text-[var(--text-muted)]">Ответ студента:</span> ${q.userAnswer}
                     </div>
                     ${!isCorrect ? `
-                        <div class="text-emerald-600 font-medium">
-                            <span class="text-[var(--text-main)]">Правильный ответ:</span> ${q.correctAnswer}
+                        <div class="text-emerald-500 font-medium">
+                            <span class="text-[var(--text-muted)]">Правильный ответ:</span> ${q.correctAnswer}
                         </div>
                     ` : ''}
                 </div>

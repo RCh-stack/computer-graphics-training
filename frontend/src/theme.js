@@ -19,14 +19,19 @@ function updateThemeUI(isDark) {
 
         if (themeText) {
             themeText.textContent = isDark ? 'Тёмная тема' : 'Светлая тема';
-        } else if (!themeIcon) {
-            btn.textContent = isDark ? 'Тёмная' : 'Светлая';
-        }
-
-        if (themeIcon) {
+            if (themeIcon) {
+                themeIcon.className = isDark
+                    ? 'fa-solid fa-moon w-5 text-indigo-400'
+                    : 'fa-solid fa-sun w-5 text-amber-500';
+            }
+        } else if (themeIcon) {
             themeIcon.className = isDark
                 ? 'fa-solid fa-moon text-sm text-indigo-400'
-                : 'fa-solid fa-sun text-sm text-amber-400';
+                : 'fa-solid fa-sun text-sm text-amber-500';
+        } else {
+            btn.innerHTML = isDark
+                ? '<i class="fa-solid fa-moon text-indigo-400"></i><span>Тёмная</span>'
+                : '<i class="fa-solid fa-sun text-amber-500"></i><span>Светлая</span>';
         }
 
         btn.title = isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему';

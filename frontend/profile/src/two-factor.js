@@ -9,14 +9,14 @@ function update2FAStatusUI(isEnabled) {
     if (isEnabled) {
         if (badge) {
             badge.textContent = 'Включена';
-            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium';
+            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 font-semibold';
         }
         setupBtn?.classList.add('hidden');
         disableBtn?.classList.remove('hidden');
     } else {
         if (badge) {
             badge.textContent = 'Отключена';
-            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20 font-medium';
+            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border-color)] font-semibold';
         }
         disableBtn?.classList.add('hidden');
         setupBtn?.classList.remove('hidden');
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inputPlaceholder: 'Текущий пароль',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#374151',
+            cancelButtonColor: '#64748b',
             confirmButtonText: 'Отключить 2FA',
             cancelButtonText: 'Отмена',
             inputValidator: (value) => {

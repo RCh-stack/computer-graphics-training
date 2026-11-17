@@ -105,19 +105,20 @@ function renderQuestionsGrid() {
 
     currentTest.questions.forEach((t, idx) => {
         const btn = document.createElement('button');
+        btn.type = 'button';
         btn.dataset.index = idx;
 
         const isAnswered = userAnswers[t.id] !== undefined && userAnswers[t.id] !== '';
         const isActive = idx === currentQuestionIndex;
 
-        let classes = 'h-9 w-full rounded-lg text-xs font-bold transition flex items-center justify-center ';
+        let classes = 'h-9 w-full rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ';
 
         if (isActive) {
-            classes += 'ring-2 ring-pink-500 border-transparent bg-pink-600/20 text-pink-400 ';
+            classes += 'ring-2 ring-pink-500 border border-transparent bg-pink-500/15 text-pink-500 ';
         } else if (isAnswered) {
-            classes += 'bg-blue-600 text-white ';
+            classes += 'bg-blue-600 text-white shadow-sm ';
         } else {
-            classes += 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] hover:bg-gray-800 ';
+            classes += 'bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] hover:bg-[var(--bg-hover)] hover:border-pink-500/40 ';
         }
 
         btn.className = classes;
@@ -156,7 +157,7 @@ function renderCurrentQuestion() {
     if (q.code_snippet) {
         mediaContainer.classList.remove('hidden');
         mediaContainer.innerHTML = `
-            <pre class="bg-gray-950 p-4 rounded-xl border border-[var(--border-color)] text-xs font-mono text-gray-200 overflow-x-auto"><code>${escapeHtml(q.code_snippet)}</code></pre>
+            <pre class="bg-slate-950 p-4 rounded-xl border border-[var(--border-color)] text-xs font-mono text-slate-200 overflow-x-auto"><code>${escapeHtml(q.code_snippet)}</code></pre>
         `;
     } else if (q.media_url) {
         mediaContainer.classList.remove('hidden');
@@ -200,7 +201,7 @@ function renderInteractiveOptions(question) {
                 id="numeric-answer-input"
                 value="${currentAnswer !== undefined ? currentAnswer : ''}"
                 placeholder="Например: 10.0"
-                class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
+                class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
             >
         `;
         optionsContainer.appendChild(wrapper);
@@ -225,11 +226,10 @@ function renderInteractiveOptions(question) {
             <label class="block text-xs font-mono text-[var(--text-muted)]">Введите ответ строкой:</label>
             <input 
                 type="text" 
-                step="any"
                 id="text-answer-input"
                 value="${currentAnswer !== undefined ? currentAnswer : ''}"
                 placeholder="Например: ray tracing"
-                class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500"
+                class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
             >
         `;
         optionsContainer.appendChild(wrapper);
@@ -251,10 +251,10 @@ function renderInteractiveOptions(question) {
         question.options.forEach(opt => {
             const isSelected = currentAnswer === opt.id;
             const label = document.createElement('label');
-            label.className = `flex items-center justify-between p-4 rounded-xl border cursor-pointer transition ${
+            label.className = `flex items-center justify-between p-4 rounded-xl border cursor-pointer transition text-[var(--text-main)] ${
                 isSelected 
                     ? 'border-pink-500 bg-pink-500/10' 
-                    : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-gray-600'
+                    : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-pink-500/40 hover:bg-[var(--bg-hover)]'
             }`;
 
             label.innerHTML = `
@@ -264,7 +264,7 @@ function renderInteractiveOptions(question) {
                         name="test_option" 
                         value="${opt.id}" 
                         ${isSelected ? 'checked' : ''}
-                        class="accent-pink-500 w-4 h-4"
+                        class="accent-pink-500 w-4 h-4 cursor-pointer"
                     >
                     <span class="text-sm font-medium">${opt.text}</span>
                 </div>
@@ -280,7 +280,8 @@ function renderInteractiveOptions(question) {
                 });
             }
 
-            label.addEventListener('click', () => {
+            const radioInput = label.querySelector('input[type="radio"]');
+            radioInput.addEventListener('change', () => {
                 userAnswers[question.id] = opt.id;
                 renderCurrentQuestion();
                 renderQuestionsGrid();
