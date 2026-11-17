@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-main)] text-[var(--text-main)] h-screen overflow-hidden flex flex-col font-sans select-none">
-    <header class="h-14 bg-[var(--bg-panel)] border-b border-[var(--border-color)] px-4 flex items-center justify-between shrink-0">
+<body data-module="testing" class="h-screen overflow-hidden flex flex-col font-sans select-none">
+    <header class="ui-header h-14 px-4 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-4">
-            <a href="index.html" class="flex items-center space-x-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] px-2.5 py-1 rounded-lg text-xs font-semibold hover:opacity-80 transition">
-                <span>← Тесты</span>
+            <a href="index.html" class="ui-btn ui-btn-secondary py-1.5 px-2.5">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Тесты</span>
             </a>
 
             <div class="h-4 w-px bg-[var(--border-color)]"></div>
@@ -22,20 +23,16 @@
             </h1>
         </div>
 
-        <div class="flex items-center space-x-4">
-            <div class="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg text-amber-400 font-mono text-xs font-bold">
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/25 px-3 py-1.5 rounded-xl text-amber-500 font-mono text-xs font-bold">
                 <i class="fa-solid fa-stopwatch"></i>
                 <span>Оставшееся время:</span>
                 <span id="test-timer">--:--</span>
             </div>
 
-            <div class="flex items-center space-x-4">
-                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-3 py-1.5 rounded-xl text-xs font-semibold hover:opacity-80 transition">
-                    Светлая
-                </button>
-            </div>
+            <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
 
-            <button id="btn-finish-test" class="bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition shadow-md">
+            <button id="btn-finish-test" type="button" class="ui-btn bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-600/20">
                 Завершить тест
             </button>
         </div>
@@ -45,7 +42,7 @@
         <main class="flex-1 bg-[var(--bg-main)] p-6 overflow-y-auto flex flex-col justify-between">
             <div class="max-w-3xl w-full mx-auto space-y-6">              
                 <div class="flex items-center justify-between">
-                    <span id="question-number-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <span id="question-number-badge" class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                         Вопрос 1
                     </span>
                     <span id="question-category" class="text-xs text-[var(--text-muted)] font-mono">
@@ -64,12 +61,12 @@
                 <div id="options-container" class="space-y-3 pt-2"></div>
             </div>
 
-            <div class="max-w-3xl w-full mx-auto pt-6 border-t border-[var(--border-color)] flex justify-between items-center">
-                <button id="btn-prev-q" class="bg-[var(--bg-card)] border border-[var(--border-color)] px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-40">
+            <div class="max-w-3xl w-full mx-auto pt-6 ui-divider-t flex justify-between items-center">
+                <button id="btn-prev-q" type="button" class="ui-btn ui-btn-secondary py-2 px-4">
                     ← Предыдущий
                 </button>
 
-                <button id="btn-next-q" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold">
+                <button id="btn-next-q" type="button" class="ui-btn ui-btn-primary py-2 px-4">
                     Следующий →
                 </button>
             </div>
@@ -77,27 +74,29 @@
 
         <aside class="w-72 bg-[var(--bg-panel)] border-l border-[var(--border-color)] p-4 flex flex-col justify-between shrink-0">
             <div class="space-y-4">
-                <div class="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider">
+                <div class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
                     Карта вопросов
                 </div>
 
                 <div id="questions-navigation-grid" class="grid grid-cols-4 gap-2"></div>
             </div>
 
-            <div class="border-t border-[var(--border-color)] pt-3 text-[11px] space-y-2 text-[var(--text-muted)]">
+            <div class="ui-divider-t pt-3 text-[11px] space-y-2 text-[var(--text-muted)]">
                 <div class="flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded bg-blue-600 inline-block"></span>
+                    <span class="w-3 h-3 rounded bg-[var(--accent)] inline-block"></span>
                     <span>Отвечен</span>
                 </div>
 
                 <div class="flex items-center space-x-2">
-                    <span class="w-3 h-3 rounded bg-[var(--bg-card)] border border-[var(--border-color)] inline-block"></span>
+                    <span class="w-3 h-3 rounded bg-[var(--bg-elevated)] border border-[var(--border-color)] inline-block"></span>
                     <span>Не отвечен</span>
                 </div>
             </div>
         </aside>
     </div>
 
+    <script src="../src/skeleton.js"></script>
+    <script src="../src/toast.js"></script>
     <script src="src/workspace.js"></script>
     <script src="../src/theme.js"></script>
     <script src="../src/notifications.js"></script>

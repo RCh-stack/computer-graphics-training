@@ -92,13 +92,18 @@ function showAlert(message, type = 'error') {
     const icon = document.getElementById('alert-icon');
 
     msg.innerText = message;
-    box.classList.remove('hidden', 'bg-red-500/10', 'border-red-500', 'text-red-400', 'bg-emerald-500/10', 'border-emerald-500', 'text-emerald-400');
+    box.classList.remove(
+        'hidden',
+        'bg-red-500/10', 'border-red-500', 'text-red-400',
+        'bg-rose-500/10', 'border-rose-500/30', 'text-rose-500',
+        'bg-emerald-500/10', 'border-emerald-500', 'border-emerald-500/30', 'text-emerald-400', 'text-emerald-500'
+    );
 
     if (type === 'error') {
-        box.classList.add('bg-red-500/10', 'border', 'border-red-500', 'text-red-400');
+        box.classList.add('bg-rose-500/10', 'border', 'border-rose-500/30', 'text-rose-500');
         icon.className = 'fa-solid fa-circle-exclamation';
     } else {
-        box.classList.add('bg-emerald-500/10', 'border', 'border-emerald-500', 'text-emerald-400');
+        box.classList.add('bg-emerald-500/10', 'border', 'border-emerald-500/30', 'text-emerald-500');
         icon.className = 'fa-solid fa-circle-check';
     }
 }

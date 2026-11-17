@@ -15,7 +15,7 @@ function initReviewClickDelegation() {
         if (!btn) return;
 
         const subId = btn.dataset.submissionId;
-        
+
         let targetSubmission = null;
         if (window.currentSubmissionsMap) {
             for (const sub of window.currentSubmissionsMap.values()) {
@@ -60,17 +60,19 @@ function renderTestDetailsList(tests) {
     if (!container) return;
 
     if (tests.length === 0) {
-        container.innerHTML = `<div class="p-3 text-center text-[11px] text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация юнит-тестов отсутствует</div>`;
+        container.innerHTML = `<div class="ui-subcard p-3 text-center text-[11px] text-[var(--text-muted)]">Детализация юнит-тестов отсутствует</div>`;
         return;
     }
 
     container.innerHTML = tests.map((t, idx) => {
         const isPassed = t.passed || t.success;
         const icon = isPassed ? '✓' : '✕';
-        const colorClass = isPassed ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-red-400 border-red-500/20 bg-red-500/5';
+        const colorClass = isPassed
+            ? 'text-emerald-500 border-emerald-500/25 bg-emerald-500/10'
+            : 'text-rose-500 border-rose-500/25 bg-rose-500/10';
 
         return `
-            <div class="p-2 rounded-xl border ${colorClass} text-xs flex justify-between items-center">
+            <div class="p-2.5 rounded-xl border ${colorClass} text-xs flex justify-between items-center font-medium">
                 <span>${idx + 1}: ${t.name || 'Проверка условий'}</span>
                 <span class="font-mono font-bold">${icon}</span>
             </div>
@@ -84,13 +86,20 @@ function initReviewModalEvents() {
 
     document.getElementById('btn-close-review-modal')?.addEventListener('click', closeModal);
     document.getElementById('btn-cancel-review')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
 
-    document.getElementById('btn-save-review')?.addEventListener('click', async () => {
+    const saveBtn = document.getElementById('btn-save-review');
+    saveBtn?.addEventListener('click', async () => {
         if (!activeSubmissionId) return;
 
         const token = localStorage.getItem('authToken');
         const status = document.getElementById('review-status-select').value;
         const teacherComment = document.getElementById('review-comment-input').value;
+
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
 
         try {
             const res = await fetch(`/api/v1/admin/submissions/labs/${activeSubmissionId}/review`, {
@@ -106,23 +115,21 @@ function initReviewModalEvents() {
 
             if (res.ok) {
                 closeModal();
-                
+
                 if (typeof window.reloadGradebookData === 'function') {
                     window.reloadGradebookData();
                 }
 
-                Swal.fire({
-                    title: 'Сохранено!',
-                    text: 'Результат проверки сохранен и доступен студенту',
-                    icon: 'success',
-                    confirmButtonText: 'ОК',
-                    confirmButtonColor: '#10b981'
-                });
+                Toast.success('Результат проверки сохранен и доступен студенту');
             } else {
-                Swal.fire('Ошибка', data.message || 'Не удалось сохранить результат проверки', 'error');
+                Toast.error(data.message || 'Не удалось сохранить результат проверки');
             }
         } catch (error) {
             console.error('Ошибка сохранения статуса:', error);
+            Toast.error('Ошибка соединения при сохранении проверки');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
         }
     });
 }
@@ -136,7 +143,7 @@ function initTestReviewClickDelegation() {
         if (!btn) return;
 
         const subId = btn.dataset.testSubmissionId;
-        
+
         let targetSubmission = null;
         if (window.currentTestSubmissionsMap) {
             for (const sub of window.currentTestSubmissionsMap.values()) {
@@ -162,16 +169,16 @@ function openTestReviewModal(sub) {
 
     const startDate = new Date(sub.started_in);
     const endDate = new Date(sub.completed_at);
-
     const diffMs = endDate.getTime() - startDate.getTime();
-    if (isNaN(diffMs) || diffMs < 0)
-       document.getElementById('test-review-duration').innerText = '0м 0с';
 
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-
-    document.getElementById('test-review-duration').innerText = `${mins}м ${secs}с`;
+    if (isNaN(diffMs) || diffMs < 0) {
+        document.getElementById('test-review-duration').innerText = '0м 0с';
+    } else {
+        const totalSeconds = Math.floor(diffMs / 1000);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        document.getElementById('test-review-duration').innerText = `${mins}м ${secs}с`;
+    }
 
     const questionsList = sub.questionsBreakdown || [];
     renderQuestionsBreakdown(questionsList);
@@ -184,30 +191,30 @@ function renderQuestionsBreakdown(questions) {
     if (!container) return;
 
     if (questions.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-xs text-[var(--text-main)] bg-[var(--bg-main)] rounded-xl">Детализация вопросов недоступна</div>`;
+        container.innerHTML = `<div class="ui-subcard p-4 text-center text-xs text-[var(--text-muted)]">Детализация вопросов недоступна</div>`;
         return;
     }
 
     container.innerHTML = questions.map((q, idx) => {
         const isCorrect = q.isCorrect;
-        const statusBadge = isCorrect 
-            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Верно</span>`
-            : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">Ошибка</span>`;
+        const statusBadge = isCorrect
+            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 shrink-0">Верно</span>`
+            : `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/25 shrink-0">Ошибка</span>`;
 
         return `
-            <div class="p-3.5 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-xl space-y-2 text-xs">
+            <div class="ui-subcard p-3.5 space-y-2 text-xs">
                 <div class="flex justify-between items-start gap-2">
                     <span class="font-bold text-[var(--text-main)]">№${idx + 1}. ${q.questionText || 'Вопрос'}</span>
                     ${statusBadge}
                 </div>
 
-                <div class="space-y-1 pt-1 border-t border-[var(--border-color)] text-[11px]">
-                    <div class="${isCorrect ? 'text-emerald-600' : 'text-red-600'} font-medium">
-                        <span class="text-[var(--text-main)]">Ответ студента:</span> ${q.userAnswer}
+                <div class="space-y-1 pt-1.5 ui-divider-t text-[11px]">
+                    <div class="${isCorrect ? 'text-emerald-500' : 'text-rose-500'} font-medium">
+                        <span class="text-[var(--text-muted)]">Ответ студента:</span> ${q.userAnswer}
                     </div>
                     ${!isCorrect ? `
-                        <div class="text-emerald-600 font-medium">
-                            <span class="text-[var(--text-main)]">Правильный ответ:</span> ${q.correctAnswer}
+                        <div class="text-emerald-500 font-medium">
+                            <span class="text-[var(--text-muted)]">Правильный ответ:</span> ${q.correctAnswer}
                         </div>
                     ` : ''}
                 </div>
@@ -216,9 +223,11 @@ function renderQuestionsBreakdown(questions) {
     }).join('');
 }
 
-document.getElementById('btn-close-test-modal')?.addEventListener('click', () => {
-    document.getElementById('test-review-modal')?.classList.add('hidden');
-});
-document.getElementById('btn-cancel-test-review')?.addEventListener('click', () => {
-    document.getElementById('test-review-modal')?.classList.add('hidden');
+const testReviewModal = document.getElementById('test-review-modal');
+const closeTestReviewModal = () => testReviewModal?.classList.add('hidden');
+
+document.getElementById('btn-close-test-modal')?.addEventListener('click', closeTestReviewModal);
+document.getElementById('btn-cancel-test-review')?.addEventListener('click', closeTestReviewModal);
+testReviewModal?.addEventListener('click', (e) => {
+    if (e.target === testReviewModal) closeTestReviewModal();
 });

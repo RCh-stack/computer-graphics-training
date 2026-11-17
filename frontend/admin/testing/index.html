@@ -7,27 +7,25 @@
     <link rel="stylesheet" href="../../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+<body data-module="testing" class="font-sans min-h-screen">
+    <header class="ui-header">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../../index.html" class="flex items-center space-x-3">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
-                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-amber-500/20 text-amber-500">Тестирование</span></span>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-500">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/25">Тестирование</span></span>
             </a>
-            <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
-                Светлая
-            </button>
+            <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/60 pb-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ui-divider-b pb-4">
             <div>
                 <h1 class="text-2xl font-bold">Конструктор тестов</h1>
-                <p class="text-xs text-[var(--text-main)] mt-1">Создание, редактирование вопросов и настройка условий прохождения</p>
+                <p class="text-xs text-[var(--text-muted)] mt-1">Создание, редактирование вопросов и настройка условий прохождения</p>
             </div>
 
-            <button id="btn-create-test" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-amber-600/20">
+            <button id="btn-create-test" type="button" class="ui-btn ui-btn-primary">
                 <i class="fa-solid fa-plus"></i> Создать тест
             </button>
         </div>
@@ -35,6 +33,8 @@
         <div id="tests-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </main>
 
+    <script src="../../src/skeleton.js"></script>
+    <script src="../../src/toast.js"></script>
     <script src="src/loader.js"></script>
     <script src="../../src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>

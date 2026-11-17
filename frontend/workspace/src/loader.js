@@ -4,15 +4,65 @@ let currentLabTemplates = {};
 let userCodePerLang = {};
 let activeLanguage = 'cpp';
 
+function renderLabWorkspaceSkeletons() {
+    const headerTitle = document.getElementById('header-title');
+    if (headerTitle) {
+        headerTitle.innerHTML = `<span aria-hidden="true" class="inline-block h-5 w-48 rounded bg-gray-500/20 animate-pulse align-middle"></span>`;
+    }
+
+    const instrTitle = document.getElementById('lab-instruction-title');
+    if (instrTitle) {
+        instrTitle.innerHTML = `<span aria-hidden="true" class="inline-block h-5 w-2/3 rounded bg-gray-500/20 animate-pulse"></span>`;
+    }
+
+    const instrText = document.getElementById('lab-instruction-text');
+    if (instrText) {
+        instrText.innerHTML = `
+            <div aria-hidden="true" class="space-y-2 animate-pulse pt-1">
+                <div class="h-3 w-full rounded bg-gray-500/15"></div>
+                <div class="h-3 w-5/6 rounded bg-gray-500/15"></div>
+                <div class="h-3 w-3/4 rounded bg-gray-500/10"></div>
+            </div>
+        `;
+    }
+
+    const reqList = document.getElementById('lab-requirements-list');
+    if (reqList) {
+        reqList.innerHTML = `
+            <li aria-hidden="true" class="h-3 w-4/5 rounded bg-gray-500/15 animate-pulse list-none"></li>
+            <li aria-hidden="true" class="h-3 w-3/5 rounded bg-gray-500/15 animate-pulse list-none"></li>
+            <li aria-hidden="true" class="h-3 w-2/3 rounded bg-gray-500/10 animate-pulse list-none"></li>
+        `;
+    }
+
+    if (window.Skeleton) {
+        Skeleton.render('#tests-container', Skeleton.labTestCases(4));
+    }
+
+    const editorContainer = document.getElementById('monaco-editor-container');
+    if (editorContainer && !window.windowEditor) {
+        editorContainer.innerHTML = `
+            <div id="monaco-skeleton-placeholder" aria-hidden="true" class="p-4 space-y-2.5 animate-pulse">
+                <div class="h-3.5 w-48 rounded bg-gray-500/20"></div>
+                <div class="h-3.5 w-64 rounded bg-gray-500/15"></div>
+                <div class="h-3.5 w-40 rounded bg-gray-500/15"></div>
+                <div class="h-3.5 w-56 rounded bg-gray-500/10"></div>
+            </div>
+        `;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const labId = urlParams.get('id');
 
     if (!labId) {
-        Swal.fire('Ошибка', 'Идентификатор лабораторной работы не указан!', 'error');
+        await Swal.fire('Ошибка', 'Идентификатор лабораторной работы не указан!', 'error');
         window.location.href = 'index.html';
         return;
     }
+
+    renderLabWorkspaceSkeletons();
 
     try {
         const token = localStorage.getItem('authToken');
@@ -31,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentLab = result.lab;
 
         renderWorkspaceUI(currentLab);
-        
+
         currentLabTemplates = parseTemplates(currentLab.template_code);
 
         const userSubmission = currentLab.userSubmission;
@@ -51,6 +101,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupSubmissionState(userSubmission);
     } catch (error) {
         console.error('Ошибка загрузки данных лабораторной работы:', error);
+        const instrText = document.getElementById('lab-instruction-text');
+        if (instrText) {
+            instrText.innerHTML = `<span class="text-rose-500">Не удалось загрузить условие лабораторной работы.</span>`;
+        }
+        const testsContainer = document.getElementById('tests-container');
+        if (testsContainer) testsContainer.innerHTML = '';
+        window.Toast?.error('Ошибка загрузки', 'Не удалось открыть лабораторную работу');
     }
 });
 
@@ -73,8 +130,12 @@ function renderWorkspaceUI(lab) {
     document.getElementById('lab-instruction-text').textContent = lab.task_json?.instruction || '';
 
     const reqList = document.getElementById('lab-requirements-list');
-    if (reqList && lab.task_json?.requirements) {
-        reqList.innerHTML = lab.task_json.requirements.map(req => `<li>${req}</li>`).join('');
+    if (reqList) {
+        if (lab.task_json?.requirements?.length) {
+            reqList.innerHTML = lab.task_json.requirements.map(req => `<li>${req}</li>`).join('');
+        } else {
+            reqList.innerHTML = '';
+        }
     }
 
     const testsStatusCount = document.getElementById('tests-status-count');
@@ -85,10 +146,10 @@ function renderWorkspaceUI(lab) {
     const testsContainer = document.getElementById('tests-container');
     if (testsContainer && lab.test_cases) {
         testsContainer.innerHTML = lab.test_cases.map(test => `
-            <div class="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-xl p-2.5 flex items-center justify-between text-xs">
+            <div class="ui-subcard p-2.5 flex items-center justify-between text-xs">
                 <div class="flex items-center space-x-2">
-                    <span class="text-[var(--text-main)] font-bold">•</span>
-                    <span class="font-medium">${test.name}</span>
+                    <span class="text-[var(--text-muted)] font-bold">•</span>
+                    <span class="font-medium text-[var(--text-main)]">${test.name}</span>
                 </div>
                 <span class="font-mono text-[10px] text-[var(--text-muted)]">${test.timeout_ms}ms</span>
             </div>
@@ -102,13 +163,15 @@ function initMonacoEditor(codeTemplate) {
         return;
     }
 
-    require.config({ 
+    require.config({
         paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }
     });
 
     require(['vs/editor/editor.main'], function () {
         const container = document.getElementById('monaco-editor-container');
         if (!container) return;
+
+        document.getElementById('monaco-skeleton-placeholder')?.remove();
 
         if (window.windowEditor) {
             window.windowEditor.dispose();
@@ -153,12 +216,12 @@ function changeEditorLanguage(langKey) {
 
     if (window.windowEditor && window.monaco) {
         const model = window.windowEditor.getModel();
-        
+
         window.monaco.editor.setModelLanguage(model, langConfig.monacoLang);
-        
+
         const codeToSet = userCodePerLang[langKey] || currentLabTemplates[langKey] || `// Шаблон для ${langConfig.name} не задан`;
         window.windowEditor.setValue(codeToSet);
-        
+
         const selectEl = document.getElementById('language-select');
         if (selectEl) selectEl.value = activeLanguage;
     }
@@ -169,7 +232,7 @@ function changeEditorLanguage(langKey) {
 
 document.getElementById('language-select')?.addEventListener('change', (e) => {
     const selectedLang = e.target.value;
-    
+
     Swal.fire({
         title: 'Смена языка',
         text: 'Переключить редактор на выбранный язык программирования?',
@@ -181,6 +244,7 @@ document.getElementById('language-select')?.addEventListener('change', (e) => {
     }).then((result) => {
         if (result.isConfirmed) {
             changeEditorLanguage(selectedLang);
+            window.Toast?.info(`Язык редактора: ${SUPPORTED_LANGUAGES[selectedLang]?.name || selectedLang}`);
         } else {
             e.target.value = activeLanguage;
         }
@@ -204,20 +268,20 @@ function setupSubmissionState(userSubmission) {
     let bannerStyle = '';
 
     if (status === 'PASSED') {
-        bannerStyle = 'bg-emerald-500/10 border-emerald-400/30 text-emerald-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-400/20 text-emerald-400">✅ Принято</span>`;
+        bannerStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-500">✅ Принято</span>`;
     } else if (status === 'REVISION') {
-        bannerStyle = 'bg-amber-500/10 border-amber-400/30 text-amber-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-400/20 text-amber-400">⚠️ На доработку</span>`;
+        bannerStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-500">⚠️ На доработку</span>`;
     } else if (status === 'REJECTED') {
-        bannerStyle = 'bg-red-500/10 border-red-400/30 text-red-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-400/20 text-red-400">❌ Отклонено</span>`;
-    } else if (status === 'SUBMITTED'){
-        bannerStyle = 'bg-blue-500/10 border-blue-400/30 text-blue-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-400/20 text-blue-400">🔎 На проверке</span>`;
+        bannerStyle = 'bg-rose-500/10 border-rose-500/30 text-rose-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-500/15 text-rose-500">❌ Отклонено</span>`;
+    } else if (status === 'SUBMITTED') {
+        bannerStyle = 'bg-blue-500/10 border-blue-500/30 text-blue-500';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-blue-500/15 text-blue-500">🔎 На проверке</span>`;
     } else {
-        bannerStyle = 'bg-gray-500/10 border-gray-400/30 text-gray-400';
-        statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-gray-400/20 text-gray-400">📝 Черновик</span>`;
+        bannerStyle = 'bg-[var(--bg-elevated)] border-[var(--border-color)] text-[var(--text-muted)]';
+        statusBadge = `<span class="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-500/15 text-[var(--text-muted)]">📝 Черновик</span>`;
     }
 
     statusContainer.className = `p-3 rounded-xl border text-xs space-y-2 ${bannerStyle}`;

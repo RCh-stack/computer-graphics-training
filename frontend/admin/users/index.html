@@ -7,20 +7,21 @@
     <link rel="stylesheet" href="../../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen">
-    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+<body data-module="users" class="font-sans min-h-screen">
+    <header class="ui-header">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../../index.html" class="flex items-center space-x-3 cursor-pointer">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
-                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/20 text-pink-400 border border-pink-500/30">Пользователи</span></span>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-500">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/15 text-pink-500 border border-pink-500/25">Пользователи</span></span>
             </a>
 
-            <div class="flex items-center gap-4">
-                <a href="../gradebook/index.html" class="text-xs text-pink-400 hover:underline"><i class="fa-solid fa-address-book"></i> Электронный журнал</a>
+            <div class="flex items-center gap-3">
+                <a href="../gradebook/index.html" class="ui-btn ui-btn-soft">
+                    <i class="fa-solid fa-address-book"></i>
+                    <span>Электронный журнал</span>
+                </a>
                 
-                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
-                    Светлая
-                </button>
+                <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
             </div>
         </div>
     </header>
@@ -29,33 +30,33 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold">Управление студентами и группами</h1>
-                <p class="text-xs text-[var(--text-main)] mt-1">Одобрение регистраций, привязка к учебным группам и управление ролями</p>
+                <p class="text-xs text-[var(--text-muted)] mt-1">Одобрение регистраций, привязка к учебным группам и управление ролями</p>
             </div>
 
-            <button id="btn-create-group" class="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-2 shadow-lg shadow-pink-600/20">
+            <button id="btn-create-group" type="button" class="ui-btn ui-btn-primary">
                 <i class="fa-solid fa-plus"></i> Создать группу
             </button>
         </div>
 
-        <div class="flex border-b border-gray-700/60 text-sm gap-6">
-            <button id="tab-btn-pending" class="py-3 font-semibold text-pink-400 border-b-2 border-pink-500 transition flex items-center gap-2">
+        <div class="flex ui-divider-b text-sm gap-6">
+            <button id="tab-btn-pending" class="py-3 font-semibold text-pink-500 border-b-2 border-pink-500 transition flex items-center gap-2">
                 <span>Заявки на получение доступа</span>
-                <span id="pending-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-400">0</span>
+                <span id="pending-badge" class="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/15 text-pink-500 font-bold">0</span>
             </button>
 
-            <button id="tab-btn-groups" class="py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2">
+            <button id="tab-btn-groups" class="py-3 font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition flex items-center gap-2">
                 <span>Группы и Студенты</span>
             </button>
 
-            <button id="tab-btn-teachers" class="py-3 font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition flex items-center gap-2">
+            <button id="tab-btn-teachers" class="py-3 font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition flex items-center gap-2">
                 <span>Преподаватели</span>
             </button>
         </div>
 
         <section id="tab-pending" class="space-y-4">
-            <div class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-hidden">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-gray-800/40 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700">
+            <div class="ui-table-wrap">
+                <table class="ui-table">
+                    <thead>
                         <tr>
                             <th class="py-3.5 px-4">ФИО Студента</th>
                             <th class="py-3.5 px-4">Email</th>
@@ -64,23 +65,23 @@
                             <th class="py-3.5 px-4 text-right">Действия</th>
                         </tr>
                     </thead>
-                    <tbody id="pending-table-body" class="divide-y divide-gray-700/50"></tbody>
+                    <tbody id="pending-table-body"></tbody>
                 </table>
             </div>
         </section>
 
-        <section id="tab-groups" class="hidden space-y-6">
-            <div class="flex items-center gap-4 bg-[var(--bg-card)] p-4 rounded-xl border border-gray-700">
-                <label class="text-xs font-semibold text-[var(--text-main)]">Выберите группу:</label>
-                <select id="group-select" class="bg-[var(--bg-panel)] border border-gray-700 text-sm rounded-xl px-4 py-2 focus:outline-none focus:border-pink-500">
+        <section id="tab-groups" class="hidden space-y-5">
+            <div class="ui-card p-4 flex items-center gap-4">
+                <label for="group-select" class="text-xs font-semibold text-[var(--text-muted)]">Выберите группу:</label>
+                <select id="group-select" class="ui-select px-4 py-2 text-xs min-w-[200px]">
                     <option value="all">Все группы</option>
                     <option value="unassigned">Без группы</option>
                 </select>
             </div>
 
-            <div class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-hidden">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-gray-800/40 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700">
+            <div class="ui-table-wrap">
+                <table class="ui-table">
+                    <thead>
                         <tr>
                             <th class="py-3.5 px-4">ФИО Пользователя</th>
                             <th class="py-3.5 px-4">Группа</th>
@@ -89,15 +90,15 @@
                             <th class="py-3.5 px-4 text-right">Управление доступом</th>
                         </tr>
                     </thead>
-                    <tbody id="students-table-body" class="divide-y divide-gray-700/50"></tbody>
+                    <tbody id="students-table-body"></tbody>
                 </table>
             </div>
         </section>
 
         <section id="tab-teachers" class="hidden space-y-4">
-            <div class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-hidden">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-gray-800/40 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700">
+            <div class="ui-table-wrap">
+                <table class="ui-table">
+                    <thead>
                         <tr>
                             <th class="py-3.5 px-4">Преподаватель</th>
                             <th class="py-3.5 px-4">Email</th>
@@ -105,12 +106,14 @@
                             <th class="py-3.5 px-4 text-right">Действия</th>
                         </tr>
                     </thead>
-                    <tbody id="teachers-table-body" class="divide-y divide-gray-700/50"></tbody>
+                    <tbody id="teachers-table-body"></tbody>
                 </table>
             </div>
         </section>
     </main>
 
+    <script src="../../src/skeleton.js"></script>
+    <script src="../../src/toast.js"></script>
     <script src="src/ui.js"></script>
     <script src="../../src/theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>

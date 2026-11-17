@@ -26,31 +26,23 @@ function initThemeToggleListener() {
 }
 
 function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-content').forEach((el) => {
+        el.classList.add('hidden');
+    });
+    document.getElementById(tabId)?.classList.remove('hidden');
 
-    const activeClasses = ['bg-pink-500/10', 'text-pink-400', 'font-semibold', 'border-pink-500/20', 'active'];
-    const inactiveClasses = ['hover:border-[var(--border-color)]', 'hover:bg-[var(--bg-card)]', 'text-[var(--text-main)]', 'font-medium', 'border-transparent'];
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove(...activeClasses);
-        btn.classList.add(...inactiveClasses);
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.classList.remove('active', 'bg-pink-500/10', 'text-pink-400', 'text-pink-500', 'border-pink-500/20', 'border-transparent', 'font-semibold');
     });
 
-    const activeTab = document.getElementById(tabId);
-    if (activeTab) activeTab.classList.remove('hidden');
-
-    const activeBtn = document.getElementById(`btn-${tabId}`);
-    if (activeBtn) {
-        activeBtn.classList.remove(...inactiveClasses);
-        activeBtn.classList.add(...activeClasses);
-    }
+    document.getElementById(`btn-${tabId}`)?.classList.add('active');
 }
 
 async function loadUserProfile() {
     try {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/users/profile`, {
+        const response = await fetch('/api/v1/users/profile', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -71,6 +63,10 @@ async function loadUserProfile() {
 }
 
 async function loadUserStats() {
+    if (window.Skeleton) {
+        Skeleton.render('#theory-chapters-list', Skeleton.chaptersList(3));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
 
@@ -100,6 +96,16 @@ async function loadUserStats() {
         renderTheoryChapters(theory.chapters);
     } catch (error) {
         console.error('Ошибка загрузки статистики:', error);
+
+        ['stat-lessons-count', 'stat-labs-count', 'stat-tests-count', 'stat-avg-grade'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = '—';
+        });
+
+        const chaptersContainer = document.getElementById('theory-chapters-list');
+        if (chaptersContainer) {
+            chaptersContainer.innerHTML = `<p class="text-xs text-rose-500 py-2">Не удалось загрузить прогресс по главам.</p>`;
+        }
     }
 }
 
@@ -151,15 +157,20 @@ function renderDoughnutChart(canvasId, passed, total, activeColor, label) {
 
 function renderTheoryChapters(chapters) {
     const container = document.getElementById('theory-chapters-list');
-    if (!container || !chapters || chapters.length === 0) return;
+    if (!container) return;
+
+    if (!chapters || chapters.length === 0) {
+        container.innerHTML = `<p class="text-xs text-[var(--text-muted)] py-2">Главы учебника пока не добавлены.</p>`;
+        return;
+    }
 
     container.innerHTML = chapters.map(ch => `
-        <div class="space-y-1">
+        <div class="space-y-1.5">
             <div class="flex justify-between text-xs font-medium">
                 <span class="text-[var(--text-main)]">${ch.title}</span>
-                <span class="font-mono text-indigo-400 font-bold">${ch.completedArticles} / ${ch.totalArticles} (${ch.percent}%)</span>
+                <span class="font-mono text-indigo-500 font-bold">${ch.completedArticles} / ${ch.totalArticles} (${ch.percent}%)</span>
             </div>
-            <div class="w-full bg-[var(--bg-panel)] rounded-full h-2 overflow-hidden border border-[var(--border-color)]">
+            <div class="w-full bg-[var(--bg-elevated)] rounded-full h-2 overflow-hidden border border-[var(--border-color)]">
                 <div class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: ${ch.percent}%"></div>
             </div>
         </div>
@@ -176,6 +187,10 @@ function toggleChaptersCollapse() {
 }
 
 async function loadUserHistory() {
+    if (window.Skeleton) {
+        Skeleton.render('#history-table-body', Skeleton.tableRows(4, 4));
+    }
+
     try {
         const token = localStorage.getItem('authToken');
 
@@ -190,7 +205,7 @@ async function loadUserHistory() {
         if (!response.ok) throw new Error('Не удалось загрузить историю активности');
 
         const result = await response.json();
-        
+
         if (result.status === 'success' && result.data) {
             rawHistoryData = result.data;
             renderHistoryTable('all');
@@ -201,7 +216,7 @@ async function loadUserHistory() {
         if (tbody) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="py-4 text-center text-red-400">
+                    <td colspan="4" class="py-6 text-center text-rose-500 text-xs">
                         Не удалось загрузить историю активности.
                     </td>
                 </tr>`;
@@ -254,7 +269,7 @@ function renderHistoryTable(filter = 'all') {
     if (items.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4" class="py-6 text-center text-[var(--text-main)]">
+                <td colspan="4" class="py-8 text-center text-[var(--text-muted)] text-xs">
                     История сдач пока пуста
                 </td>
             </tr>`;
@@ -266,24 +281,24 @@ function renderHistoryTable(filter = 'all') {
         const isTest = item.type === 'test';
         const isLesson = item.type === 'lesson';
 
-        const typeBadge = isLab 
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-flask"></i> Lab</span>`
-            : isTest ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-list-check"></i> Test</span>`
-            : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"><i class="fa-solid fa-book"></i> Lesson</span>`;
+        const typeBadge = isLab
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25"><i class="fa-solid fa-flask"></i> Lab</span>`
+            : isTest ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/25"><i class="fa-solid fa-list-check"></i> Test</span>`
+            : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/25"><i class="fa-solid fa-book"></i> Lesson</span>`;
 
-        const titleHTML = (isLesson && item.chapterTitle) 
+        const titleHTML = (isLesson && item.chapterTitle)
             ? `<div>
                 <div class="font-medium text-[var(--text-main)]">${item.title}</div>
-                <div class="text-[10px] text-[var(--text-muted)] opacity-80 font-normal">${item.chapterTitle}</div>
+                <div class="text-[10px] text-[var(--text-muted)] font-normal">${item.chapterTitle}</div>
                </div>`
             : `<div class="font-medium text-[var(--text-main)]">${item.title}</div>`;
 
-        let gradeColor = 'text-emerald-400';
-        if (item.grade < 60) gradeColor = 'text-red-400';
-        else if (item.grade < 80) gradeColor = 'text-amber-400';
+        let gradeColor = 'text-emerald-500';
+        if (item.grade < 60) gradeColor = 'text-rose-500';
+        else if (item.grade < 80) gradeColor = 'text-amber-500';
 
         const gradeHTML = isLesson
-            ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">✓ Изучено</span>`
+            ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/25">✓ Изучено</span>`
             : `<span class="font-bold font-mono ${gradeColor}">${item.grade}%</span>`;
 
         const formattedDate = item.date.toLocaleString('ru-RU', {
@@ -295,11 +310,11 @@ function renderHistoryTable(filter = 'all') {
         });
 
         return `
-            <tr class="hover:bg-[var(--bg-card)] transition">
+            <tr class="hover:bg-[var(--bg-hover)] transition">
                 <td class="py-3 px-3">${typeBadge}</td>
                 <td class="py-3 px-3">${titleHTML}</td>
                 <td class="py-3 px-3 text-center">${gradeHTML}</td>
-                <td class="py-3 px-3 text-right text-[var(--text-main)]">${formattedDate}</td>
+                <td class="py-3 px-3 text-right text-[var(--text-muted)] text-xs">${formattedDate}</td>
             </tr>
         `;
     }).join('');
@@ -318,9 +333,9 @@ function filterHistory(filterType) {
         if (!btn) return;
 
         if (key === filterType) {
-            btn.className = 'px-3 py-1 rounded-lg font-medium text-pink-400 bg-pink-500/10 border border-pink-500/20 transition';
+            btn.className = 'px-3 py-1 rounded-lg font-semibold text-pink-500 bg-pink-500/10 border border-pink-500/25 transition cursor-pointer';
         } else {
-            btn.className = 'px-3 py-1 rounded-lg font-medium text-[var(--text-main)] hover:text-[var(--text-main)] transition';
+            btn.className = 'px-3 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] border border-transparent transition cursor-pointer';
         }
     });
 
@@ -354,14 +369,15 @@ async function handleProfileUpdate(e) {
 
             localStorage.setItem('user', JSON.stringify(localUser));
 
-            Swal.fire({ title: 'Сохранено!', text: 'Данные профиля обновлены', icon: 'success', confirmButtonColor: '#10b981' });
+            Toast.success('Данные профиля обновлены');
 
             updateHeaderProfile();
         } else {
-            Swal.fire({ title: 'Ошибка', text: result.message || 'Не удалось обновить данные', icon: 'error' });
+            Toast.error(result.message || 'Не удалось обновить данные');
         }
     } catch (error) {
         console.error(error);
+        Toast.error('Ошибка соединения с сервером');
     }
 }
 
@@ -385,13 +401,14 @@ async function handlePasswordChange(e) {
         const result = await response.json();
 
         if (result.status === 'success') {
-            Swal.fire({ title: 'Успешно!', text: 'Пароль успешно изменен', icon: 'success', confirmButtonColor: '#10b981' });
+            Toast.success('Пароль успешно изменен');
             document.getElementById('password-form').reset();
         } else {
-            Swal.fire({ title: 'Ошибка', text: result.message || 'Неверный текущий пароль', icon: 'error' });
+            Toast.error(result.message || 'Неверный текущий пароль');
         }
     } catch (error) {
         console.error(error);
+        Toast.error('Ошибка соединения с сервером');
     }
 }
 
@@ -404,7 +421,7 @@ function updateHeaderProfile() {
 
         const userNameEl = document.getElementById('user-name');
         if (userNameEl) {
-            const fullName = `${user.firstName}`.trim();
+            const fullName = `${user.firstName || ''}`.trim();
             userNameEl.innerText = fullName || user.email || 'Студент';
         }
 

@@ -10,6 +10,7 @@ let labState = {
     testCases: []
 };
 let activeTCIndex = 0;
+let isLabLoaded = false;
 
 let adminTemplatesState = {
     cpp: '',
@@ -27,7 +28,7 @@ function initEvents() {
 
     document.getElementById('admin-template-lang-select')?.addEventListener('change', (e) => {
         adminTemplatesState[activeAdminLang] = document.getElementById('lab-template-code').value;
-        
+
         activeAdminLang = e.target.value;
         document.getElementById('lab-template-code').value = adminTemplatesState[activeAdminLang] || '';
     });
@@ -53,12 +54,50 @@ function initEvents() {
     });
 }
 
+function setLabLoadingState(isLoading) {
+    const saveBtn = document.getElementById('btn-save-lab');
+    const reqList = document.getElementById('requirements-list');
+    const tcNav = document.getElementById('testcase-nav-list');
+    const editorCard = document.getElementById('tc-editor-card');
+    const emptyState = document.getElementById('tc-empty-state');
+
+    if (saveBtn) saveBtn.disabled = isLoading;
+
+    if (isLoading) {
+        if (reqList) {
+            reqList.innerHTML = `
+                <div aria-hidden="true" class="space-y-2 animate-pulse">
+                    <div class="h-7 w-full rounded-lg bg-gray-500/15"></div>
+                    <div class="h-7 w-4/5 rounded-lg bg-gray-500/15"></div>
+                </div>
+            `;
+        }
+        if (tcNav && window.Skeleton) {
+            Skeleton.render(tcNav, Skeleton.questionPalette(4));
+        }
+
+        emptyState?.classList.add('hidden');
+        editorCard?.classList.add('hidden');
+
+        if (editorCard && editorCard.parentElement && !document.getElementById('tc-editor-skeleton') && window.Skeleton) {
+            const skeletonWrapper = document.createElement('div');
+            skeletonWrapper.id = 'tc-editor-skeleton';
+            skeletonWrapper.className = editorCard.className.replace('hidden', '');
+            skeletonWrapper.innerHTML = Skeleton.labTestCaseEditor();
+            editorCard.parentElement.insertBefore(skeletonWrapper, editorCard);
+        }
+    } else {
+        document.getElementById('tc-editor-skeleton')?.remove();
+    }
+}
+
 async function loadLabDetails() {
     if (!labId) {
         window.location.href = 'labs.html';
         return;
     }
 
+    setLabLoadingState(true);
     const token = localStorage.getItem('authToken');
 
     try {
@@ -67,7 +106,7 @@ async function loadLabDetails() {
         });
         const data = await res.json();
 
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
             const lab = data.lab;
 
             document.getElementById('lab-title').value = lab.title || '';
@@ -113,13 +152,20 @@ async function loadLabDetails() {
             }
             labState.testCases = Array.isArray(testCases) ? testCases : [];
 
+            isLabLoaded = true;
+            setLabLoadingState(false);
+
             activeTCIndex = 0;
             renderRequirements();
             renderTestCaseNav();
             renderActiveTestCaseEditor();
+        } else {
+            throw new Error(data.message || 'Не удалось загрузить лабораторную работу');
         }
     } catch (error) {
         console.error('Ошибка загрузки работы:', error);
+        setLabLoadingState(false);
+        window.Toast?.error('Ошибка загрузки', 'Не удалось получить параметры лабораторной работы');
     }
 }
 
@@ -148,15 +194,15 @@ function renderTestCaseNav() {
     counter.innerText = labState.testCases.length;
 
     if (labState.testCases.length === 0) {
-        container.innerHTML = `<span class="col-span-4 text-xs text-[var(--text-main)] text-center py-1">Пусто</span>`;
+        container.innerHTML = `<span class="col-span-4 text-xs text-[var(--text-muted)] text-center py-1">Пусто</span>`;
         return;
     }
 
     container.innerHTML = labState.testCases.map((tc, idx) => {
         const isActive = idx === activeTCIndex;
-        const btnClass = isActive 
-            ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-md shadow-emerald-600/30' 
-            : 'bg-[var(--bg-panel)] text-[var(--text-main)] border-gray-700 hover:border-emerald-500/50';
+        const btnClass = isActive
+            ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-md shadow-emerald-600/25'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-main)] border-[var(--border-color)] hover:border-emerald-500/50';
 
         return `
             <button type="button" data-index="${idx}" class="tc-nav-btn py-1.5 px-1 text-xs rounded-xl border transition text-center font-mono ${btnClass}">
@@ -204,11 +250,23 @@ function addNewTestCase() {
     renderActiveTestCaseEditor();
 }
 
-function deleteActiveTestCase() {
+async function deleteActiveTestCase() {
     if (labState.testCases.length === 0) return;
 
+    const confirmRes = await Swal.fire({
+        title: `Удалить тест №${activeTCIndex + 1}?`,
+        text: 'Тест-кейс будет удален после сохранения лабораторной работы.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Удалить',
+        cancelButtonText: 'Отмена',
+        confirmButtonColor: '#ef4444'
+    });
+
+    if (!confirmRes.isConfirmed) return;
+
     labState.testCases.splice(activeTCIndex, 1);
-    
+
     labState.testCases.forEach((tc, idx) => tc.id = idx + 1);
 
     if (activeTCIndex >= labState.testCases.length) {
@@ -217,20 +275,24 @@ function deleteActiveTestCase() {
 
     renderTestCaseNav();
     renderActiveTestCaseEditor();
+    window.Toast?.info('Тест-кейс удален', 'Не забудьте сохранить лабораторную работу');
 }
 
 function renderRequirements() {
     const container = document.getElementById('requirements-list');
     if (!container) return;
 
-    container.innerHTML = labState.requirements.map((req, idx) => `
-        <div class="flex items-center gap-2">
-            <input type="text" value="${req}" class="req-input flex-1 px-2.5 py-1 bg-[var(--bg-panel)] border border-gray-700 rounded-lg text-xs focus:outline-none focus:border-emerald-500" data-index="${idx}">
-            <button type="button" class="btn-remove-req text-[var(--text-main)] hover:text-red-400 text-xs px-1.5" data-index="${idx}">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    `).join('');
+    container.innerHTML = labState.requirements.map((req, idx) => {
+        const safeReq = String(req || '').replace(/"/g, '"');
+        return `
+            <div class="flex items-center gap-2">
+                <input type="text" value="${safeReq}" class="req-input ui-input flex-1 px-2.5 py-1" data-index="${idx}">
+                <button type="button" class="btn-remove-req text-[var(--text-muted)] hover:text-rose-500 text-xs px-1.5 transition" data-index="${idx}">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
 }
 
 function addRequirement() {
@@ -248,10 +310,18 @@ function syncRequirementsFromDOM() {
 }
 
 async function saveLab() {
+    if (!isLabLoaded) return;
+
     syncActiveTestCaseFromDOM();
     syncRequirementsFromDOM();
 
     adminTemplatesState[activeAdminLang] = document.getElementById('lab-template-code').value;
+
+    const saveBtn = document.getElementById('btn-save-lab');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
 
     const token = localStorage.getItem('authToken');
 
@@ -261,9 +331,9 @@ async function saveLab() {
         difficulty: document.getElementById('lab-difficulty').value,
         order: parseInt(document.getElementById('lab-order').value) || 0,
         isUnlocked: document.getElementById('lab-is-unlocked').checked,
-        
+
         templateCode: JSON.stringify(adminTemplatesState),
-        
+
         taskJson: {
             title: document.getElementById('task-title').value,
             instruction: document.getElementById('task-instruction').value,
@@ -275,9 +345,9 @@ async function saveLab() {
     try {
         const res = await fetch(`/api/v1/admin/labs/${labId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
         });
@@ -285,17 +355,17 @@ async function saveLab() {
         const data = await res.json();
 
         if (res.ok) {
-            Swal.fire({ 
-                title: 'Сохранено!', 
-                text: 'Лабораторная работа успешно обновлена', 
-                icon: 'success', 
-                confirmButtonColor: '#10b981' 
-            });
+            Toast.success('Лабораторная работа успешно обновлена');
         } else {
-            Swal.fire('Ошибка', data.message || 'Не удалось сохранить лабораторную работу', 'error');
+            Toast.error(data.message || 'Не удалось сохранить лабораторную работу');
         }
     } catch (error) {
         console.error(error);
-        Swal.fire('Ошибка', 'Ошибка сети при сохранении', 'error');
+        Toast.error('Ошибка сети при сохранении');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
     }
 }

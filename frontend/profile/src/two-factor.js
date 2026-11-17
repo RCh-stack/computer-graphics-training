@@ -9,14 +9,14 @@ function update2FAStatusUI(isEnabled) {
     if (isEnabled) {
         if (badge) {
             badge.textContent = 'Включена';
-            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium';
+            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 font-semibold';
         }
         setupBtn?.classList.add('hidden');
         disableBtn?.classList.remove('hidden');
     } else {
         if (badge) {
             badge.textContent = 'Отключена';
-            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20 font-medium';
+            badge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border-color)] font-semibold';
         }
         disableBtn?.classList.add('hidden');
         setupBtn?.classList.remove('hidden');
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (!res.ok) {
-                Swal.fire('Ошибка', data.message || 'Не удалось начать настройку 2FA', 'error');
+                Toast.error(data.message || 'Не удалось начать настройку 2FA');
                 return;
             }
 
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('2fa-confirm-code')?.focus();
         } catch (err) {
             console.error('Ошибка генерации QR-кода 2FA:', err);
-            Swal.fire('Ошибка сети', 'Не удалось получить QR-код', 'error');
+            Toast.error('Не удалось получить QR-код');
         }
     });
 
@@ -75,21 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const secret = document.getElementById('2fa-manual-secret')?.textContent;
         if (!secret) return;
         await navigator.clipboard.writeText(secret);
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: 'Ключ скопирован',
-            showConfirmButton: false,
-            timer: 2000
-        });
+        Toast.info('Ключ скопирован в буфер обмена');
     });
 
     document.getElementById('btn-confirm-enable-2fa')?.addEventListener('click', async () => {
         const code = document.getElementById('2fa-confirm-code')?.value.trim();
 
         if (!code || code.length !== 6) {
-            Swal.fire('Введите код', 'Укажите 6-значный код из приложения', 'warning');
+            Toast.warning('Введите код', 'Укажите 6-значный код из приложения');
             return;
         }
 
@@ -106,15 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (!res.ok) {
-                Swal.fire('Неверный код', data.message || 'Проверьте код и время на устройстве', 'error');
+                Toast.error(data.message || 'Проверьте код и время на устройстве');
                 return;
             }
 
             update2FAStatusUI(true);
-            Swal.fire('Готово!', 'Двухфакторная аутентификация включена', 'success');
+            Toast.success('Двухфакторная аутентификация включена');
         } catch (err) {
             console.error('Ошибка активации 2FA:', err);
-            Swal.fire('Ошибка сети', 'Не удалось активировать 2FA', 'error');
+            Toast.error('Не удалось активировать 2FA');
         }
     });
 
@@ -126,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inputPlaceholder: 'Текущий пароль',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#374151',
+            cancelButtonColor: '#64748b',
             confirmButtonText: 'Отключить 2FA',
             cancelButtonText: 'Отмена',
             inputValidator: (value) => {
@@ -149,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (!res.ok) {
-                Swal.fire('Ошибка', data.message || 'Не удалось отключить 2FA', 'error');
+                Toast.error(data.message || 'Не удалось отключить 2FA');
                 return;
             }
 
@@ -163,10 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {}
 
             update2FAStatusUI(false);
-            Swal.fire('Отключено', 'Двухфакторная аутентификация выключена', 'info');
-        } catch (err) {
-            console.error('Ошибка отключения 2FA:', err);
-            Swal.fire('Ошибка сети', 'Не удалось отключить 2FA', 'error');
+            Toast.info('Двухфакторная аутентификация выключена');
+        } catch (error) {
+            console.error('Ошибка отключения 2FA:', error);
+            Toast.error('Не удалось отключить 2FA');
         }
     });
 });

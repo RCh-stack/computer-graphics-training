@@ -9,6 +9,7 @@ const lessonId = new URLSearchParams(window.location.search).get('id');
 let quill = null;
 let currentOrder = 1;
 let widgetsState = [];
+let isLessonLoaded = false;
 
 const WIDGET_PRESETS = {
     RAY_SPHERE_2D: { t: 130, angle: 0, origin: { x: 30, y: 110 }, sphere: { r: 35, x: 180, y: 110 } },
@@ -45,6 +46,7 @@ function initEvents() {
             const idx = parseInt(removeBtn.dataset.index);
             widgetsState.splice(idx, 1);
             renderWidgets();
+            window.Toast?.info('Виджет удален', 'Не забудьте сохранить страницу');
             return;
         }
     });
@@ -64,12 +66,28 @@ function initEvents() {
     });
 }
 
+function setEditorLoadingState(isLoading) {
+    const titleInput = document.getElementById('lesson-title');
+    const saveBtn = document.getElementById('btn-save-lesson');
+    const addWidgetBtn = document.getElementById('btn-add-widget');
+
+    if (titleInput) titleInput.disabled = isLoading;
+    if (saveBtn) saveBtn.disabled = isLoading;
+    if (addWidgetBtn) addWidgetBtn.disabled = isLoading;
+    if (quill) quill.enable(!isLoading);
+
+    if (isLoading && window.Skeleton) {
+        Skeleton.render('#widgets-list-container', Skeleton.widgetCards(1));
+    }
+}
+
 async function loadLessonDetails() {
     if (!lessonId) {
         window.location.href = 'index.html';
         return;
     }
 
+    setEditorLoadingState(true);
     const token = localStorage.getItem('authToken');
 
     try {
@@ -78,25 +96,33 @@ async function loadLessonDetails() {
         });
         const data = await res.json();
 
-        if (data.status === 'success') {
+        if (res.ok && data.status === 'success') {
             const art = data.lesson;
             document.getElementById('lesson-title').value = art.title || '';
             currentOrder = art.order || 1;
 
-            if (quill && art.content) {
-                quill.root.innerHTML = art.content;
+            if (quill) {
+                quill.root.innerHTML = art.content || '';
             }
 
             let wConfig = art.widgets_config;
             if (typeof wConfig === 'string') {
-                try { wConfig = JSON.parse(wConfig); } catch(e) { wConfig = []; }
+                try { wConfig = JSON.parse(wConfig); } catch (e) { wConfig = []; }
             }
             widgetsState = Array.isArray(wConfig) ? wConfig : [];
 
+            isLessonLoaded = true;
+            setEditorLoadingState(false);
             renderWidgets();
+        } else {
+            throw new Error(data.message || 'Не удалось загрузить статью');
         }
     } catch (error) {
         console.error('Ошибка загрузки статьи:', error);
+        setEditorLoadingState(false);
+        const container = document.getElementById('widgets-list-container');
+        if (container) container.innerHTML = '';
+        window.Toast?.error('Ошибка загрузки', 'Не удалось загрузить содержимое статьи');
     }
 }
 
@@ -105,7 +131,7 @@ function renderWidgets() {
     if (!container) return;
 
     if (widgetsState.length === 0) {
-        container.innerHTML = `<div class="p-6 border border-dashed border-[var(--border-color)] rounded-xl text-center text-[var(--text-main)] text-xs">Виджеты не привязаны к этой странице</div>`;
+        container.innerHTML = `<div class="p-6 border border-dashed border-[var(--border-strong)] rounded-xl text-center text-[var(--text-muted)] text-xs">Виджеты не привязаны к этой странице</div>`;
         return;
     }
 
@@ -114,17 +140,17 @@ function renderWidgets() {
         const configJson = JSON.stringify(w.config || WIDGET_PRESETS[widgetId], null, 2);
 
         return `
-            <div class="widget-card bg-[var(--bg-panel)] p-3.5 rounded-xl border border-[var(--border-color)] space-y-3" data-index="${idx}">
-                <div class="flex justify-between items-center border-b border-[var(--border-color)] pb-2">
-                    <span class="text-xs font-bold font-mono text-blue-300">Виджет ${idx + 1}</span>
-                    <button type="button" class="btn-remove-widget text-red-400 text-xs hover:underline" data-index="${idx}">
+            <div class="widget-card ui-subcard p-3.5 space-y-3" data-index="${idx}">
+                <div class="flex justify-between items-center ui-divider-b pb-2">
+                    <span class="text-xs font-bold font-mono text-blue-500">Виджет №${idx + 1}</span>
+                    <button type="button" class="btn-remove-widget text-rose-500 text-xs hover:underline font-medium" data-index="${idx}">
                         <i class="fa-solid fa-trash mr-1"></i> Удалить
                     </button>
                 </div>
 
                 <div>
-                    <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Тип виджета</label>
-                    <select class="widget-type-select w-full px-2.5 py-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-xs font-semibold focus:outline-none focus:border-blue-500">
+                    <label class="block text-[10px] uppercase font-semibold text-[var(--text-muted)] mb-1">Тип виджета</label>
+                    <select class="widget-type-select ui-select w-full px-2.5 py-1.5 font-semibold">
                         <option value="RAY_SPHERE_2D" ${widgetId === 'RAY_SPHERE_2D' ? 'selected' : ''}>RAY_SPHERE_2D</option>
                         <option value="LAMBERT_DIFFUSE_2D" ${widgetId === 'LAMBERT_DIFFUSE_2D' ? 'selected' : ''}>LAMBERT_DIFFUSE_2D</option>
                         <option value="SPECULAR_REFLECTION_2D" ${widgetId === 'SPECULAR_REFLECTION_2D' ? 'selected' : ''}>SPECULAR_REFLECTION_2D</option>
@@ -132,8 +158,8 @@ function renderWidgets() {
                 </div>
 
                 <div>
-                    <label class="block text-[10px] uppercase font-semibold text-[var(--text-main)] mb-1">Параметры (JSON)</label>
-                    <textarea rows="5" class="widget-config-textarea w-full font-mono text-[11px] px-2.5 py-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-lg text-blue-300 focus:outline-none focus:border-blue-500 leading-relaxed">${configJson}</textarea>
+                    <label class="block text-[10px] uppercase font-semibold text-[var(--text-muted)] mb-1">Параметры (JSON)</label>
+                    <textarea rows="5" class="widget-config-textarea ui-textarea w-full font-mono text-[11px] px-2.5 py-1.5 text-blue-500 leading-relaxed">${configJson}</textarea>
                 </div>
             </div>
         `;
@@ -141,7 +167,7 @@ function renderWidgets() {
 }
 
 function addNewWidget() {
-    syncWidgetsFromDOM();
+    if (!syncWidgetsFromDOM()) return;
     widgetsState.push({
         type: 'widget',
         widgetId: 'RAY_SPHERE_2D',
@@ -151,6 +177,8 @@ function addNewWidget() {
 }
 
 function syncWidgetsFromDOM() {
+    let isValid = true;
+
     document.querySelectorAll('.widget-card').forEach((card, idx) => {
         if (!widgetsState[idx]) return;
 
@@ -160,23 +188,36 @@ function syncWidgetsFromDOM() {
         let parsedConfig = {};
         try {
             parsedConfig = JSON.parse(textareaEl.value);
+            textareaEl.classList.remove('border-rose-500');
         } catch {
-            parsedConfig = WIDGET_PRESETS[selectEl.value] || {};
+            isValid = false;
+            textareaEl.classList.add('border-rose-500');
+            window.Toast?.warning(`Ошибка JSON в виджете №${idx + 1}`, 'Проверьте синтаксис параметров перед сохранением');
         }
 
-        widgetsState[idx] = {
-            type: 'widget',
-            widgetId: selectEl ? selectEl.value : 'RAY_SPHERE_2D',
-            config: parsedConfig
-        };
+        if (isValid) {
+            widgetsState[idx] = {
+                type: 'widget',
+                widgetId: selectEl ? selectEl.value : 'RAY_SPHERE_2D',
+                config: parsedConfig
+            };
+        }
     });
+
+    return isValid;
 }
 
 async function saveLesson() {
-    syncWidgetsFromDOM();
+    if (!isLessonLoaded) return;
+    if (!syncWidgetsFromDOM()) return;
+
+    const saveBtn = document.getElementById('btn-save-lesson');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
 
     const token = localStorage.getItem('authToken');
-
     const htmlContent = quill ? quill.root.innerHTML : '';
 
     const payload = {
@@ -189,9 +230,9 @@ async function saveLesson() {
     try {
         const res = await fetch(`/api/v1/admin/ebook/lessons/${lessonId}`, {
             method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(payload)
         });
@@ -199,20 +240,17 @@ async function saveLesson() {
         const data = await res.json();
 
         if (res.ok) {
-            Swal.fire({ 
-                title: 'Сохранено!', 
-                text: 'Страница успешно сохранена', 
-                icon: 'success', 
-                confirmButtonText: 'ОК',
-                confirmButtonColor: '#2563eb',
-                allowOutsideClick: false,
-                allowEscapeKey: false  
-            });
+            Toast.success('Страница успешно сохранена');
         } else {
-            Swal.fire({ title: 'Ошибка', text: data.message || 'Не удалось сохранить страницу', icon: 'error', confirmButtonText: 'ОК' });
+            Toast.error(data.message || 'Не удалось сохранить страницу');
         }
     } catch (error) {
         console.error(error);
-        Swal.fire({ title: 'Ошибка', text: 'Ошибка подключения к серверу', icon: 'error', confirmButtonText: 'ОК' });
+        Toast.error('Ошибка подключения к серверу');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
     }
 }

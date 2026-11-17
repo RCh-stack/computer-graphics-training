@@ -7,123 +7,122 @@
     <link rel="stylesheet" href="../../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-[var(--bg-panel)] text-[var(--text-main)] font-sans min-h-screen flex flex-col">
-    <header class="bg-[var(--bg-panel)] border-b border-[var(--border-color)] sticky top-0 z-50">
+<body data-module="users" class="font-sans min-h-screen flex flex-col">
+    <header class="ui-header">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <a href="../../index.html" class="flex items-center space-x-3 cursor-pointer">
                 <i class="fa-solid fa-graduation-cap text-pink-500 text-2xl"></i>
-                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-400">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/20 text-pink-400 border border-pink-500/30">Журнал</span></span>
+                <span class="text-xl font-bold tracking-wide">VirtualLab <span class="text-pink-500">Edu</span> <span class="text-xs ml-2 px-2 py-0.5 rounded bg-pink-500/15 text-pink-500 border border-pink-500/25">Журнал</span></span>
             </a>
-            <div class="flex items-center gap-4">
-                <a href="../users/index.html" class="text-xs text-pink-400 hover:underline"><i class="fa-solid fa-users"></i> Пользователи</a>
-                <button id="theme-toggle" class="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-main)] px-2.5 py-1 rounded-lg text-xs font-semibold">
-                    Светлая
-                </button>
+            <div class="flex items-center gap-3">
+                <a href="../users/index.html" class="ui-btn ui-btn-soft">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Пользователи</span>
+                </a>
+                <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
             </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-6 flex-1 w-full">
-      
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-700/60 pb-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ui-divider-b pb-4">
             <div>
                 <h1 class="text-2xl font-bold">Электронный журнал успеваемости</h1>
-                <p class="text-xs text-[var(--text-main)] mt-1">Сводная ведомость выполнения лабораторных работ и тестирования</p>
+                <p class="text-xs text-[var(--text-muted)] mt-1">Сводная ведомость выполнения лабораторных работ и тестирования</p>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <input id="gradebook-search-input" type="text" placeholder="Поиск студента..." 
-                    class="bg-[var(--bg-card)] border border-gray-700 text-xs rounded-xl px-3 py-2 text-[var(--text-main)] focus:outline-none focus:border-pink-500 w-48">
+                    class="ui-input px-3 py-2 w-48">
 
-                <select id="gradebook-group-select" class="bg-[var(--bg-card)] border border-gray-700 text-xs rounded-xl px-4 py-2 focus:outline-none focus:border-pink-500">
+                <select id="gradebook-group-select" class="ui-select px-4 py-2">
                     <option value="">Все группы</option>
                 </select>
 
                 <button id="btn-export-excel" type="button" 
-                    class="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl text-xs font-semibold border border-emerald-500/30 transition flex items-center gap-2">
+                    class="ui-btn bg-emerald-500/10 hover:bg-emerald-600 text-emerald-500 hover:text-white border-emerald-500/25">
                     <i class="fa-solid fa-file-excel"></i>
                     <span>Экспорт (.xlsx)</span>
                 </button>
             </div>
         </div>
 
-        <div class="flex border-b border-gray-700 space-x-2">
-            <button id="tab-btn-theory" type="button" class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-main)] hover:text-[var(--text-main)] flex items-center gap-2">
+        <div class="flex ui-divider-b space-x-2">
+            <button id="tab-btn-theory" type="button" class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-2 transition">
                 <i class="fa-solid fa-book-open"></i>
                 <span>Теория</span>
             </button>
 
-            <button id="tab-btn-labs" type="button" class="px-4 py-2.5 text-xs font-bold border-b-2 border-emerald-500 text-emerald-400 flex items-center gap-2">
+            <button id="tab-btn-labs" type="button" class="px-4 py-2.5 text-xs font-bold border-b-2 border-emerald-500 text-emerald-500 flex items-center gap-2 transition">
                 <i class="fa-solid fa-flask"></i>
                 <span>Лабораторные работы</span>
             </button>
 
-            <button id="tab-btn-tests" type="button" class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-main)] hover:text-[var(--text-main)] flex items-center gap-2">
+            <button id="tab-btn-tests" type="button" class="px-4 py-2.5 text-xs font-semibold border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-2 transition">
                 <i class="fa-solid fa-list-check"></i>
                 <span>Тестирование</span>
             </button>
         </div>
 
-        <div id="section-theory-gradebook" class="hidden bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-x-auto shadow-lg">
-            <table class="w-full text-left text-xs border-collapse">
-                <thead id="theory-thead" class="bg-gray-800/60 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700"></thead>
-                <tbody id="theory-tbody" class="divide-y divide-gray-700/50 text-[var(--text-main)]"></tbody>
+        <div id="section-theory-gradebook" class="hidden ui-table-wrap">
+            <table class="ui-table">
+                <thead id="theory-thead"></thead>
+                <tbody id="theory-tbody"></tbody>
             </table>          
         </div>
 
-        <div id="section-labs-gradebook" class="bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-x-auto shadow-lg">
-            <table class="w-full text-left text-xs border-collapse">
-                <thead id="labs-thead" class="bg-gray-800/60 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700"></thead>
-                <tbody id="labs-tbody" class="divide-y divide-gray-700/50 text-[var(--text-main)]"></tbody>
+        <div id="section-labs-gradebook" class="ui-table-wrap">
+            <table class="ui-table">
+                <thead id="labs-thead"></thead>
+                <tbody id="labs-tbody"></tbody>
             </table>          
         </div>
 
-        <div id="section-tests-gradebook" class="hidden bg-[var(--bg-card)] rounded-2xl border border-gray-700 overflow-x-auto shadow-lg">
-            <table class="w-full text-left text-xs border-collapse">
-                <thead id="tests-thead" class="bg-gray-800/60 text-[var(--text-main)] uppercase tracking-wider font-semibold border-b border-gray-700"></thead>
-                <tbody id="tests-tbody" class="divide-y divide-gray-700/50 text-[var(--text-main)]"></tbody>
+        <div id="section-tests-gradebook" class="hidden ui-table-wrap">
+            <table class="ui-table">
+                <thead id="tests-thead"></thead>
+                <tbody id="tests-tbody"></tbody>
             </table>          
         </div>
     </main>
 
-    <div id="review-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-[var(--bg-panel)] border border-gray-500 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">
-            
-            <div class="p-4 border-b border-gray-500 flex justify-between items-center bg-gray-500/50">
+    <div id="review-modal" class="hidden ui-modal-backdrop">
+        <div class="ui-modal-card w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div class="ui-modal-header">
                 <div>
-                    <span id="review-student-group" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">Группа</span>
-                    <h3 id="review-student-name" class="text-base font-bold text-[var(--text-main)] mt-0.5">ФИО Студента</h3>
-                    <p id="review-lab-title" class="text-xs text-blue-600 font-semibold">Название лабораторной работы</p>
+                    <span id="review-student-group" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold uppercase">Группа</span>
+                    <h3 id="review-student-name" class="text-base font-bold text-[var(--text-main)] mt-1">ФИО Студента</h3>
+                    <p id="review-lab-title" class="text-xs text-blue-500 font-semibold">Название лабораторной работы</p>
                 </div>
 
-                <button id="btn-close-review-modal" type="button" class="text-[var(--text-main)] hover:text-white p-2 text-lg transition">
-                    <i class="fa-solid fa-xmark"></i>
+                <button id="btn-close-review-modal" type="button" class="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-hover)] transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">             
                 <div class="lg:col-span-7 space-y-2">
                     <div class="flex justify-between items-center">
-                        <label id="review-language" class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider"></label>
-                        <span id="review-submitted-at" class="text-[10px] font-mono text-[var(--text-main)]">Дата сдачи</span>
+                        <label id="review-language" class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider"></label>
+                        <span id="review-submitted-at" class="text-[10px] font-mono text-[var(--text-muted)]">Дата сдачи</span>
                     </div>
-                    <pre id="review-code-container" class="bg-gray-950 border border-gray-800 rounded-xl p-4 font-mono text-xs text-emerald-400 overflow-x-auto h-[380px] leading-relaxed select-text"></pre>
+                    <pre id="review-code-container" class="bg-[#0c0c0e] border border-[var(--border-color)] rounded-xl p-4 font-mono text-xs text-emerald-400 overflow-x-auto h-[380px] leading-relaxed select-text"></pre>
                 </div>
 
                 <div class="lg:col-span-5 space-y-4 flex flex-col justify-between">
                     <div class="space-y-3">
-                        <div class="flex justify-between items-center border-b border-gray-700/60 pb-2">
-                            <label class="text-[11px] font-bold text-[var(--text-main)] uppercase tracking-wider">Unit-тесты</label>
-                            <span id="review-tests-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">0/0</span>
+                        <div class="flex justify-between items-center ui-divider-b pb-2">
+                            <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Unit-тесты</label>
+                            <span id="review-tests-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-500">0/0</span>
                         </div>
                         
                         <div id="review-tests-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
 
-                    <div class="space-y-3 border-t border-gray-700/60 pt-4">
+                    <div class="space-y-3 ui-divider-t pt-4">
                         <div>
-                            <label class="block text-xs font-semibold text-[var(--text-main)] mb-1">Статус проверки</label>
-                            <select id="review-status-select" class="w-full px-3 py-2 bg-[var(--bg-card)] border border-gray-700 rounded-xl text-xs font-semibold text-[var(--text-main)] focus:outline-none focus:border-emerald-500">
+                            <label class="block text-xs font-semibold text-[var(--text-muted)] mb-1">Статус проверки</label>
+                            <select id="review-status-select" class="ui-select w-full px-3 py-2 font-semibold">
                                 <option value="SUBMITTED">🔎 На проверке</option>
                                 <option value="PASSED">✅ Принято</option>
                                 <option value="REVISION">⚠️ На доработку</option>
@@ -132,63 +131,65 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-[var(--text-main)] mb-1">Комментарий</label>
-                            <textarea id="review-comment-input" rows="3" class="w-full px-3 py-2 bg-[var(--bg-card)] border border-gray-700 rounded-xl text-xs text-[var(--text-main)] focus:outline-none focus:border-emerald-500 resize-none" placeholder="Укажите комментарий для студента..."></textarea>
+                            <label class="block text-xs font-semibold text-[var(--text-muted)] mb-1">Комментарий</label>
+                            <textarea id="review-comment-input" rows="3" class="ui-textarea w-full px-3 py-2 resize-none" placeholder="Укажите комментарий для студента..."></textarea>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-4 border-t border-gray-700 bg-gray-800/50 flex justify-end gap-3">
-                <button id="btn-cancel-review" type="button" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-red-600/20">
+            <div class="ui-modal-footer">
+                <button id="btn-cancel-review" type="button" class="ui-btn ui-btn-secondary">
                     Отмена
                 </button>
 
-                <button id="btn-save-review" type="button" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                <button id="btn-save-review" type="button" class="ui-btn bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20">
                     <i class="fa-solid fa-check"></i> Сохранить статус
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="test-review-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-[var(--bg-panel)] border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-fade-in">       
-            <div class="p-4 bg-[var(--bg-card)] border-b border-[var(--border-color)] flex justify-between items-center">   
+    <div id="test-review-modal" class="hidden ui-modal-backdrop">
+        <div class="ui-modal-card w-full max-w-3xl max-h-[90vh] flex flex-col animate-fade-in">       
+            <div class="ui-modal-header">   
                 <div>
-                    <span id="test-review-group" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Группа</span>
-                    <h3 id="test-review-student-name" class="text-base font-bold text-[var(--text-main)] mt-0.5">ФИО Студента</h3>
-                    <p id="test-review-title" class="text-xs text-amber-400 font-semibold">Название теста</p>
+                    <span id="test-review-group" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold uppercase">Группа</span>
+                    <h3 id="test-review-student-name" class="text-base font-bold text-[var(--text-main)] mt-1">ФИО Студента</h3>
+                    <p id="test-review-title" class="text-xs text-amber-500 font-semibold">Название теста</p>
                 </div>
 
-                <button id="btn-close-test-modal" type="button" class="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-pink-500 hover:bg-pink-500/10 border border-transparent hover:border-pink-500/20 transition cursor-pointer">
+                <button id="btn-close-test-modal" type="button" class="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-pink-500 hover:bg-pink-500/10 transition cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <div class="p-4 bg-[var(--bg-main)] border-b border-[var(--border-color)] grid grid-cols-3 gap-4 text-center">
-                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
-                    <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Набранный балл</div>
-                    <div id="test-review-score" class="text-lg font-bold font-mono text-emerald-600 mt-0.5">0%</div>
+            <div class="p-4 bg-[var(--bg-main)] ui-divider-b grid grid-cols-3 gap-4 text-center">
+                <div class="ui-panel p-2.5">
+                    <div class="text-[10px] uppercase font-bold text-[var(--text-muted)]">Набранный балл</div>
+                    <div id="test-review-score" class="text-lg font-bold font-mono text-emerald-500 mt-0.5">0%</div>
                 </div>
 
-                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
-                    <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Затрачено времени</div>
-                    <div id="test-review-duration" class="text-lg font-bold font-mono text-blue-600 mt-0.5">00:00</div>
+                <div class="ui-panel p-2.5">
+                    <div class="text-[10px] uppercase font-bold text-[var(--text-muted)]">Затрачено времени</div>
+                    <div id="test-review-duration" class="text-lg font-bold font-mono text-blue-500 mt-0.5">00:00</div>
                 </div>
 
-                <div class="p-2.5 rounded-xl bg-[var(--bg-main)] border border-[var(--border-color)]">
-                    <div class="text-[10px] uppercase font-bold text-[var(--text-main)]">Дата сдачи</div>
-                    <div id="test-review-date" class="text-lg font-semibold font-mono text-red-600 mt-0.5">01.01.2026</div>
+                <div class="ui-panel p-2.5">
+                    <div class="text-[10px] uppercase font-bold text-[var(--text-muted)]">Дата сдачи</div>
+                    <div id="test-review-date" class="text-lg font-semibold font-mono text-rose-500 mt-0.5">01.01.2026</div>
                 </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-4">
-                <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--text-main)]">Разбор ответов на вопросы</h4>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Разбор ответов на вопросы</h4>
                 <div id="test-questions-breakdown" class="space-y-3"></div>
             </div>
         </div>
     </div>
 
+    <script src="../../src/skeleton.js"></script>
+    <script src="../../src/toast.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/submissions.js"></script>
     <script src="../../src/theme.js"></script>
