@@ -152,6 +152,8 @@ function executeRender(usePreview = false) {
 
     tracer.renderScene(fovValue, background_color, currentStepIndex, spheresVector, lightsVector);
 
+    const metrics = tracer.getLastMetrics();
+
     spheresVector.delete();
     lightsVector.delete();
 
@@ -172,9 +174,13 @@ function executeRender(usePreview = false) {
     const elapsedMs = performance.now() - t0;
     updateAdaptivePreviewScale(usedScale, elapsedMs);
 
-    timerDiv.innerText = preview
-        ? `Превью ${Math.round(usedScale * 100)}% (${targetWidth}×${targetHeight}): ${elapsedMs.toFixed(1)} ms`
-        : `Время рендера: ${elapsedMs.toFixed(1)} ms`;
+    if (preview) {
+        timerDiv.innerText = `Превью ${Math.round(usedScale * 100)}% (${targetWidth}×${targetHeight}): ${elapsedMs.toFixed(1)} ms`;
+    } else {
+        window.lastRtMetrics = metrics;
+        timerDiv.innerText = `Время рендера: ${elapsedMs.toFixed(1)} ms (Wasm: ${metrics.renderTimeMs.toFixed(1)} ms | Лучей: ${metrics.totalRays.toLocaleString()})`;
+        console.log('RT Metrics:', metrics);
+    }
 }
 
 document.getElementById('btn-add-sphere').addEventListener('click', () => {
