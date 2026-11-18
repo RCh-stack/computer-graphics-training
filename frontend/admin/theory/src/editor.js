@@ -5,17 +5,133 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const lessonId = new URLSearchParams(window.location.search).get('id');
+const adminLessonDraftKey = `admin_ebook_lesson_${lessonId || 'new'}`;
+
+const adminLessonGuard = window.DraftGuard
+    ? window.DraftGuard.create({
+          confirmTitle: 'Изменения в статье не сохранены',
+          confirmText: 'Сохранить изменения в статье перед переходом?',
+          onSave: () => saveLesson()
+      })
+    : null;
 
 let quill = null;
 let currentOrder = 1;
 let widgetsState = [];
 let isLessonLoaded = false;
+let isSyncingQuill = false;
 
 const WIDGET_PRESETS = {
     RAY_SPHERE_2D: { t: 130, angle: 0, origin: { x: 30, y: 110 }, sphere: { r: 35, x: 180, y: 110 } },
     LAMBERT_DIFFUSE_2D: { lightAngle: 45, normalAngle: 0, albedo: 0.8 },
     SPECULAR_REFLECTION_2D: { incidentAngle: 30, roughness: 0.1 }
 };
+
+function getWidgetsSnapshotFromDOM() {
+    const cards = document.querySelectorAll('#widgets-list-container .widget-card');
+    if (cards.length > 0) {
+        return Array.from(cards).map((card, idx) => {
+            const selectEl = card.querySelector('.widget-type-select');
+            const textareaEl = card.querySelector('.widget-config-textarea');
+            const widgetId = selectEl ? selectEl.value : (widgetsState[idx]?.widgetId || 'RAY_SPHERE_2D');
+            const rawText = textareaEl ? textareaEl.value : '';
+
+            try {
+                return {
+                    type: 'widget',
+                    widgetId,
+                    config: JSON.parse(rawText)
+                };
+            } catch {
+                return {
+                    type: 'widget',
+                    widgetId,
+                    rawConfig: rawText
+                };
+            }
+        });
+    }
+
+    return widgetsState.map(w => {
+        const widgetId = w.widgetId || 'RAY_SPHERE_2D';
+        if (typeof w._rawConfig === 'string') {
+            return { type: 'widget', widgetId, rawConfig: w._rawConfig };
+        }
+        return {
+            type: 'widget',
+            widgetId,
+            config: w.config || WIDGET_PRESETS[widgetId] || {}
+        };
+    });
+}
+
+function getLessonSnapshot() {
+    return {
+        title: document.getElementById('lesson-title')?.value ?? '',
+        content: quill ? quill.root.innerHTML : '',
+        widgets: getWidgetsSnapshotFromDOM()
+    };
+}
+
+function applyLessonSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    const titleInput = document.getElementById('lesson-title');
+    if (titleInput) titleInput.value = snapshot.title || '';
+
+    if (quill) {
+        isSyncingQuill = true;
+        quill.root.innerHTML = snapshot.content || '';
+        setTimeout(() => {
+            isSyncingQuill = false;
+        }, 0);
+    }
+
+    widgetsState = Array.isArray(snapshot.widgets)
+        ? snapshot.widgets.map(w => {
+              const widgetId = w.widgetId || 'RAY_SPHERE_2D';
+              if (typeof w.rawConfig === 'string') {
+                  return { type: 'widget', widgetId, _rawConfig: w.rawConfig };
+              }
+              return {
+                  type: 'widget',
+                  widgetId,
+                  config: w.config || WIDGET_PRESETS[widgetId] || {}
+              };
+          })
+        : [];
+
+    renderWidgets();
+}
+
+function trackLessonChanges() {
+    if (!isLessonLoaded || !adminLessonGuard) return;
+    adminLessonGuard.watch(adminLessonDraftKey, getLessonSnapshot());
+}
+
+function syncWidgetsLenientFromDOM() {
+    document.querySelectorAll('#widgets-list-container .widget-card').forEach((card, idx) => {
+        if (!widgetsState[idx]) return;
+        const selectEl = card.querySelector('.widget-type-select');
+        const textareaEl = card.querySelector('.widget-config-textarea');
+        const widgetId = selectEl ? selectEl.value : 'RAY_SPHERE_2D';
+        const rawText = textareaEl ? textareaEl.value : '';
+
+        try {
+            widgetsState[idx] = {
+                type: 'widget',
+                widgetId,
+                config: JSON.parse(rawText)
+            };
+        } catch {
+            widgetsState[idx] = {
+                type: 'widget',
+                widgetId,
+                _rawConfig: rawText
+            };
+        }
+    });
+}
 
 function initQuillEditor() {
     quill = new Quill('#quill-editor-container', {
@@ -34,18 +150,32 @@ function initQuillEditor() {
             ]
         }
     });
+
+    quill.on('text-change', () => {
+        if (isSyncingQuill) return;
+        trackLessonChanges();
+    });
 }
 
 function initEvents() {
     document.getElementById('btn-save-lesson')?.addEventListener('click', saveLesson);
     document.getElementById('btn-add-widget')?.addEventListener('click', addNewWidget);
+    document.getElementById('lesson-title')?.addEventListener('input', trackLessonChanges);
+
+    document.getElementById('widgets-list-container')?.addEventListener('input', (e) => {
+        if (e.target.classList.contains('widget-config-textarea')) {
+            trackLessonChanges();
+        }
+    });
 
     document.getElementById('widgets-list-container')?.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.btn-remove-widget');
         if (removeBtn) {
+            syncWidgetsLenientFromDOM();
             const idx = parseInt(removeBtn.dataset.index);
             widgetsState.splice(idx, 1);
             renderWidgets();
+            trackLessonChanges();
             window.Toast?.info('Виджет удален', 'Не забудьте сохранить страницу');
             return;
         }
@@ -53,14 +183,19 @@ function initEvents() {
 
     document.getElementById('widgets-list-container')?.addEventListener('change', (e) => {
         if (e.target.classList.contains('widget-type-select')) {
+            syncWidgetsLenientFromDOM();
             const card = e.target.closest('.widget-card');
             const idx = parseInt(card.dataset.index);
             const newWidgetId = e.target.value;
 
             if (widgetsState[idx]) {
-                widgetsState[idx].widgetId = newWidgetId;
-                widgetsState[idx].config = WIDGET_PRESETS[newWidgetId] || {};
+                widgetsState[idx] = {
+                    type: 'widget',
+                    widgetId: newWidgetId,
+                    config: WIDGET_PRESETS[newWidgetId] || {}
+                };
                 renderWidgets();
+                trackLessonChanges();
             }
         }
     });
@@ -102,6 +237,7 @@ async function loadLessonDetails() {
             currentOrder = art.order || 1;
 
             if (quill) {
+                isSyncingQuill = true;
                 quill.root.innerHTML = art.content || '';
             }
 
@@ -111,14 +247,47 @@ async function loadLessonDetails() {
             }
             widgetsState = Array.isArray(wConfig) ? wConfig : [];
 
-            isLessonLoaded = true;
             setEditorLoadingState(false);
             renderWidgets();
+
+            await new Promise(resolve => setTimeout(resolve, 0));
+            isSyncingQuill = false;
+            isLessonLoaded = true;
+
+            const serverSnapshot = getLessonSnapshot();
+            adminLessonGuard?.setBaseline(adminLessonDraftKey, serverSnapshot);
+
+            if (adminLessonGuard?.hasDiffFromBaseline(adminLessonDraftKey, serverSnapshot)) {
+                const savedDraft = adminLessonGuard.load(adminLessonDraftKey);
+                const savedTime = savedDraft?.savedAt
+                    ? new Date(savedDraft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '';
+
+                const restoreRes = await Swal.fire({
+                    title: 'Найден несохранённый черновик',
+                    text: `Обнаружены локальные правки статьи${savedTime ? ` от ${savedTime}` : ''}, которые не были сохранены в БД. Восстановить их?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Восстановить черновик',
+                    cancelButtonText: 'Загрузить из БД',
+                    confirmButtonColor: '#2563eb'
+                });
+
+                if (restoreRes.isConfirmed && savedDraft?.data) {
+                    applyLessonSnapshot(savedDraft.data);
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    trackLessonChanges();
+                    window.Toast?.info('Черновик восстановлен', 'Нажмите «Сохранить», чтобы записать изменения в БД');
+                } else {
+                    adminLessonGuard.clear(adminLessonDraftKey);
+                }
+            }
         } else {
             throw new Error(data.message || 'Не удалось загрузить статью');
         }
     } catch (error) {
         console.error('Ошибка загрузки статьи:', error);
+        isSyncingQuill = false;
         setEditorLoadingState(false);
         const container = document.getElementById('widgets-list-container');
         if (container) container.innerHTML = '';
@@ -137,7 +306,9 @@ function renderWidgets() {
 
     container.innerHTML = widgetsState.map((w, idx) => {
         const widgetId = w.widgetId || 'RAY_SPHERE_2D';
-        const configJson = JSON.stringify(w.config || WIDGET_PRESETS[widgetId], null, 2);
+        const configJson = typeof w._rawConfig === 'string'
+            ? w._rawConfig
+            : JSON.stringify(w.config || WIDGET_PRESETS[widgetId], null, 2);
 
         return `
             <div class="widget-card ui-subcard p-3.5 space-y-3" data-index="${idx}">
@@ -174,6 +345,7 @@ function addNewWidget() {
         config: WIDGET_PRESETS.RAY_SPHERE_2D
     });
     renderWidgets();
+    trackLessonChanges();
 }
 
 function syncWidgetsFromDOM() {
@@ -208,8 +380,8 @@ function syncWidgetsFromDOM() {
 }
 
 async function saveLesson() {
-    if (!isLessonLoaded) return;
-    if (!syncWidgetsFromDOM()) return;
+    if (!isLessonLoaded) return false;
+    if (!syncWidgetsFromDOM()) return false;
 
     const saveBtn = document.getElementById('btn-save-lesson');
     if (saveBtn) {
@@ -240,13 +412,17 @@ async function saveLesson() {
         const data = await res.json();
 
         if (res.ok) {
+            adminLessonGuard?.markClean(adminLessonDraftKey, getLessonSnapshot());
             Toast.success('Страница успешно сохранена');
+            return true;
         } else {
             Toast.error(data.message || 'Не удалось сохранить страницу');
+            return false;
         }
     } catch (error) {
         console.error(error);
         Toast.error('Ошибка подключения к серверу');
+        return false;
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;

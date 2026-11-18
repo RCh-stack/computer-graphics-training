@@ -4,6 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const labId = new URLSearchParams(window.location.search).get('id');
+const adminLabDraftKey = `admin_lab_${labId || 'new'}`;
+
+const adminLabGuard = window.DraftGuard
+    ? window.DraftGuard.create({
+          confirmTitle: 'Изменения в лабораторной не сохранены',
+          confirmText: 'Сохранить изменения в базе данных перед переходом?',
+          onSave: () => saveLab()
+      })
+    : null;
 
 let labState = {
     requirements: [],
@@ -20,17 +29,117 @@ let adminTemplatesState = {
 };
 let activeAdminLang = 'cpp';
 
+function getLabFormSnapshot() {
+    const templatesSnapshot = {
+        ...adminTemplatesState,
+        [activeAdminLang]: document.getElementById('lab-template-code')?.value ?? ''
+    };
+
+    const requirementsSnapshot = [...labState.requirements];
+    document.querySelectorAll('#requirements-list .req-input').forEach((input, idx) => {
+        if (requirementsSnapshot[idx] !== undefined) {
+            requirementsSnapshot[idx] = input.value;
+        }
+    });
+
+    const testCasesSnapshot = labState.testCases.map((tc, idx) => {
+        if (idx === activeTCIndex && document.getElementById('tc-name')) {
+            return {
+                ...tc,
+                name: document.getElementById('tc-name').value,
+                input: document.getElementById('tc-input').value,
+                expected_output: document.getElementById('tc-output').value,
+                timeout_ms: parseInt(document.getElementById('tc-timeout').value) || 1000
+            };
+        }
+        return { ...tc };
+    });
+
+    return {
+        title: document.getElementById('lab-title')?.value ?? '',
+        description: document.getElementById('lab-description')?.value ?? '',
+        difficulty: document.getElementById('lab-difficulty')?.value ?? 'Средний',
+        order: parseInt(document.getElementById('lab-order')?.value) || 0,
+        isUnlocked: Boolean(document.getElementById('lab-is-unlocked')?.checked),
+        templates: templatesSnapshot,
+        taskTitle: document.getElementById('task-title')?.value ?? '',
+        taskInstruction: document.getElementById('task-instruction')?.value ?? '',
+        requirements: requirementsSnapshot,
+        testCases: testCasesSnapshot
+    };
+}
+
+function applyLabFormSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    document.getElementById('lab-title').value = snapshot.title || '';
+    document.getElementById('lab-difficulty').value = snapshot.difficulty || 'Средний';
+    document.getElementById('lab-order').value = snapshot.order || 0;
+    document.getElementById('lab-is-unlocked').checked = Boolean(snapshot.isUnlocked);
+    document.getElementById('lab-description').value = snapshot.description || '';
+
+    adminTemplatesState = {
+        cpp: '',
+        python: '',
+        csharp: '',
+        go: '',
+        ...(snapshot.templates || {})
+    };
+    activeAdminLang = 'cpp';
+    const langSelect = document.getElementById('admin-template-lang-select');
+    if (langSelect) langSelect.value = 'cpp';
+    document.getElementById('lab-template-code').value = adminTemplatesState.cpp || '';
+
+    document.getElementById('task-title').value = snapshot.taskTitle || '';
+    document.getElementById('task-instruction').value = snapshot.taskInstruction || '';
+    labState.requirements = Array.isArray(snapshot.requirements) ? [...snapshot.requirements] : [];
+    labState.testCases = Array.isArray(snapshot.testCases) ? snapshot.testCases.map(tc => ({ ...tc })) : [];
+
+    activeTCIndex = 0;
+    renderRequirements();
+    renderTestCaseNav();
+    renderActiveTestCaseEditor();
+}
+
+function trackLabChanges() {
+    if (!isLabLoaded || !adminLabGuard) return;
+    adminLabGuard.watch(adminLabDraftKey, getLabFormSnapshot());
+}
+
 function initEvents() {
     document.getElementById('btn-save-lab')?.addEventListener('click', saveLab);
     document.getElementById('btn-add-req')?.addEventListener('click', addRequirement);
     document.getElementById('btn-add-testcase')?.addEventListener('click', addNewTestCase);
     document.getElementById('btn-delete-active-tc')?.addEventListener('click', deleteActiveTestCase);
 
+    const watchedFieldIds = [
+        'lab-title',
+        'lab-difficulty',
+        'lab-order',
+        'lab-is-unlocked',
+        'lab-description',
+        'lab-template-code',
+        'task-title',
+        'task-instruction',
+        'tc-name',
+        'tc-input',
+        'tc-output',
+        'tc-timeout'
+    ];
+
+    watchedFieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const eventName = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
+        el.addEventListener(eventName, trackLabChanges);
+    });
+
     document.getElementById('admin-template-lang-select')?.addEventListener('change', (e) => {
         adminTemplatesState[activeAdminLang] = document.getElementById('lab-template-code').value;
 
         activeAdminLang = e.target.value;
         document.getElementById('lab-template-code').value = adminTemplatesState[activeAdminLang] || '';
+        trackLabChanges();
     });
 
     document.getElementById('testcase-nav-list')?.addEventListener('click', (e) => {
@@ -43,6 +152,12 @@ function initEvents() {
         }
     });
 
+    document.getElementById('requirements-list')?.addEventListener('input', (e) => {
+        if (e.target.closest('.req-input')) {
+            trackLabChanges();
+        }
+    });
+
     document.getElementById('requirements-list')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-remove-req');
         if (btn) {
@@ -50,6 +165,7 @@ function initEvents() {
             const idx = parseInt(btn.dataset.index);
             labState.requirements.splice(idx, 1);
             renderRequirements();
+            trackLabChanges();
         }
     });
 }
@@ -159,6 +275,34 @@ async function loadLabDetails() {
             renderRequirements();
             renderTestCaseNav();
             renderActiveTestCaseEditor();
+
+            const serverSnapshot = getLabFormSnapshot();
+            adminLabGuard?.setBaseline(adminLabDraftKey, serverSnapshot);
+
+            if (adminLabGuard?.hasDiffFromBaseline(adminLabDraftKey, serverSnapshot)) {
+                const savedDraft = adminLabGuard.load(adminLabDraftKey);
+                const savedTime = savedDraft?.savedAt
+                    ? new Date(savedDraft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '';
+
+                const restoreRes = await Swal.fire({
+                    title: 'Найден несохранённый черновик',
+                    text: `Обнаружены локальные изменения${savedTime ? ` от ${savedTime}` : ''}, которые не были сохранены в БД. Восстановить их?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Восстановить черновик',
+                    cancelButtonText: 'Загрузить из БД',
+                    confirmButtonColor: '#10b981'
+                });
+
+                if (restoreRes.isConfirmed && savedDraft?.data) {
+                    applyLabFormSnapshot(savedDraft.data);
+                    trackLabChanges();
+                    window.Toast?.info('Черновик восстановлен', 'Нажмите «Сохранить», чтобы записать изменения в БД');
+                } else {
+                    adminLabGuard.clear(adminLabDraftKey);
+                }
+            }
         } else {
             throw new Error(data.message || 'Не удалось загрузить лабораторную работу');
         }
@@ -248,6 +392,7 @@ function addNewTestCase() {
     activeTCIndex = labState.testCases.length - 1;
     renderTestCaseNav();
     renderActiveTestCaseEditor();
+    trackLabChanges();
 }
 
 async function deleteActiveTestCase() {
@@ -275,6 +420,7 @@ async function deleteActiveTestCase() {
 
     renderTestCaseNav();
     renderActiveTestCaseEditor();
+    trackLabChanges();
     window.Toast?.info('Тест-кейс удален', 'Не забудьте сохранить лабораторную работу');
 }
 
@@ -283,7 +429,9 @@ function renderRequirements() {
     if (!container) return;
 
     container.innerHTML = labState.requirements.map((req, idx) => {
-        const safeReq = String(req || '').replace(/"/g, '"');
+        const safeReq = String(req || '')
+            .replace(/&/g, '&')
+            .replace(/"/g, '"');
         return `
             <div class="flex items-center gap-2">
                 <input type="text" value="${safeReq}" class="req-input ui-input flex-1 px-2.5 py-1" data-index="${idx}">
@@ -299,6 +447,7 @@ function addRequirement() {
     syncRequirementsFromDOM();
     labState.requirements.push('Новое требование');
     renderRequirements();
+    trackLabChanges();
 }
 
 function syncRequirementsFromDOM() {
@@ -310,7 +459,7 @@ function syncRequirementsFromDOM() {
 }
 
 async function saveLab() {
-    if (!isLabLoaded) return;
+    if (!isLabLoaded) return false;
 
     syncActiveTestCaseFromDOM();
     syncRequirementsFromDOM();
@@ -355,13 +504,17 @@ async function saveLab() {
         const data = await res.json();
 
         if (res.ok) {
+            adminLabGuard?.markClean(adminLabDraftKey, getLabFormSnapshot());
             Toast.success('Лабораторная работа успешно обновлена');
+            return true;
         } else {
             Toast.error(data.message || 'Не удалось сохранить лабораторную работу');
+            return false;
         }
     } catch (error) {
         console.error(error);
         Toast.error('Ошибка сети при сохранении');
+        return false;
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;

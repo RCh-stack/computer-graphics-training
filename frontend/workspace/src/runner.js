@@ -1,3 +1,15 @@
+window.labDraftGuard = window.DraftGuard
+    ? window.DraftGuard.create({
+          confirmTitle: 'Код лабораторной не сохранён',
+          confirmText: 'Сохранить текущий код как черновик в базе перед выходом?',
+          onSave: () => saveDraft()
+      })
+    : null;
+
+function getStudentLabDraftKey(labId, lang) {
+    return `student_lab_${labId}_${lang || 'cpp'}`;
+}
+
 document.getElementById('btn-save-draft')?.addEventListener('click', saveDraft);
 document.getElementById('btn-run')?.addEventListener('click', runCode);
 document.getElementById('btn-submit')?.addEventListener('click', submitCode);
@@ -10,7 +22,7 @@ async function saveDraft() {
 
     if (!code.trim()) {
         Toast.warning('Код не может быть пустым');
-        return;
+        return false;
     }
 
     const btnSave = document.getElementById('btn-save-draft');
@@ -31,18 +43,22 @@ async function saveDraft() {
         const data = await res.json().catch(() => ({}));
 
         if (res.ok) {
+            window.labDraftGuard?.markClean(getStudentLabDraftKey(labId, selectedLang), code);
             Toast.success('Черновик сохранён');
 
             const statusContainer = document.getElementById('teacher-feedback-banner');
             if (statusContainer && statusContainer.classList.contains('hidden') && typeof setupSubmissionState === 'function') {
                 setupSubmissionState({ status: 'DRAFT' });
             }
+            return true;
         } else {
             Toast.error(data.message || 'Не удалось сохранить черновик');
+            return false;
         }
     } catch (error) {
         console.error('Ошибка сохранения черновика:', error);
         Toast.error('Ошибка соединения при сохранении черновика');
+        return false;
     } finally {
         if (btnSave) btnSave.disabled = false;
     }
@@ -165,6 +181,8 @@ async function submitCode() {
         if (!response.ok) {
             throw new Error(result.message || `Ошибка сервера: ${response.status}`);
         }
+
+        window.labDraftGuard?.markClean(getStudentLabDraftKey(labId, selectedLang), code);
 
         if (result.status === 'compile_error') {
             Swal.fire({

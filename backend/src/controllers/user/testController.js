@@ -6,6 +6,44 @@ function getDbClient() {
     return new Client({ connectionString: process.env.DATABASE_URL });
 }
 
+function parseJsonField(raw, fallback = {}) {
+    if (!raw) return fallback;
+    if (typeof raw === 'object') return raw;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
+function gradeQuestions(questions, answers) {
+    let correctCount = 0;
+
+    questions.forEach(q => {
+        const userAnswer = answers[q.id];
+        const optionsData = parseJsonField(q.options_json, {});
+
+        if (userAnswer !== undefined && userAnswer !== null && String(userAnswer).trim() !== '') {
+            if (optionsData.type === 'numeric_input') {
+                const expected = parseFloat(q.correct_answer);
+                const actual = parseFloat(userAnswer);
+                const tolerance = optionsData.tolerance || 0.01;
+
+                if (!isNaN(actual) && Math.abs(expected - actual) <= tolerance) {
+                    correctCount++;
+                }
+            } else if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
+                correctCount++;
+            }
+        }
+    });
+
+    const totalQuestions = questions.length;
+    const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+
+    return { correctCount, totalQuestions, scorePercent };
+}
+
 /**
  * GET /api/v1/tests
  */
@@ -25,14 +63,15 @@ const getAllTests = catchAsync(async (req, res) => {
                 t.time_limit, 
                 t.is_unlocked,
                 COUNT(tq.id)::int AS questions_count,
-                ts.score_percent AS score,
-                (ts.completed_at IS NOT NULL) AS is_completed
+                CASE WHEN ts.completed_at IS NOT NULL THEN ts.score_percent ELSE NULL END AS score,
+                (ts.completed_at IS NOT NULL) AS is_completed,
+                (ts.id IS NOT NULL AND ts.completed_at IS NULL) AS has_active_attempt
             FROM "tests" t
             LEFT JOIN "test_questions" tq 
                    ON t.id = tq.test_id
             LEFT JOIN "test_submissions" ts 
                    ON t.id = ts.test_id AND ts.user_id = $1
-            GROUP BY t.id, ts.score_percent, ts.completed_at
+            GROUP BY t.id, ts.id, ts.score_percent, ts.completed_at
             ORDER BY t.order ASC;
         `;
 
@@ -52,6 +91,12 @@ const getAllTests = catchAsync(async (req, res) => {
  */
 const getTestById = catchAsync(async (req, res) => {
     const { id } = req.params;
+    const userId = req.user ? req.user.id : null;
+
+    if (!userId) {
+        throw new AppError('Необходима авторизация', 401, 'UNAUTHORIZED');
+    }
+
     const client = getDbClient();
 
     try {
@@ -70,8 +115,12 @@ const getTestById = catchAsync(async (req, res) => {
             throw new AppError('Тест не найден', 404, 'TEST_NOT_FOUND');
         }
 
+        if (!test.is_unlocked) {
+            throw new AppError('Этот тест пока заблокирован', 403, 'TEST_LOCKED');
+        }
+
         const questionsResult = await client.query(
-            `SELECT id, "order", "question_text", "options_json", explanation
+            `SELECT id, "order", "question_text", "options_json"
              FROM "test_questions"
              WHERE "test_id" = $1
              ORDER BY "order" ASC;`,
@@ -79,14 +128,7 @@ const getTestById = catchAsync(async (req, res) => {
         );
 
         test.questions = questionsResult.rows.map(q => {
-            let optionsData = q.options_json || {};
-            if (typeof optionsData === 'string') {
-                try {
-                    optionsData = JSON.parse(optionsData);
-                } catch {
-                    optionsData = {};
-                }
-            }
+            const optionsData = parseJsonField(q.options_json, {});
 
             return {
                 id: q.id,
@@ -99,7 +141,132 @@ const getTestById = catchAsync(async (req, res) => {
             };
         });
 
-        return res.json({ status: 'success', test });
+        const existingSubRes = await client.query(
+            `SELECT id,
+                    user_answers,
+                    started_in,
+                    expires_at,
+                    completed_at,
+                    CASE
+                        WHEN expires_at IS NULL THEN NULL
+                        ELSE GREATEST(0, CEIL(EXTRACT(EPOCH FROM (expires_at - NOW()))))::int
+                    END AS remaining_seconds
+             FROM "test_submissions"
+             WHERE user_id = $1 AND test_id = $2
+             LIMIT 1;`,
+            [userId, id]
+        );
+
+        let attemptRow = existingSubRes.rows[0];
+        const timeLimitMinutes = Number(test.time_limit) || 0;
+
+        if (!attemptRow) {
+            const insertRes = await client.query(
+                `INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, started_in, expires_at, completed_at)
+                 VALUES (
+                     gen_random_uuid(),
+                     $1,
+                     $2,
+                     0,
+                     '{}'::jsonb,
+                     NOW(),
+                     CASE WHEN $3::int > 0 THEN NOW() + make_interval(mins => $3::int) ELSE NULL END,
+                     NULL
+                 )
+                 RETURNING id,
+                           user_answers,
+                           started_in,
+                           expires_at,
+                           completed_at,
+                           CASE
+                               WHEN expires_at IS NULL THEN NULL
+                               ELSE GREATEST(0, CEIL(EXTRACT(EPOCH FROM (expires_at - NOW()))))::int
+                           END AS remaining_seconds;`,
+                [userId, id, timeLimitMinutes]
+            );
+            attemptRow = insertRes.rows[0];
+        } else if (attemptRow.completed_at !== null) {
+            const resetRes = await client.query(
+                `UPDATE "test_submissions"
+                 SET score_percent = 0,
+                     user_answers = '{}'::jsonb,
+                     started_in = NOW(),
+                     expires_at = CASE WHEN $3::int > 0 THEN NOW() + make_interval(mins => $3::int) ELSE NULL END,
+                     completed_at = NULL
+                 WHERE id = $1 AND user_id = $2
+                 RETURNING id,
+                           user_answers,
+                           started_in,
+                           expires_at,
+                           completed_at,
+                           CASE
+                               WHEN expires_at IS NULL THEN NULL
+                               ELSE GREATEST(0, CEIL(EXTRACT(EPOCH FROM (expires_at - NOW()))))::int
+                           END AS remaining_seconds;`,
+                [attemptRow.id, userId, timeLimitMinutes]
+            );
+            attemptRow = resetRes.rows[0];
+        }
+
+        const savedAnswers = parseJsonField(attemptRow.user_answers, {});
+        const hasTimeLimit = attemptRow.expires_at !== null;
+        const remainingSeconds = hasTimeLimit ? Number(attemptRow.remaining_seconds ?? 0) : null;
+        const isExpired = hasTimeLimit && remainingSeconds <= 0;
+
+        return res.json({
+            status: 'success',
+            test,
+            attempt: {
+                id: attemptRow.id,
+                startedAt: attemptRow.started_in,
+                expiresAt: attemptRow.expires_at,
+                hasTimeLimit,
+                remainingSeconds,
+                savedAnswers,
+                isExpired
+            }
+        });
+    } finally {
+        await client.end();
+    }
+});
+
+/**
+ * PATCH /api/v1/tests/:id/progress
+ */
+const saveTestProgress = catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user ? req.user.id : null;
+    const answers = req.body.answers;
+
+    if (!userId) {
+        throw new AppError('Необходима авторизация', 401, 'UNAUTHORIZED');
+    }
+
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+        return res.json({ status: 'ignored' });
+    }
+
+    const client = getDbClient();
+
+    try {
+        await client.connect();
+
+        const updateRes = await client.query(
+            `UPDATE "test_submissions"
+             SET user_answers = $1::jsonb
+             WHERE user_id = $2
+               AND test_id = $3
+               AND completed_at IS NULL
+               AND (expires_at IS NULL OR expires_at >= NOW() - interval '15 seconds')
+             RETURNING id;`,
+            [JSON.stringify(answers), userId, id]
+        );
+
+        return res.json({
+            status: 'success',
+            synced: updateRes.rowCount > 0
+        });
     } finally {
         await client.end();
     }
@@ -110,8 +277,7 @@ const getTestById = catchAsync(async (req, res) => {
  */
 const submitTest = catchAsync(async (req, res) => {
     const { id } = req.params;
-    const startedIn = req.body.started_in ?? req.body.startedIn ?? null;
-    const answers = req.body.answers || {};
+    const clientAnswers = req.body.answers || {};
     const userId = req.user ? req.user.id : null;
 
     if (!userId) {
@@ -137,49 +303,54 @@ const submitTest = catchAsync(async (req, res) => {
             throw new AppError('Вопросы к тесту не найдены', 404, 'TEST_QUESTIONS_NOT_FOUND');
         }
 
-        let correctCount = 0;
+        const subRes = await client.query(
+            `SELECT id, score_percent, user_answers, started_in, expires_at, completed_at, NOW() AS server_now
+             FROM "test_submissions"
+             WHERE user_id = $1 AND test_id = $2
+             LIMIT 1;`,
+            [userId, id]
+        );
 
-        questions.forEach(q => {
-            const userAnswer = answers[q.id];
-            let optionsData = q.options_json || {};
-            if (typeof optionsData === 'string') {
-                try {
-                    optionsData = JSON.parse(optionsData);
-                } catch {
-                    optionsData = {};
-                }
+        const existingSub = subRes.rows[0];
+
+        if (existingSub && existingSub.completed_at !== null) {
+            const savedAnswers = parseJsonField(existingSub.user_answers, {});
+            const { correctCount, totalQuestions } = gradeQuestions(questions, savedAnswers);
+
+            return res.json({
+                status: 'success',
+                score_percent: existingSub.score_percent,
+                correct_count: correctCount,
+                total_count: totalQuestions
+            });
+        }
+
+        let effectiveAnswers = clientAnswers;
+        if (existingSub && existingSub.expires_at) {
+            const overdueMs = new Date(existingSub.server_now).getTime() - new Date(existingSub.expires_at).getTime();
+            if (overdueMs > 15000 && Object.keys(clientAnswers).length === 0) {
+                effectiveAnswers = parseJsonField(existingSub.user_answers, {});
             }
+        }
 
-            if (userAnswer !== undefined && userAnswer !== null) {
-                if (optionsData.type === 'numeric_input') {
-                    const expected = parseFloat(q.correct_answer);
-                    const actual = parseFloat(userAnswer);
-                    const tolerance = optionsData.tolerance || 0.01;
+        const { correctCount, totalQuestions, scorePercent } = gradeQuestions(questions, effectiveAnswers);
 
-                    if (!isNaN(actual) && Math.abs(expected - actual) <= tolerance) {
-                        correctCount++;
-                    }
-                } else if (String(userAnswer).trim() === String(q.correct_answer).trim()) {
-                    correctCount++;
-                }
-            }
-        });
-
-        const totalQuestions = questions.length;
-        const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-
-        const upsertQuery = `
-            INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, started_in, completed_at)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
-            ON CONFLICT (user_id, test_id) 
-            DO UPDATE SET score_percent = EXCLUDED.score_percent, 
-                          user_answers = EXCLUDED.user_answers,
-                          started_in = EXCLUDED.started_in,
-                          completed_at = EXCLUDED.completed_at
-            RETURNING score_percent;
-        `;
-
-        await client.query(upsertQuery, [userId, id, scorePercent, JSON.stringify(answers), startedIn]);
+        if (existingSub) {
+            await client.query(
+                `UPDATE "test_submissions"
+                 SET score_percent = $1,
+                     user_answers = $2::jsonb,
+                     completed_at = NOW()
+                 WHERE id = $3 AND user_id = $4;`,
+                [scorePercent, JSON.stringify(effectiveAnswers), existingSub.id, userId]
+            );
+        } else {
+            await client.query(
+                `INSERT INTO "test_submissions" (id, user_id, test_id, score_percent, user_answers, started_in, completed_at)
+                 VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb, NOW(), NOW());`,
+                [userId, id, scorePercent, JSON.stringify(effectiveAnswers)]
+            );
+        }
 
         return res.json({
             status: 'success',
@@ -211,13 +382,13 @@ const getTestResult = catchAsync(async (req, res) => {
         const subRes = await client.query(`
             SELECT id, score_percent, user_answers, completed_at
             FROM "test_submissions"
-            WHERE user_id = $1 AND test_id = $2
+            WHERE user_id = $1 AND test_id = $2 AND completed_at IS NOT NULL
             ORDER BY completed_at DESC
             LIMIT 1;
         `, [userId, id]);
 
         if (subRes.rows.length === 0) {
-            throw new AppError('Вы еще не проходили этот тест', 404, 'SUBMISSION_NOT_FOUND');
+            throw new AppError('Завершенная попытка по этому тесту не найдена', 404, 'SUBMISSION_NOT_FOUND');
         }
 
         const submission = subRes.rows[0];
@@ -229,14 +400,7 @@ const getTestResult = catchAsync(async (req, res) => {
             ORDER BY "order" ASC;
         `, [id]);
 
-        let userAnsObj = submission.user_answers;
-        if (typeof userAnsObj === 'string') {
-            try {
-                userAnsObj = JSON.parse(userAnsObj);
-            } catch {
-                userAnsObj = {};
-            }
-        }
+        const userAnsObj = parseJsonField(submission.user_answers, {});
 
         const breakdown = qRes.rows.map(q => {
             let rawUserAnswer = '';
@@ -245,21 +409,25 @@ const getTestResult = catchAsync(async (req, res) => {
                 const found = userAnsObj.find(item => item.questionId === q.id || item.id === q.id);
                 rawUserAnswer = found ? (found.answer || found.userAnswer) : '';
             } else if (typeof userAnsObj === 'object' && userAnsObj !== null) {
-                rawUserAnswer = userAnsObj[q.id] || userAnsObj.answers?.[q.id] || '';
+                rawUserAnswer = userAnsObj[q.id] ?? userAnsObj.answers?.[q.id] ?? '';
             }
 
-            const isSkipped = !rawUserAnswer || rawUserAnswer === '';
-            const isCorrect = !isSkipped && String(rawUserAnswer).trim().toLowerCase() === String(q.correct_answer).trim().toLowerCase();
+            const optionsData = parseJsonField(q.options_json, {});
+            const optionsList = Array.isArray(optionsData) ? optionsData : (optionsData.options || []);
 
-            let options = q.options_json;
-            if (typeof options === 'string') {
-                try {
-                    options = JSON.parse(options);
-                } catch {
-                    options = null;
+            const isSkipped = rawUserAnswer === '' || rawUserAnswer === null || rawUserAnswer === undefined;
+            let isCorrect = false;
+
+            if (!isSkipped) {
+                if (optionsData.type === 'numeric_input') {
+                    const expected = parseFloat(q.correct_answer);
+                    const actual = parseFloat(rawUserAnswer);
+                    const tolerance = optionsData.tolerance || 0.01;
+                    isCorrect = !isNaN(actual) && Math.abs(expected - actual) <= tolerance;
+                } else {
+                    isCorrect = String(rawUserAnswer).trim().toLowerCase() === String(q.correct_answer).trim().toLowerCase();
                 }
             }
-            const optionsList = Array.isArray(options) ? options : (options?.options || []);
 
             return {
                 number: q.order,
@@ -290,6 +458,7 @@ const getTestResult = catchAsync(async (req, res) => {
 module.exports = {
     getAllTests,
     getTestById,
+    saveTestProgress,
     submitTest,
     getTestResult
 };

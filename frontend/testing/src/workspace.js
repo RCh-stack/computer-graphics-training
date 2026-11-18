@@ -3,12 +3,91 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let currentTest = null;
+let currentAttempt = null;
 let currentQuestionIndex = 0;
 let userAnswers = {};
 let timerInterval = null;
-let timeRemaining = 0;
+let targetEndTimestampMs = null;
+let hasTimeLimit = true;
 let testStartTime = null;
 let isSubmittingTest = false;
+let isTestCompleted = false;
+
+function getAnswersStorageKey(testId, attemptId) {
+    return `cg_test_answers_${testId}_${attemptId || 'active'}`;
+}
+
+function loadSavedAnswersFromStorage(storageKey) {
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function persistAnswersToStorage() {
+    if (!currentTest) return;
+    const key = getAnswersStorageKey(currentTest.id, currentAttempt?.id);
+    try {
+        localStorage.setItem(key, JSON.stringify(userAnswers));
+        scheduleServerAnswersSync();
+    } catch (error) {
+        console.warn('Не удалось сохранить ответы в localStorage:', error);
+    }
+}
+
+let progressSyncTimer = null;
+
+function scheduleServerAnswersSync() {
+    if (!currentTest || isSubmittingTest || isTestCompleted) return;
+
+    clearTimeout(progressSyncTimer);
+    progressSyncTimer = setTimeout(syncAnswersToServer, 800);
+}
+
+async function syncAnswersToServer() {
+    if (!currentTest || isSubmittingTest || isTestCompleted) return;
+
+    try {
+        const token = localStorage.getItem('authToken');
+        await fetch(`/api/v1/tests/${currentTest.id}/progress`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({
+                answers: userAnswers,
+                attemptId: currentAttempt?.id || null
+            }),
+            keepalive: true
+        });
+    } catch {
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && currentTest && !isTestCompleted) {
+        clearTimeout(progressSyncTimer);
+        syncAnswersToServer();
+    }
+});
+
+function clearSavedAnswersFromStorage() {
+    if (!currentTest) return;
+    const key = getAnswersStorageKey(currentTest.id, currentAttempt?.id);
+    localStorage.removeItem(key);
+    localStorage.removeItem(getAnswersStorageKey(currentTest.id, 'active'));
+}
+
+window.addEventListener('beforeunload', (e) => {
+    if (currentTest && !isSubmittingTest && !isTestCompleted) {
+        e.preventDefault();
+    }
+});
 
 function renderWorkspaceSkeletons() {
     if (!window.Skeleton) return;
@@ -54,10 +133,64 @@ async function initTestWorkspace() {
 
         const data = await response.json();
         currentTest = data.test;
+        currentAttempt = data.attempt || null;
 
         document.getElementById('test-title').textContent = currentTest.title;
-        timeRemaining = currentTest.time_limit * 60;
-        testStartTime = new Date(Date.now()).toISOString();
+
+        const timeLimitMinutes = Number(currentTest.time_limit) || 0;
+
+        if (currentAttempt && typeof currentAttempt.remainingSeconds === 'number') {
+            hasTimeLimit = true;
+            targetEndTimestampMs = Date.now() + currentAttempt.remainingSeconds * 1000;
+            testStartTime = currentAttempt.startedAt || new Date().toISOString();
+        } else if (currentAttempt && currentAttempt.hasTimeLimit === false) {
+            hasTimeLimit = false;
+            targetEndTimestampMs = null;
+            testStartTime = currentAttempt.startedAt || new Date().toISOString();
+        } else if (timeLimitMinutes > 0) {
+            hasTimeLimit = true;
+            targetEndTimestampMs = Date.now() + timeLimitMinutes * 60 * 1000;
+            testStartTime = new Date().toISOString();
+        } else {
+            hasTimeLimit = false;
+            targetEndTimestampMs = null;
+            testStartTime = new Date().toISOString();
+        }
+
+        const storageKey = getAnswersStorageKey(currentTest.id, currentAttempt?.id);
+        const cachedAnswers = loadSavedAnswersFromStorage(storageKey);
+        const serverAnswers = (currentAttempt && typeof currentAttempt.savedAnswers === 'object' && currentAttempt.savedAnswers)
+            ? currentAttempt.savedAnswers
+            : {};
+
+        userAnswers = { ...serverAnswers, ...cachedAnswers };
+
+        const validQuestionIds = new Set((currentTest.questions || []).map(q => String(q.id)));
+        Object.keys(userAnswers).forEach(qId => {
+            if (!validQuestionIds.has(String(qId))) {
+                delete userAnswers[qId];
+            }
+        });
+
+        const initialRemainingSec = getRemainingSeconds();
+
+        if (hasTimeLimit && (currentAttempt?.isExpired || initialRemainingSec <= 0)) {
+            renderQuestionsGrid();
+            renderCurrentQuestion();
+            await Swal.fire({
+                title: 'Время попытки истекло',
+                text: 'Отведенное на тест время закончилось. Ваши сохраненные ответы будут отправлены.',
+                icon: 'info',
+                confirmButtonText: 'ОК',
+                allowOutsideClick: false
+            });
+            await submitTest({ isAutoTimeout: true });
+            return;
+        }
+
+        if (Object.keys(userAnswers).length > 0 && currentAttempt) {
+            window.Toast?.info('Попытка восстановлена', 'Ранее выбранные ответы и остаток времени загружены');
+        }
 
         startTimer();
         renderQuestionsGrid();
@@ -71,14 +204,21 @@ async function initTestWorkspace() {
     }
 }
 
+function getRemainingSeconds() {
+    if (!hasTimeLimit || targetEndTimestampMs === null) return Infinity;
+    return Math.max(0, Math.ceil((targetEndTimestampMs - Date.now()) / 1000));
+}
+
 function startTimer() {
     updateTimerDisplay();
-    timerInterval = setInterval(() => {
-        timeRemaining--;
-        updateTimerDisplay();
+    if (!hasTimeLimit) return;
 
-        if (timeRemaining <= 0) {
+    timerInterval = setInterval(() => {
+        const remaining = updateTimerDisplay();
+
+        if (remaining <= 0) {
             clearInterval(timerInterval);
+            timerInterval = null;
             Swal.fire({
                 title: 'Время истекло!',
                 text: 'Отведенное время закончилось. Ваши ответы будут автоматически отправлены.',
@@ -86,17 +226,34 @@ function startTimer() {
                 confirmButtonText: 'ОК',
                 allowOutsideClick: false
             }).then(() => {
-                submitTest();
+                submitTest({ isAutoTimeout: true });
             });
         }
-    }, 1000);
+    }, 500);
 }
 
 function updateTimerDisplay() {
-    const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
+    const timerEl = document.getElementById('test-timer');
+    if (!hasTimeLimit) {
+        if (timerEl) timerEl.textContent = '∞';
+        return Infinity;
+    }
+
+    const remaining = getRemainingSeconds();
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
     const formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    document.getElementById('test-timer').textContent = formatted;
+
+    if (timerEl) {
+        timerEl.textContent = formatted;
+        if (remaining <= 60) {
+            timerEl.classList.add('text-rose-500', 'animate-pulse');
+        } else {
+            timerEl.classList.remove('text-rose-500', 'animate-pulse');
+        }
+    }
+
+    return remaining;
 }
 
 function renderQuestionsGrid() {
@@ -214,6 +371,7 @@ function renderInteractiveOptions(question) {
             } else {
                 delete userAnswers[question.id];
             }
+            persistAnswersToStorage();
             renderQuestionsGrid();
         });
         return;
@@ -227,7 +385,7 @@ function renderInteractiveOptions(question) {
             <input 
                 type="text" 
                 id="text-answer-input"
-                value="${currentAnswer !== undefined ? currentAnswer : ''}"
+                value="${currentAnswer !== undefined ? escapeHtml(currentAnswer) : ''}"
                 placeholder="Например: ray tracing"
                 class="w-full max-w-xs bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-[var(--text-main)] focus:outline-none focus:border-pink-500 transition"
             >
@@ -242,6 +400,7 @@ function renderInteractiveOptions(question) {
             } else {
                 delete userAnswers[question.id];
             }
+            persistAnswersToStorage();
             renderQuestionsGrid();
         });
         return;
@@ -283,6 +442,7 @@ function renderInteractiveOptions(question) {
             const radioInput = label.querySelector('input[type="radio"]');
             radioInput.addEventListener('change', () => {
                 userAnswers[question.id] = opt.id;
+                persistAnswersToStorage();
                 renderCurrentQuestion();
                 renderQuestionsGrid();
             });
@@ -334,7 +494,7 @@ async function confirmAndSubmitTest() {
     }
 }
 
-async function submitTest() {
+async function submitTest({ isAutoTimeout = false } = {}) {
     if (isSubmittingTest) return;
     isSubmittingTest = true;
 
@@ -352,20 +512,27 @@ async function submitTest() {
             },
             body: JSON.stringify({
                 answers: userAnswers,
-                startedIn: testStartTime
+                startedIn: testStartTime,
+                attemptId: currentAttempt?.id || null,
+                isAutoTimeout
             })
         });
 
         if (!response.ok) throw new Error('Не удалось завершить тестирование');
 
         clearInterval(timerInterval);
+        timerInterval = null;
+        isTestCompleted = true;
+        clearSavedAnswersFromStorage();
+
         const result = await response.json();
+        const passThreshold = currentTest.passing_score ?? 70;
 
         await showTestResultModal({
             score: result.score_percent,
             correctCount: result.correct_count,
             totalCount: result.total_count,
-            passed: result.score_percent >= 60
+            passed: result.passed !== undefined ? Boolean(result.passed) : result.score_percent >= passThreshold
         });
 
         window.location.href = 'index.html';

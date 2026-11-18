@@ -1,11 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { getAllTests, getTestById, submitTest, getTestResult } = require('../controllers/user/testController');
+const {
+    getAllTests,
+    getTestById,
+    saveTestProgress,
+    submitTest,
+    getTestResult
+} = require('../controllers/user/testController');
 const { authenticateToken } = require('../services/jwt');
 
-router.get('/', authenticateToken, getAllTests)
+router.get('/', authenticateToken, getAllTests);
 
 router.get('/:id', authenticateToken, getTestById);
+
+router.patch('/:id/progress', authenticateToken, saveTestProgress);
 
 router.post('/:id/submit', authenticateToken, submitTest);
 
