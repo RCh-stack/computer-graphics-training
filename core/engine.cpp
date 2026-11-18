@@ -6,9 +6,11 @@
 #include <emscripten/bind.h>
 
 #include "src/ray_math.h"
+#include "src/path_math.h"
 #include "src/render_metrics.h"
 
 using namespace RayTracing;
+using namespace PathTracing;
 
 class RayTracer {
 private:
@@ -68,6 +70,134 @@ public:
     }
 };
 
+class PathTracer {
+private:
+    int width;
+    int height;
+    uint32_t baseSeed;
+    uint32_t accumulatedSamples;
+    std::vector<Vec3f> accumBuffer;
+    std::vector<unsigned char> rgbaBuffer;
+    RenderMetrics accumulatedMetrics;
+
+    static inline unsigned char linearToSrgbByte(float linearVal) {
+        float clamped = std::max(0.0f, linearVal);
+        if (clamped > 1.0f) {
+            clamped = 1.0f - std::exp(-clamped);
+        }
+        float srgb = std::pow(std::min(1.0f, clamped), 1.0f / 2.2f);
+        return static_cast<unsigned char>(255.0f * srgb + 0.5f);
+    }
+
+public:
+    PathTracer(int w, int h)
+        : width(w), height(h), baseSeed(42u), accumulatedSamples(0u)
+    {
+        const size_t pixelCount = static_cast<size_t>(width) * static_cast<size_t>(height);
+        accumBuffer.assign(pixelCount, Vec3f(0.f, 0.f, 0.f));
+        rgbaBuffer.resize(pixelCount * 4, 0);
+    }
+
+    void reset() {
+        std::fill(accumBuffer.begin(), accumBuffer.end(), Vec3f(0.f, 0.f, 0.f));
+        accumulatedSamples = 0u;
+        accumulatedMetrics = RenderMetrics{};
+    }
+
+    void setSeed(uint32_t seed) {
+        baseSeed = seed ? seed : 1u;
+    }
+
+    uint32_t getAccumulatedSamples() const {
+        return accumulatedSamples;
+    }
+
+    void renderPass(
+        int samplesPerPass,
+        float fov,
+        Vec3f backg,
+        int current_step,
+        const std::vector<Sphere>& spheres,
+        const std::vector<Light>& lights)
+    {
+        if (samplesPerPass <= 0) return;
+
+        auto tStart = std::chrono::high_resolution_clock::now();
+
+        RenderMetrics passMetrics;
+        const uint32_t passSpp = static_cast<uint32_t>(samplesPerPass);
+        passMetrics.spp = passSpp;
+        passMetrics.primaryRays = static_cast<uint32_t>(width * height) * passSpp;
+
+        const float tanHalfFov = std::tan(fov * 0.5f);
+        const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+        const float invWidth = 1.0f / static_cast<float>(width);
+        const float invHeight = 1.0f / static_cast<float>(height);
+        const Vec3f cameraOrig(0.f, 0.f, 0.f);
+
+        const uint32_t startSample = accumulatedSamples;
+        const uint32_t nextTotalSamples = accumulatedSamples + passSpp;
+        const float invTotalSamples = 1.0f / static_cast<float>(nextTotalSamples);
+
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                const uint32_t pixelIdx = static_cast<uint32_t>(i + j * width);
+                Vec3f sumColor = accumBuffer[pixelIdx];
+
+                for (uint32_t s = 0; s < passSpp; s++) {
+                    const uint32_t globalSampleIdx = startSample + s;
+                    RngState rng(hash_seed(pixelIdx, globalSampleIdx, baseSeed));
+
+                    const float jx = (globalSampleIdx == 0) ? 0.5f : rng.nextFloat();
+                    const float jy = (globalSampleIdx == 0) ? 0.5f : rng.nextFloat();
+
+                    const float x = (2.f * (i + jx) * invWidth - 1.f) * tanHalfFov * aspectRatio;
+                    const float y = -(2.f * (j + jy) * invHeight - 1.f) * tanHalfFov;
+
+                    Vec3f dir = Vec3f(x, y, -1.f).normalize();
+                    Vec3f sampleColor = trace_path_step_dispatcher(
+                        cameraOrig, dir, backg, spheres, lights, current_step, rng, passMetrics
+                    );
+
+                    sumColor = sumColor + sampleColor;
+                }
+
+                accumBuffer[pixelIdx] = sumColor;
+
+                const Vec3f avgLinear = sumColor * invTotalSamples;
+                const size_t rgbaIndex = static_cast<size_t>(pixelIdx) * 4;
+                rgbaBuffer[rgbaIndex]     = linearToSrgbByte(avgLinear.x);
+                rgbaBuffer[rgbaIndex + 1] = linearToSrgbByte(avgLinear.y);
+                rgbaBuffer[rgbaIndex + 2] = linearToSrgbByte(avgLinear.z);
+                rgbaBuffer[rgbaIndex + 3] = 255;
+            }
+        }
+
+        auto tEnd = std::chrono::high_resolution_clock::now();
+        const double elapsedMs = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
+
+        accumulatedSamples = nextTotalSamples;
+        accumulatedMetrics.spp = accumulatedSamples;
+        accumulatedMetrics.renderTimeMs += elapsedMs;
+        accumulatedMetrics.primaryRays += passMetrics.primaryRays;
+        accumulatedMetrics.shadowRays += passMetrics.shadowRays;
+        accumulatedMetrics.secondaryRays += passMetrics.secondaryRays;
+        accumulatedMetrics.intersectionTests += passMetrics.intersectionTests;
+        accumulatedMetrics.totalRays =
+            accumulatedMetrics.primaryRays +
+            accumulatedMetrics.shadowRays +
+            accumulatedMetrics.secondaryRays;
+    }
+
+    uintptr_t getBufferPointer() {
+        return reinterpret_cast<uintptr_t>(rgbaBuffer.data());
+    }
+
+    RenderMetrics getLastMetrics() const {
+        return accumulatedMetrics;
+    }
+};
+
 EMSCRIPTEN_BINDINGS(raytracing_engine) {
     emscripten::register_vector<Sphere>("VectorSphere");
     emscripten::register_vector<Light>("VectorLight");
@@ -117,6 +247,15 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .function("renderScene", &RayTracer::renderScene)
         .function("getBufferPointer", &RayTracer::getBufferPointer)
         .function("getLastMetrics", &RayTracer::getLastMetrics);
+
+    emscripten::class_<PathTracer>("PathTracer")
+        .constructor<int, int>()
+        .function("reset", &PathTracer::reset)
+        .function("setSeed", &PathTracer::setSeed)
+        .function("getAccumulatedSamples", &PathTracer::getAccumulatedSamples)
+        .function("renderPass", &PathTracer::renderPass)
+        .function("getBufferPointer", &PathTracer::getBufferPointer)
+        .function("getLastMetrics", &PathTracer::getLastMetrics);
 
     emscripten::value_object<Vec3f>("Vec3f")
         .field("x", +[](const Vec3f& v) -> float { return v[0]; }, +[](Vec3f& v, float val) { v[0] = val; })
