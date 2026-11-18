@@ -63,6 +63,31 @@ function renderOutliner() {
     });
 }
 
+function bindLiveSlider(id, obj, prop, labelId) {
+    const slider = document.getElementById(id);
+    const label = document.getElementById(labelId);
+    if (!slider) return;
+
+    let isDragging = false;
+
+    slider.addEventListener('input', (e) => {
+        isDragging = true;
+        obj[prop] = parseFloat(e.target.value);
+        if (label) label.innerText = obj[prop].toFixed(1);
+        triggerRender({ interactive: true });
+    });
+
+    const commitFinalRender = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        triggerRender({ interactive: false });
+    };
+
+    slider.addEventListener('change', commitFinalRender);
+    slider.addEventListener('pointerup', commitFinalRender);
+    slider.addEventListener('keyup', commitFinalRender);
+}
+
 function renderInspector() {
     const obj = sceneObjects.find(o => o.id === selectedObjectId);
     if (!obj) {
@@ -130,24 +155,22 @@ function renderInspector() {
             }
         });
 
-        const bindSlider = (id, prop, labelId) => {
-            document.getElementById(id).addEventListener('input', (e) => {
-                obj[prop] = parseFloat(e.target.value);
-                document.getElementById(labelId).innerText = obj[prop].toFixed(1);
-                triggerRender();
-            });
-        };
+        bindLiveSlider('insp-x', obj, 'x', 'insp-val-x');
+        bindLiveSlider('insp-y', obj, 'y', 'insp-val-y');
+        bindLiveSlider('insp-z', obj, 'z', 'insp-val-z');
+        bindLiveSlider('insp-r', obj, 'r', 'insp-val-r');
 
-        bindSlider('insp-x', 'x', 'insp-val-x');
-        bindSlider('insp-y', 'y', 'insp-val-y');
-        bindSlider('insp-z', 'z', 'insp-val-z');
-        bindSlider('insp-r', 'r', 'insp-val-r');
-        
-        document.getElementById('insp-color').addEventListener('change', (e) => {
+        const colorInput = document.getElementById('insp-color');
+        const colorLabel = document.getElementById('insp-val-color');
+        colorInput.addEventListener('input', (e) => {
             obj.color = e.target.value;
-            const colorLabel = document.getElementById('insp-val-color');
             if (colorLabel) colorLabel.innerText = obj.color;
-            triggerRender();
+            triggerRender({ interactive: true });
+        });
+        colorInput.addEventListener('change', (e) => {
+            obj.color = e.target.value;
+            if (colorLabel) colorLabel.innerText = obj.color;
+            triggerRender({ interactive: false });
         });
 
     } else if (obj.type === 'light') {
@@ -173,17 +196,9 @@ function renderInspector() {
             </div>
         `;
 
-        const bindSlider = (id, prop, labelId) => {
-            document.getElementById(id).addEventListener('input', (e) => {
-                obj[prop] = parseFloat(e.target.value);
-                document.getElementById(labelId).innerText = obj[prop].toFixed(1);
-                triggerRender();
-            });
-        };
-
-        bindSlider('insp-x', 'x', 'insp-val-x');
-        bindSlider('insp-y', 'y', 'insp-val-y');
-        bindSlider('insp-z', 'z', 'insp-val-z');
-        bindSlider('insp-int', 'intensity', 'insp-val-int');
+        bindLiveSlider('insp-x', obj, 'x', 'insp-val-x');
+        bindLiveSlider('insp-y', obj, 'y', 'insp-val-y');
+        bindLiveSlider('insp-z', obj, 'z', 'insp-val-z');
+        bindLiveSlider('insp-int', obj, 'intensity', 'insp-val-int');
     }
 }

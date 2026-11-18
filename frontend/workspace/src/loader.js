@@ -1,8 +1,18 @@
 window.windowEditor = null;
 
+let currentLabId = null;
 let currentLabTemplates = {};
+let serverCodePerLang = {};
 let userCodePerLang = {};
 let activeLanguage = 'cpp';
+let isSyncingEditorValue = false;
+
+function resolveLabDraftKey(labId, lang) {
+    if (typeof window.getStudentLabDraftKey === 'function') {
+        return window.getStudentLabDraftKey(labId, lang);
+    }
+    return `student_lab_${labId}_${lang || 'cpp'}`;
+}
 
 function renderLabWorkspaceSkeletons() {
     const headerTitle = document.getElementById('header-title');
@@ -54,9 +64,9 @@ function renderLabWorkspaceSkeletons() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const labId = urlParams.get('id');
+    currentLabId = urlParams.get('id');
 
-    if (!labId) {
+    if (!currentLabId) {
         await Swal.fire('Ошибка', 'Идентификатор лабораторной работы не указан!', 'error');
         window.location.href = 'index.html';
         return;
@@ -67,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const token = localStorage.getItem('authToken');
 
-        const response = await fetch(`/api/v1/labs/${labId}`, {
+        const response = await fetch(`/api/v1/labs/${currentLabId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -88,17 +98,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeLanguage = (userSubmission && userSubmission.language) ? userSubmission.language : 'cpp';
 
         Object.keys(SUPPORTED_LANGUAGES).forEach(lang => {
-            userCodePerLang[lang] = currentLabTemplates[lang] || '';
+            const baseCode = currentLabTemplates[lang] || '';
+            serverCodePerLang[lang] = baseCode;
+            userCodePerLang[lang] = baseCode;
         });
 
         if (userSubmission && userSubmission.submittedCode) {
+            serverCodePerLang[activeLanguage] = userSubmission.submittedCode;
             userCodePerLang[activeLanguage] = userSubmission.submittedCode;
         }
 
-        const initialCode = userCodePerLang[activeLanguage] || currentLabTemplates[activeLanguage] || '// Код не предоставлен';
+        Object.keys(SUPPORTED_LANGUAGES).forEach(lang => {
+            const key = resolveLabDraftKey(currentLabId, lang);
+            window.labDraftGuard?.setBaseline(key, serverCodePerLang[lang]);
+        });
 
-        initMonacoEditor(initialCode);
-        setupSubmissionState(userSubmission);
+        let initialCode = userCodePerLang[activeLanguage] || currentLabTemplates[activeLanguage] || '// Код не предоставлен';
+        let restoredFromDraft = false;
+
+        const activeDraftKey = resolveLabDraftKey(currentLabId, activeLanguage);
+        const savedDraft = window.labDraftGuard?.load(activeDraftKey);
+        if (savedDraft && typeof savedDraft.data === 'string' && savedDraft.data !== serverCodePerLang[activeLanguage]) {
+            initialCode = savedDraft.data;
+            userCodePerLang[activeLanguage] = savedDraft.data;
+            restoredFromDraft = true;
+        }
+
+        initMonacoEditor(initialCode, restoredFromDraft);
+        setupSubmissionState(userSubmission, { skipEditorUpdate: true });
     } catch (error) {
         console.error('Ошибка загрузки данных лабораторной работы:', error);
         const instrText = document.getElementById('lab-instruction-text');
@@ -157,7 +184,7 @@ function renderWorkspaceUI(lab) {
     }
 }
 
-function initMonacoEditor(codeTemplate) {
+function initMonacoEditor(codeTemplate, restoredFromDraft = false) {
     if (typeof require === 'undefined') {
         console.error('Monaco RequireJS Loader не подключен.');
         return;
@@ -194,6 +221,21 @@ function initMonacoEditor(codeTemplate) {
             padding: { top: 12, bottom: 12 }
         });
 
+        window.windowEditor.onDidChangeModelContent(() => {
+            if (isSyncingEditorValue || !currentLabId) return;
+            const currentCode = window.windowEditor.getValue();
+            userCodePerLang[activeLanguage] = currentCode;
+            window.labDraftGuard?.watch(resolveLabDraftKey(currentLabId, activeLanguage), currentCode);
+        });
+
+        if (restoredFromDraft && currentLabId) {
+            window.labDraftGuard?.watch(resolveLabDraftKey(currentLabId, activeLanguage), codeTemplate);
+            window.Toast?.info(
+                'Восстановлен несохранённый черновик',
+                'Нажмите «Сохранить черновик», чтобы зафиксировать изменения в базе'
+            );
+        }
+
         const selectEl = document.getElementById('language-select');
         if (selectEl) selectEl.value = activeLanguage;
 
@@ -214,13 +256,27 @@ function changeEditorLanguage(langKey) {
     activeLanguage = langKey;
     const langConfig = SUPPORTED_LANGUAGES[langKey] || SUPPORTED_LANGUAGES['cpp'];
 
+    if (currentLabId && userCodePerLang[langKey] === serverCodePerLang[langKey]) {
+        const nextDraft = window.labDraftGuard?.load(resolveLabDraftKey(currentLabId, langKey));
+        if (nextDraft && typeof nextDraft.data === 'string' && nextDraft.data !== serverCodePerLang[langKey]) {
+            userCodePerLang[langKey] = nextDraft.data;
+            window.labDraftGuard?.watch(resolveLabDraftKey(currentLabId, langKey), nextDraft.data);
+        }
+    }
+
     if (window.windowEditor && window.monaco) {
         const model = window.windowEditor.getModel();
 
         window.monaco.editor.setModelLanguage(model, langConfig.monacoLang);
 
         const codeToSet = userCodePerLang[langKey] || currentLabTemplates[langKey] || `// Шаблон для ${langConfig.name} не задан`;
-        window.windowEditor.setValue(codeToSet);
+
+        isSyncingEditorValue = true;
+        try {
+            window.windowEditor.setValue(codeToSet);
+        } finally {
+            isSyncingEditorValue = false;
+        }
 
         const selectEl = document.getElementById('language-select');
         if (selectEl) selectEl.value = activeLanguage;
@@ -251,11 +307,16 @@ document.getElementById('language-select')?.addEventListener('change', (e) => {
     });
 });
 
-function setupSubmissionState(userSubmission) {
+function setupSubmissionState(userSubmission, { skipEditorUpdate = false } = {}) {
     if (!userSubmission) return;
 
-    if (userSubmission.submittedCode && window.windowEditor) {
-        window.windowEditor.setValue(userSubmission.submittedCode);
+    if (!skipEditorUpdate && userSubmission.submittedCode && window.windowEditor) {
+        isSyncingEditorValue = true;
+        try {
+            window.windowEditor.setValue(userSubmission.submittedCode);
+        } finally {
+            isSyncingEditorValue = false;
+        }
     }
 
     const statusContainer = document.getElementById('teacher-feedback-banner');

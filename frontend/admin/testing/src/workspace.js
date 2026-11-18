@@ -5,11 +5,115 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const testId = new URLSearchParams(window.location.search).get('id');
+const adminTestDraftKey = `admin_test_${testId || 'new'}`;
+
+const adminTestGuard = window.DraftGuard
+    ? window.DraftGuard.create({
+          confirmTitle: 'Изменения в тесте не сохранены',
+          confirmText: 'Сохранить изменения в тесте перед переходом?',
+          onSave: () => saveTest()
+      })
+    : null;
 
 let questionsState = [];
 let activeQIndex = 0;
 let activeInputTarget = null;
 let isTestLoaded = false;
+
+function normalizeQuestionForSnapshot(q) {
+    const type = q.type || 'single_choice';
+    return {
+        type,
+        questionText: q.questionText || '',
+        options: type === 'single_choice'
+            ? (Array.isArray(q.options) ? q.options.map(o => ({ id: o.id, text: o.text || '' })) : [])
+            : [],
+        correctAnswer: String(q.correctAnswer ?? ''),
+        explanation: q.explanation || '',
+        codeSnippet: q.codeSnippet || '',
+        mediaUrl: q.mediaUrl || ''
+    };
+}
+
+function getTestFormSnapshot() {
+    const questionsSnapshot = questionsState.map((q, idx) => {
+        if (idx === activeQIndex && document.getElementById('q-text')) {
+            const type = document.getElementById('q-type').value;
+            let options = q.options;
+            let correctAnswer = q.correctAnswer;
+
+            if (type === 'single_choice') {
+                const optionRows = document.querySelectorAll('.option-input-row');
+                options = Array.from(optionRows).map((row, optIdx) => {
+                    const textInput = row.querySelector('.option-text-input');
+                    return {
+                        id: row.dataset.optid || `opt_${optIdx + 1}`,
+                        text: textInput ? textInput.value : ''
+                    };
+                });
+                const checkedRadio = document.querySelector('input[name="active_correct_radio"]:checked');
+                if (checkedRadio) {
+                    correctAnswer = checkedRadio.value;
+                }
+            } else {
+                correctAnswer = document.getElementById('q-direct-correct')?.value.trim() ?? '';
+            }
+
+            return normalizeQuestionForSnapshot({
+                type,
+                questionText: document.getElementById('q-text').value,
+                options,
+                correctAnswer,
+                explanation: document.getElementById('q-explanation').value,
+                codeSnippet: document.getElementById('q-code-snippet').value,
+                mediaUrl: document.getElementById('q-media-url').value
+            });
+        }
+
+        return normalizeQuestionForSnapshot(q);
+    });
+
+    return {
+        title: document.getElementById('test-title')?.value ?? '',
+        description: document.getElementById('test-description')?.value ?? '',
+        difficulty: document.getElementById('test-difficulty')?.value ?? 'Средний',
+        timeLimit: parseInt(document.getElementById('test-time-limit')?.value) || 15,
+        isUnlocked: Boolean(document.getElementById('test-is-unlocked')?.checked),
+        questions: questionsSnapshot
+    };
+}
+
+function applyTestSnapshot(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return;
+
+    document.getElementById('test-title').value = snapshot.title || '';
+    document.getElementById('test-description').value = snapshot.description || '';
+    document.getElementById('test-difficulty').value = snapshot.difficulty || 'Средний';
+    document.getElementById('test-time-limit').value = snapshot.timeLimit || 15;
+    document.getElementById('test-is-unlocked').checked = Boolean(snapshot.isUnlocked);
+
+    questionsState = Array.isArray(snapshot.questions)
+        ? snapshot.questions.map((q, idx) => ({
+              id: `restored_${idx}_${Date.now()}`,
+              type: q.type || 'single_choice',
+              questionText: q.questionText || '',
+              options: Array.isArray(q.options) ? q.options.map(o => ({ ...o })) : [],
+              correctAnswer: q.correctAnswer || '',
+              explanation: q.explanation || '',
+              codeSnippet: q.codeSnippet || '',
+              mediaUrl: q.mediaUrl || ''
+          }))
+        : [];
+
+    activeQIndex = 0;
+    renderQuestionsNav();
+    renderActiveQuestionEditor();
+}
+
+function trackTestChanges() {
+    if (!isTestLoaded || !adminTestGuard) return;
+    adminTestGuard.watch(adminTestDraftKey, getTestFormSnapshot());
+}
 
 function initEvents() {
     document.getElementById('btn-save-test')?.addEventListener('click', saveTest);
@@ -17,11 +121,32 @@ function initEvents() {
     document.getElementById('btn-delete-active-q')?.addEventListener('click', deleteActiveQuestion);
     document.getElementById('btn-add-option')?.addEventListener('click', addOptionToActiveQuestion);
 
+    const watchedFieldIds = [
+        'test-title',
+        'test-description',
+        'test-difficulty',
+        'test-time-limit',
+        'test-is-unlocked',
+        'q-text',
+        'q-code-snippet',
+        'q-media-url',
+        'q-explanation',
+        'q-direct-correct'
+    ];
+
+    watchedFieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const eventName = (el.tagName === 'SELECT' || el.type === 'checkbox') ? 'change' : 'input';
+        el.addEventListener(eventName, trackTestChanges);
+    });
+
     document.getElementById('q-type')?.addEventListener('change', (e) => {
         if (questionsState[activeQIndex]) {
             syncDOMToActiveQuestion();
             questionsState[activeQIndex].type = e.target.value;
             renderActiveQuestionEditor();
+            trackTestChanges();
         }
     });
 
@@ -32,6 +157,18 @@ function initEvents() {
             if (!isNaN(idx) && idx !== activeQIndex) {
                 switchActiveQuestion(idx);
             }
+        }
+    });
+
+    document.getElementById('options-list-container')?.addEventListener('input', (e) => {
+        if (e.target.classList.contains('option-text-input')) {
+            trackTestChanges();
+        }
+    });
+
+    document.getElementById('options-list-container')?.addEventListener('change', (e) => {
+        if (e.target.name === 'active_correct_radio') {
+            trackTestChanges();
         }
     });
 
@@ -125,12 +262,40 @@ async function loadTestDetails() {
                 };
             });
 
-            isTestLoaded = true;
             setEditorLoadingState(false);
 
             activeQIndex = 0;
             renderQuestionsNav();
             renderActiveQuestionEditor();
+
+            isTestLoaded = true;
+            const serverSnapshot = getTestFormSnapshot();
+            adminTestGuard?.setBaseline(adminTestDraftKey, serverSnapshot);
+
+            if (adminTestGuard?.hasDiffFromBaseline(adminTestDraftKey, serverSnapshot)) {
+                const savedDraft = adminTestGuard.load(adminTestDraftKey);
+                const savedTime = savedDraft?.savedAt
+                    ? new Date(savedDraft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '';
+
+                const restoreRes = await Swal.fire({
+                    title: 'Найден несохранённый черновик',
+                    text: `Обнаружены локальные изменения теста${savedTime ? ` от ${savedTime}` : ''}, которые не были сохранены в БД. Восстановить их?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Восстановить черновик',
+                    cancelButtonText: 'Загрузить из БД',
+                    confirmButtonColor: '#d97706'
+                });
+
+                if (restoreRes.isConfirmed && savedDraft?.data) {
+                    applyTestSnapshot(savedDraft.data);
+                    trackTestChanges();
+                    window.Toast?.info('Черновик восстановлен', 'Нажмите «Сохранить», чтобы записать изменения в БД');
+                } else {
+                    adminTestGuard.clear(adminTestDraftKey);
+                }
+            }
         } else {
             throw new Error(data.message || 'Не удалось загрузить тест');
         }
@@ -247,7 +412,9 @@ function renderActiveQuestionEditor() {
 
         optionsContainer.innerHTML = q.options.map((opt, optIndex) => {
             const isChecked = q.correctAnswer === opt.id;
-            const safeOptText = String(opt.text || '').replace(/"/g, '"');
+            const safeOptText = String(opt.text || '')
+                .replace(/&/g, '&')
+                .replace(/"/g, '"');
 
             return `
                 <div class="option-input-row flex items-center gap-2" data-optid="${opt.id}">
@@ -298,6 +465,7 @@ function addNewQuestion() {
     activeQIndex = questionsState.length - 1;
     renderQuestionsNav();
     renderActiveQuestionEditor();
+    trackTestChanges();
 }
 
 async function deleteActiveQuestion() {
@@ -322,6 +490,7 @@ async function deleteActiveQuestion() {
 
     renderQuestionsNav();
     renderActiveQuestionEditor();
+    trackTestChanges();
     window.Toast?.info('Вопрос удален', 'Не забудьте сохранить изменения теста');
 }
 
@@ -333,6 +502,7 @@ function addOptionToActiveQuestion() {
     const newOptId = `opt_${q.options.length + 1}`;
     q.options.push({ id: newOptId, text: `Вариант ${q.options.length + 1}` });
     renderActiveQuestionEditor();
+    trackTestChanges();
 }
 
 function removeOptionFromActiveQuestion(optIndex) {
@@ -348,10 +518,11 @@ function removeOptionFromActiveQuestion(optIndex) {
     }
 
     renderActiveQuestionEditor();
+    trackTestChanges();
 }
 
 async function saveTest() {
-    if (!isTestLoaded) return;
+    if (!isTestLoaded) return false;
 
     syncDOMToActiveQuestion();
 
@@ -399,13 +570,17 @@ async function saveTest() {
         const data = await res.json();
 
         if (res.ok) {
+            adminTestGuard?.markClean(adminTestDraftKey, getTestFormSnapshot());
             Toast.success('Тест успешно обновлен');
+            return true;
         } else {
             Toast.error(data.message || 'Не удалось сохранить тест');
+            return false;
         }
     } catch (error) {
         console.error(error);
         Toast.error('Ошибка подключения к серверу');
+        return false;
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;

@@ -1,6 +1,12 @@
 const WIDTH = 1168;
 const HEIGHT = 638;
 
+const TARGET_PREVIEW_MS = 20;
+const MIN_PREVIEW_SCALE = 0.15;
+const MAX_PREVIEW_SCALE = 0.55;
+const DEFAULT_PREVIEW_SCALE = 0.40;
+const PREVIEW_SCALE_STEP = 0.05;
+
 const STEPS = [
     { id: 0, title: "0. BACKGROUND", desc: "Генерация первичного пучка лучей из камеры (Ray Casting). Если луч не пересекает ни один объект сцены, возвращается базовый цвет фона." },
     { id: 1, title: "1. DIFFUSE", desc: "Поиск ближайшей точки пересечения луча со сферами методом решения квадратного уравнения. Визуализация нормалей поверхностей." },
