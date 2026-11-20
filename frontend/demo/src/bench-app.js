@@ -88,6 +88,7 @@ function ensureTracers(width, height) {
 function buildSceneVectors(sceneKey) {
     const scene = BENCH_SCENES[sceneKey];
     const spheresVector = new Module.VectorSphere();
+    const meshesVector = new Module.VectorMesh();
     const lightsVector = new Module.VectorLight();
 
     scene.objects.forEach(obj => {
@@ -106,6 +107,12 @@ function buildSceneVectors(sceneKey) {
             spheresVector.push_back(sp);
             sp.delete();
             mat.delete();
+        } else if (obj.type === 'mesh') {
+            const wasmMesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, obj.albedo);
+            if (wasmMesh) {
+                meshesVector.push_back(wasmMesh);
+                wasmMesh.delete();
+            }
         } else if (obj.type === 'light') {
             const lt = new Module.Light(
                 { x: obj.x, y: obj.y, z: obj.z },
@@ -118,7 +125,7 @@ function buildSceneVectors(sceneKey) {
         }
     });
 
-    return { spheresVector, lightsVector, scene };
+    return { spheresVector, meshesVector, lightsVector, scene };
 }
 
 function readTracerRgbaCopy(tracer, width, height) {
@@ -199,6 +206,38 @@ function computeImageComparison(bufA, bufB, width, height, renderHeatmap = true)
     return { rmse, psnr, globalEnergyDiffPct, diffRgba };
 }
 
+function computeAabbStats(metrics, scene) {
+    if (!scene || !metrics) return null;
+
+    let meshCount = 0;
+    let totalTriangles = 0;
+    scene.objects.forEach(obj => {
+        if (obj.type === 'mesh') {
+            meshCount++;
+            const geom = obj.geometry || MeshLibrary.getGeometry(obj.meshKey);
+            totalTriangles += geom ? geom.triangleCount : 0;
+        }
+    });
+
+    if (meshCount === 0 || totalTriangles === 0 || !metrics.aabbTests) {
+        return null;
+    }
+
+    const rayMeshQueries = metrics.aabbTests / meshCount;
+    const bruteForceTriangles = rayMeshQueries * totalTriangles;
+    const savedTriangles = Math.max(0, bruteForceTriangles - metrics.triangleTests);
+    const cullPct = bruteForceTriangles > 0 ? (savedTriangles / bruteForceTriangles) * 100.0 : 0.0;
+    const actualMeshChecks = metrics.aabbTests + metrics.triangleTests;
+    const speedupFactor = actualMeshChecks > 0 ? bruteForceTriangles / actualMeshChecks : 1.0;
+
+    return {
+        aabbTests: Math.round(metrics.aabbTests),
+        triangleTests: Math.round(metrics.triangleTests),
+        cullPct,
+        speedupFactor
+    };
+}
+
 function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
     const rtMs = Math.max(0.01, rt.renderTimeMs);
     const ptMs = Math.max(0.01, pt.renderTimeMs);
@@ -243,6 +282,33 @@ function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
         ["Пропускная способность (MRays/s)", `${rtMRays.toFixed(2)}`, `${ptMRays.toFixed(2)}`, `${((ptMRays / rtMRays) * 100).toFixed(0)}% от RT`],
         ["Разница световой энергии ΔE (GI)", "Базовый (0%)", `${quality.globalEnergyDiffPct >= 0 ? '+' : ''}${quality.globalEnergyDiffPct.toFixed(2)}%`, "Вклад непрямого света"]
     ];
+
+    const currentScene = BENCH_SCENES[sceneSelect.value];
+    const rtAabb = computeAabbStats(rt, currentScene);
+    const ptAabb = computeAabbStats(pt, currentScene);
+
+    if (rtAabb && ptAabb) {
+        rows.push(
+            [
+                "Тесты ограничивающих боксов (AABB)",
+                rtAabb.aabbTests.toLocaleString(),
+                ptAabb.aabbTests.toLocaleString(),
+                `×${(ptAabb.aabbTests / Math.max(1, rtAabb.aabbTests)).toFixed(2)}`
+            ],
+            [
+                "Тесты пересечения «луч–треугольник» (Δ)",
+                rtAabb.triangleTests.toLocaleString(),
+                ptAabb.triangleTests.toLocaleString(),
+                `×${(ptAabb.triangleTests / Math.max(1, rtAabb.triangleTests)).toFixed(2)}`
+            ],
+            [
+                "Отсечено треугольников по AABB",
+                `${rtAabb.cullPct.toFixed(1)}% (${rtAabb.speedupFactor.toFixed(2)}×)`,
+                `${ptAabb.cullPct.toFixed(1)}% (${ptAabb.speedupFactor.toFixed(2)}×)`,
+                "Ускорение против полного перебора Δ"
+            ]
+        );
+    }
 
     tbody.innerHTML = rows.map(r => `
         <tr class="hover:bg-[var(--bg-elevated)] transition">
@@ -435,14 +501,14 @@ async function runStandardOrEqualTime(mode) {
     const res = BENCH_RESOLUTIONS[resSelect.value] || BENCH_RESOLUTIONS["640x360"];
     ensureTracers(res.width, res.height);
 
-    const { spheresVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
+    const { spheresVector, meshesVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
     const bg = hexToVec3f(scene.bgColor);
 
     try {
         setProgress(10, 'Рендер Ray Tracing...');
         await nextFrame();
 
-        benchRtTracer.renderScene(scene.fov, bg, 5, spheresVector, lightsVector);
+        benchRtTracer.renderSceneWithMeshes(scene.fov, bg, 5, spheresVector, meshesVector, lightsVector);
         const rtMetrics = benchRtTracer.getLastMetrics();
         const rtRgba = readTracerRgbaCopy(benchRtTracer, res.width, res.height);
         putRgbaToCanvas(ctxRt, rtRgba, res.width, res.height);
@@ -458,7 +524,7 @@ async function runStandardOrEqualTime(mode) {
                 const rem = goalSpp - benchPtTracer.getAccumulatedSamples();
                 const stepSpp = Math.min(rem, batch);
 
-                benchPtTracer.renderPass(stepSpp, scene.fov, bg, 3, spheresVector, lightsVector);
+                benchPtTracer.renderPassWithMeshes(stepSpp, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
                 const cur = benchPtTracer.getAccumulatedSamples();
                 setProgress(15 + (cur / goalSpp) * 80, `PT: ${cur} / ${goalSpp} SPP`);
 
@@ -472,7 +538,7 @@ async function runStandardOrEqualTime(mode) {
 
             let elapsedBudget = 0;
             do {
-                benchPtTracer.renderPass(1, scene.fov, bg, 3, spheresVector, lightsVector);
+                benchPtTracer.renderPassWithMeshes(1, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
                 const m = benchPtTracer.getLastMetrics();
                 elapsedBudget = m.renderTimeMs;
 
@@ -499,6 +565,7 @@ async function runStandardOrEqualTime(mode) {
         setProgress(100, 'Завершено');
     } finally {
         spheresVector.delete();
+        meshesVector.delete();
         lightsVector.delete();
     }
 }
@@ -507,14 +574,14 @@ async function runConvergenceSweep() {
     const res = BENCH_RESOLUTIONS[resSelect.value] || BENCH_RESOLUTIONS["640x360"];
     ensureTracers(res.width, res.height);
 
-    const { spheresVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
+    const { spheresVector, meshesVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
     const bg = hexToVec3f(scene.bgColor);
     const gtSpp = parseInt(gtSppSelect.value, 10) || 512;
 
     try {
         setProgress(5, 'Этап 1/3: Базовый Ray Tracing...');
         await nextFrame();
-        benchRtTracer.renderScene(scene.fov, bg, 5, spheresVector, lightsVector);
+        benchRtTracer.renderSceneWithMeshes(scene.fov, bg, 5, spheresVector, meshesVector, lightsVector);
         const rtMetrics = benchRtTracer.getLastMetrics();
         const rtRgba = readTracerRgbaCopy(benchRtTracer, res.width, res.height);
         putRgbaToCanvas(ctxRt, rtRgba, res.width, res.height);
@@ -524,7 +591,7 @@ async function runConvergenceSweep() {
         while (benchPtTracer.getAccumulatedSamples() < gtSpp && !cancelRequested) {
             const rem = gtSpp - benchPtTracer.getAccumulatedSamples();
             const step = Math.min(rem, 16);
-            benchPtTracer.renderPass(step, scene.fov, bg, 3, spheresVector, lightsVector);
+            benchPtTracer.renderPassWithMeshes(step, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
             const cur = benchPtTracer.getAccumulatedSamples();
             setProgress(5 + (cur / gtSpp) * 50, `Этап 2/3: Эталон GT (${cur}/${gtSpp} SPP)`);
             await nextFrame();
@@ -542,7 +609,7 @@ async function runConvergenceSweep() {
             const deltaSpp = targetCheckpoint - benchPtTracer.getAccumulatedSamples();
 
             if (deltaSpp > 0) {
-                benchPtTracer.renderPass(deltaSpp, scene.fov, bg, 3, spheresVector, lightsVector);
+                benchPtTracer.renderPassWithMeshes(deltaSpp, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
             }
 
             const curMetrics = benchPtTracer.getLastMetrics();
@@ -583,6 +650,7 @@ async function runConvergenceSweep() {
         setProgress(100, 'Анализ сходимости завершён');
     } finally {
         spheresVector.delete();
+        meshesVector.delete();
         lightsVector.delete();
     }
 }
@@ -614,12 +682,17 @@ function exportBenchmarkCsv() {
     }
 
     const sceneName = BENCH_SCENES[sceneSelect.value]?.name || sceneSelect.value;
+
+    const scene = BENCH_SCENES[sceneSelect.value];
+    const rtAabb = computeAabbStats(lastRtMetrics, scene);
+    const ptAabb = computeAabbStats(lastPtMetrics, scene);
+
     const lines = [
         `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight}`,
         '',
-        'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;Проверок пересечения;MRays/s',
-        `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)}`,
-        `Path Tracing;${lastPtMetrics.spp};${lastPtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastPtMetrics.renderTimeMs).toFixed(2)};${lastPtMetrics.primaryRays};${lastPtMetrics.shadowRays};${lastPtMetrics.secondaryRays};${lastPtMetrics.totalRays};${Math.round(lastPtMetrics.intersectionTests)};${(lastPtMetrics.totalRays / (lastPtMetrics.renderTimeMs * 1000)).toFixed(2)}`
+        'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;Проверок пересечения;MRays/s;AABB тесты;Треугольные тесты;Отсечено AABB (%)',
+        `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)};${rtAabb ? rtAabb.aabbTests : 0};${rtAabb ? rtAabb.triangleTests : 0};${rtAabb ? rtAabb.cullPct.toFixed(1) : 0}`,
+        `Path Tracing;${lastPtMetrics.spp};${lastPtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastPtMetrics.renderTimeMs).toFixed(2)};${lastPtMetrics.primaryRays};${lastPtMetrics.shadowRays};${lastPtMetrics.secondaryRays};${lastPtMetrics.totalRays};${Math.round(lastPtMetrics.intersectionTests)};${(lastPtMetrics.totalRays / (lastPtMetrics.renderTimeMs * 1000)).toFixed(2)};${ptAabb ? ptAabb.aabbTests : 0};${ptAabb ? ptAabb.triangleTests : 0};${ptAabb ? ptAabb.cullPct.toFixed(1) : 0}`
     ];
 
     if (convergenceHistory.length > 0) {
@@ -646,8 +719,16 @@ function updateSceneSummary() {
     const scene = BENCH_SCENES[sceneSelect.value];
     if (!scene) return;
     const spheresCount = scene.objects.filter(o => o.type === 'sphere').length;
+    const meshes = scene.objects.filter(o => o.type === 'mesh');
+    const trianglesCount = meshes.reduce((acc, m) => {
+        const geom = m.geometry || MeshLibrary.getGeometry(m.meshKey);
+        return acc + (geom ? geom.triangleCount : 0);
+    }, 0);
     const lightsCount = scene.objects.filter(o => o.type === 'light').length;
-    sceneSummary.innerText = `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}`;
+
+    sceneSummary.innerText = meshes.length > 0
+        ? `Сфер: ${spheresCount} | Мешей: ${meshes.length} (${trianglesCount} Δ) | Света: ${lightsCount} | FOV: ${scene.fov}`
+        : `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}`;
 }
 
 modeSelect.addEventListener('change', () => {

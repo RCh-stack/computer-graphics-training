@@ -222,5 +222,96 @@ const BENCH_SCENES = {
             );
             return list;
         })()
+    },
+    obj_duck_prism: {
+        name: "3D-модели (.obj): Хрустальная утка и призма",
+        fov: 1.15,
+        bgColor: "#141b29",
+        objects: [
+            {
+                type: "sphere",
+                x: 0.0, y: -103.5, z: -14.0, r: 100.0,
+                color: "#cbd5e1",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 15.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "mesh",
+                meshKey: "duck",
+                x: -1.4, y: -1.3, z: -10.5,
+                rotX: 0, rotY: -28, rotZ: 0,
+                scale: 2.1,
+                smoothShading: true,
+                color: "#bae6fd",
+                albedo: { x: 0.0, y: 0.5, z: 0.1, w: 0.85 },
+                specularExponent: 125.0,
+                refractiveIndex: 1.5,
+                roughness: 0.02,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "mesh",
+                meshKey: "prism",
+                x: 3.1, y: -1.6, z: -11.5,
+                rotX: 0, rotY: 22, rotZ: 0,
+                scale: 1.9,
+                smoothShading: false,
+                color: "#fde68a",
+                albedo: { x: 0.0, y: 0.5, z: 0.1, w: 0.85 },
+                specularExponent: 125.0,
+                refractiveIndex: 1.55,
+                roughness: 0.02,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -3.5, y: 8.0, z: -9.0,
+                intensity: 2.3,
+                radius: 1.3,
+                color: "#fff7ed"
+            }
+        ]
+    },
+    obj_cornell: {
+        name: "3D-модели (.obj): Корнельская комната",
+        fov: 1.15,
+        bgColor: "#090d16",
+        objects: [
+            ...MeshLibrary.createCornellBoxWalls(),
+            {
+                type: "mesh",
+                meshKey: "duck",
+                x: -1.6, y: -1.5, z: -13.0,
+                rotX: 0, rotY: -35, rotZ: 0,
+                scale: 1.9,
+                smoothShading: true,
+                color: "#e0f2fe",
+                albedo: { x: 0.0, y: 0.5, z: 0.1, w: 0.85 },
+                specularExponent: 125.0,
+                refractiveIndex: 1.5,
+                roughness: 0.02,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 2.0, y: -1.8, z: -14.2, r: 1.7,
+                color: "#f8fafc",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: 0.0, y: 3.55, z: -13.5,
+                intensity: 2.6,
+                radius: 0.85,
+                color: "#fff7ed"
+            }
+        ]
     }
 };
