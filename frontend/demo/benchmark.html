@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VirtualLab — Сравнительный бенчмарк RT vs PT</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="h-screen overflow-hidden flex flex-col font-sans select-none">
+    <header class="ui-header h-14 px-4 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-4">
+            <a href="index.html" class="ui-btn ui-btn-secondary py-1.5 px-2.5">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Модули</span>
+            </a>
+
+            <div class="h-4 w-px bg-[var(--border-color)]"></div>
+
+            <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <h1 class="text-base font-extrabold tracking-wide text-[var(--text-main)]">
+                    BenchLab <span class="text-xs font-semibold text-blue-500">RT vs PT Analytics</span>
+                </h1>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button id="theme-toggle" type="button" class="ui-theme-btn">Светлая</button>
+
+            <div id="wasm-status" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                Загрузка Wasm...
+            </div>
+
+            <button id="btn-export-csv" type="button" class="ui-btn ui-btn-secondary py-1.5 px-3 text-emerald-500">
+                <i class="fa-solid fa-file-csv"></i>
+                <span>Экспорт CSV</span>
+            </button>
+
+            <button id="btn-run-benchmark" type="button" class="ui-btn ui-btn-primary py-1.5 px-3.5">
+                <i class="fa-solid fa-play"></i>
+                <span>Запустить тест</span>
+            </button>
+
+            <button id="btn-stop-benchmark" type="button" class="hidden ui-btn ui-btn-secondary py-1.5 px-3 text-rose-500">
+                <i class="fa-solid fa-stop"></i>
+                <span>Остановить</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <aside class="w-72 bg-[var(--bg-panel)] border-r border-[var(--border-color)] flex flex-col justify-between shrink-0 overflow-y-auto">
+            <div class="p-4 space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Режим эксперимента
+                    </label>
+
+                    <select id="bench-mode" class="ui-select w-full px-3 py-2 text-xs font-semibold text-blue-500 cursor-pointer">
+                        <option value="standard">1. Сравнение качества (RT vs PT N SPP)</option>
+                        <option value="equal_time">2. Равный бюджет времени (Equal-Time)</option>
+                        <option value="convergence">3. Анализ сходимости (SPP 1 → 256)</option>
+                    </select>
+
+                    <p id="bench-mode-hint" class="text-[11px] text-[var(--text-muted)] leading-relaxed pt-1">
+                        Синхронный тест классического алгоритма RT и стохастического PT на выбранной сцене с расчётом разности освещённости.
+                    </p>
+                </div>
+
+                <div class="space-y-1.5 pt-3 ui-divider-t">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Эталонная тестовая сцена
+                    </label>
+
+                    <select id="bench-scene" class="ui-select w-full px-3 py-2 text-xs font-semibold text-[var(--text-main)] cursor-pointer">
+                        <option value="gi_soft_shadows">1. Глобальное освещение (GI & Soft Shadows)</option>
+                        <option value="diffuse_only">2. Базовая геометрия (Diffuse Only)</option>
+                        <option value="specular_glass">3. Зеркала и стекло (Specular & Glass)</option>
+                        <option value="stress_many">4. Стресс-тест (18 объектов, 3 источника света)</option>
+                    </select>
+
+                    <div id="scene-summary" class="ui-subcard p-2.5 text-[11px] font-mono text-[var(--text-muted)] leading-relaxed">
+                        Сфер: 4 | Источников: 1
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 pt-3 ui-divider-t">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Разрешение кадра
+                    </label>
+
+                    <select id="bench-resolution" class="ui-select w-full px-3 py-2 text-xs font-mono font-semibold text-[var(--text-main)] cursor-pointer">
+                        <option value="640x360" selected>640 × 360 (Быстрый тест)</option>
+                        <option value="800x450">800 × 450 (Стандартный)</option>
+                        <option value="1168x638">1168 × 638 (Full HD)</option>
+                    </select>
+                </div>
+
+                <div id="group-standard-spp" class="space-y-2 pt-3 ui-divider-t">
+                    <div class="flex justify-between text-xs font-mono text-[var(--text-main)]">
+                        <span>Целевые сэмплы PT (SPP):</span>
+                        <span id="val-bench-spp" class="text-amber-500 font-bold">32</span>
+                    </div>
+                    <input type="range" id="bench-spp" min="1" max="256" step="1" value="32" class="w-full accent-amber-500 cursor-pointer">
+                </div>
+
+                <div id="group-equal-time" class="hidden space-y-2 pt-3 ui-divider-t">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Бюджет времени на кадр
+                    </label>
+
+                    <select id="bench-time-budget" class="ui-select w-full px-3 py-2 text-xs font-mono text-[var(--text-main)] cursor-pointer">
+                        <option value="auto" selected>Авто (= времени кадра RT)</option>
+                        <option value="33">33.3 мс (30 FPS)</option>
+                        <option value="50">50.0 мс (20 FPS)</option>
+                        <option value="100">100.0 мс (10 FPS)</option>
+                    </select>
+                </div>
+
+                <div id="group-convergence" class="hidden space-y-2 pt-3 ui-divider-t">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Эталон Ground Truth (PT)
+                    </label>
+
+                    <select id="bench-gt-spp" class="ui-select w-full px-3 py-2 text-xs font-mono text-[var(--text-main)] cursor-pointer">
+                        <option value="256">256 SPP (Быстрый эталон)</option>
+                        <option value="512" selected>512 SPP (Высокая точность)</option>
+                    </select>
+
+                    <p class="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                        Контрольные точки: 1, 2, 4, 8, 16, 32, 64, 128, 256 SPP.
+                    </p>
+                </div>
+
+                <div class="space-y-2 pt-3 ui-divider-t">
+                    <div class="flex justify-between text-xs font-mono">
+                        <span class="text-[var(--text-muted)]">Статус выполнения:</span>
+                        <span id="bench-progress-text" class="text-blue-500 font-bold">Готов</span>
+                    </div>
+
+                    <div class="w-full h-2 bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border-color)]">
+                        <div id="bench-progress-bar" class="h-full bg-blue-500 transition-all duration-150" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 bg-[var(--bg-main)] overflow-y-auto p-4 md:p-5 space-y-5">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="ui-card p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+                            <span class="text-xs font-bold">Ray Tracing (Детерминированный)</span>
+                        </div>
+
+                        <span id="badge-rt-time" class="text-[11px] font-mono text-pink-500 font-bold">-- мс</span>
+                    </div>
+
+                    <div class="relative rounded-xl overflow-hidden border border-[var(--border-color)] bg-black aspect-video flex items-center justify-center">
+                        <canvas id="canvas-rt" width="640" height="360" class="w-full h-full object-contain block"></canvas>
+                    </div>
+                </div>
+
+                <div class="ui-card p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span id="title-pt-canvas" class="text-xs font-bold">Path Tracing (Монте-Карло)</span>
+                        </div>
+
+                        <span id="badge-pt-time" class="text-[11px] font-mono text-amber-500 font-bold">-- мс</span>
+                    </div>
+
+                    <div class="relative rounded-xl overflow-hidden border border-[var(--border-color)] bg-black aspect-video flex items-center justify-center">
+                        <canvas id="canvas-pt" width="640" height="360" class="w-full h-full object-contain block"></canvas>
+                    </div>
+                </div>
+
+                <div class="ui-card p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                            <span class="text-xs font-bold">Карта разности ΔI (|PT − RT|)</span>
+                        </div>
+
+                        <span id="badge-diff-energy" class="text-[11px] font-mono text-blue-500 font-bold">ΔE: --%</span>
+                    </div>
+
+                    <div class="relative rounded-xl overflow-hidden border border-[var(--border-color)] bg-black aspect-video flex items-center justify-center">
+                        <canvas id="canvas-diff" width="640" height="360" class="w-full h-full object-contain block"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="ui-card p-3.5">
+                    <div class="text-[11px] text-[var(--text-muted)] font-semibold">Коэффициент замедления PT</div>
+                    <div id="kpi-slowdown" class="text-lg font-extrabold font-mono text-blue-500 mt-1">-- ×</div>
+                    <div id="kpi-slowdown-sub" class="text-[10px] text-[var(--text-muted)] mt-0.5">Отношение времени T_PT / T_RT</div>
+                </div>
+
+                <div class="ui-card p-3.5">
+                    <div class="text-[11px] text-[var(--text-muted)] font-semibold">Пропускная способность (MRays/s)</div>
+                    <div id="kpi-throughput" class="text-lg font-extrabold font-mono text-emerald-500 mt-1">-- / --</div>
+                    <div class="text-[10px] text-[var(--text-muted)] mt-0.5">Ray Tracing vs Path Tracing</div>
+                </div>
+
+                <div class="ui-card p-3.5">
+                    <div class="text-[11px] text-[var(--text-muted)] font-semibold">Средняя стоимость луча</div>
+                    <div id="kpi-ray-cost" class="text-lg font-extrabold font-mono text-pink-500 mt-1">-- / --</div>
+                    <div class="text-[10px] text-[var(--text-muted)] mt-0.5">Проверок пересечения на 1 луч</div>
+                </div>
+
+                <div class="ui-card p-3.5">
+                    <div class="text-[11px] text-[var(--text-muted)] font-semibold">Качество / Шум (PSNR & RMSE)</div>
+                    <div id="kpi-quality" class="text-lg font-extrabold font-mono text-amber-500 mt-1">-- дБ</div>
+                    <div id="kpi-quality-sub" class="text-[10px] text-[var(--text-muted)] mt-0.5">RMSE: --</div>
+                </div>
+            </div>
+
+            <div class="ui-card p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-[var(--text-main)]">Сводная таблица вычислительных и алгоритмических метрик</h2>
+                    <span class="text-[11px] font-mono text-[var(--text-muted)]">C++ / WebAssembly Core</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="ui-divider-b text-[var(--text-muted)] uppercase text-[10px] font-bold">
+                                <th class="py-2 px-3">Метрика</th>
+                                <th class="py-2 px-3 text-pink-500">Ray Tracing</th>
+                                <th class="py-2 px-3 text-amber-500">Path Tracing</th>
+                                <th class="py-2 px-3 text-blue-500">Отношение / Разница</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="metrics-table-body" class="font-mono divide-y divide-[var(--border-color)]">
+                            <tr>
+                                <td colspan="4" class="py-6 text-center text-[var(--text-muted)] font-sans">
+                                    Выполните запуск теста для сбора метрик...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="ui-card p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-[var(--text-main)]">Структура трафика лучей (Primary / Shadow / Secondary)</h3>
+                        <span class="text-[10px] font-mono text-[var(--text-muted)]">Логарифмическая / Линейная шкала</span>
+                    </div>
+
+                    <canvas id="chart-rays" width="560" height="230" class="w-full h-56 block"></canvas>
+                </div>
+
+                <div class="ui-card p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-[var(--text-main)]">Сходимость Монте-Карло: PSNR (дБ) от числа сэмплов (SPP)</h3>
+                        <span id="chart-conv-subtitle" class="text-[10px] font-mono text-[var(--text-muted)]">Доступно в режиме анализа сходимости</span>
+                    </div>
+                    
+                    <canvas id="chart-convergence" width="560" height="230" class="w-full h-56 block"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="src/bench-config.js"></script>
+    <script src="src/bench-app.js"></script>
+    <script src="../src/theme.js"></script>
+    <script src="../src/toast.js"></script>
+    <script src="/core/engine.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</body>
+</html>

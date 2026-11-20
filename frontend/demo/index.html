@@ -87,7 +87,7 @@
                 </div>
             </div>
 
-            <div class="ui-card p-5 flex flex-col justify-between opacity-75 hover:opacity-100 transition">
+            <div class="ui-card p-5 flex flex-col justify-between hover:border-blue-500/40 transition group">
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
                         <span class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase font-mono tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">
@@ -96,16 +96,17 @@
                         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
                     </div>
 
-                    <h3 class="text-lg font-bold">Сравнительный бенчмарк</h3>
+                    <h3 class="text-lg font-bold group-hover:text-blue-500 transition">Сравнительный бенчмарк</h3>
                     <p class="text-xs text-[var(--text-muted)] leading-relaxed">
-                        Модуль для двухоконного сравнения качества, скорости сходимости (FPS / ms) и затрат памяти между различными техниками рендеринга.
+                        Модуль для двухоконного сравнения качества, скорости сходимости (PSNR / RMSE), структуры лучей и вычислительной сложности RT и PT.
                     </p>
                 </div>
 
                 <div class="pt-5 mt-5 ui-divider-t flex items-center justify-between">
-                    <span class="text-[11px] font-mono text-[var(--text-muted)]">Скоро</span>
-                    <button type="button" disabled class="ui-btn ui-btn-secondary">
-                        В разработке
+                    <span class="text-[11px] font-mono text-[var(--text-muted)]">Модуль 3</span>
+                    <button type="button" onclick="launchModule('benchmark.html')" class="ui-btn ui-btn-primary">
+                        <span>Запустить</span>
+                        <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
             </div>

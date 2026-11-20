@@ -1,0 +1,226 @@
+const BENCH_RESOLUTIONS = {
+    "640x360": { width: 640, height: 360 },
+    "800x450": { width: 800, height: 450 },
+    "1168x638": { width: 1168, height: 638 }
+};
+
+const CONVERGENCE_CHECKPOINTS = [1, 2, 4, 8, 16, 32, 64, 128, 256];
+
+const BENCH_MODE_HINTS = {
+    standard: "Синхронный прогон классического RT и стохастического PT на выбранной сцене с расчётом разности освещённости.",
+    equal_time: "Ограничение времени рендера PT бюджетом одного кадра RT (или заданным лимитом) для оценки достижимого SPP.",
+    convergence: "Серия прогонов PT (1 → 256 SPP) с расчётом RMSE и PSNR относительно эталонного изображения Ground Truth."
+};
+
+const BENCH_SCENES = {
+    gi_soft_shadows: {
+        name: "Глобальное освещение (GI & Soft Shadows)",
+        fov: 1.20,
+        bgColor: "#141b29",
+        objects: [
+            {
+                type: "sphere",
+                x: 0.0, y: -103.5, z: -16.0, r: 100.0,
+                color: "#cbd5e1",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: -4.2, y: -1.1, z: -14.5, r: 2.4,
+                color: "#ef4444",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 0.2, y: -1.3, z: -13.5, r: 2.2,
+                color: "#f8fafc",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 4.3, y: -1.4, z: -12.5, r: 2.1,
+                color: "#3b82f6",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -3.5, y: 7.5, z: -10.5,
+                intensity: 2.2,
+                radius: 1.6,
+                color: "#fff7ed"
+            }
+        ]
+    },
+    diffuse_only: {
+        name: "Базовая геометрия (Diffuse Only)",
+        fov: 1.35,
+        bgColor: "#1e293b",
+        objects: [
+            {
+                type: "sphere",
+                x: -4.5, y: 0.0, z: -15.0, r: 2.6,
+                color: "#e2e8f0",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 0.0, y: 0.5, z: -13.0, r: 2.2,
+                color: "#f59e0b",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 4.6, y: -0.3, z: -15.5, r: 2.8,
+                color: "#10b981",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 10.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -8.0, y: 12.0, z: -4.0,
+                intensity: 1.8,
+                radius: 0.8,
+                color: "#ffffff"
+            }
+        ]
+    },
+    specular_glass: {
+        name: "Зеркала и стекло (Specular & Glass)",
+        fov: 1.25,
+        bgColor: "#0f172a",
+        objects: [
+            {
+                type: "sphere",
+                x: 0.0, y: -103.5, z: -16.0, r: 100.0,
+                color: "#94a3b8",
+                albedo: { x: 0.8, y: 0.2, z: 0.0, w: 0.0 },
+                specularExponent: 25.0,
+                refractiveIndex: 1.0,
+                roughness: 0.85,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: -3.8, y: -0.8, z: -14.0, r: 2.6,
+                color: "#f8fafc",
+                albedo: { x: 0.0, y: 10.0, z: 0.85, w: 0.0 },
+                specularExponent: 1425.0,
+                refractiveIndex: 1.0,
+                roughness: 0.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 0.6, y: -1.1, z: -11.5, r: 2.2,
+                color: "#bae6fd",
+                albedo: { x: 0.0, y: 0.5, z: 0.1, w: 0.85 },
+                specularExponent: 125.0,
+                refractiveIndex: 1.5,
+                roughness: 0.01,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 4.5, y: -0.9, z: -15.0, r: 2.5,
+                color: "#f43f5e",
+                albedo: { x: 0.85, y: 0.15, z: 0.0, w: 0.0 },
+                specularExponent: 20.0,
+                refractiveIndex: 1.0,
+                roughness: 0.9,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -6.0, y: 10.0, z: -6.0,
+                intensity: 1.9,
+                radius: 1.2,
+                color: "#ffffff"
+            },
+            {
+                type: "light",
+                x: 7.0, y: 8.0, z: -8.0,
+                intensity: 1.4,
+                radius: 1.0,
+                color: "#e0f2fe"
+            }
+        ]
+    },
+    stress_many: {
+        name: "Стресс-тест (18 объектов, 3 света)",
+        fov: 1.35,
+        bgColor: "#111827",
+        objects: (() => {
+            const list = [
+                {
+                    type: "sphere",
+                    x: 0.0, y: -104.0, z: -18.0, r: 100.0,
+                    color: "#cbd5e1",
+                    albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                    specularExponent: 10.0,
+                    refractiveIndex: 1.0,
+                    roughness: 1.0,
+                    emissionIntensity: 0.0
+                }
+            ];
+            const palette = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
+            let idx = 0;
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const isMirror = (row + col) % 4 === 1;
+                    const isGlass = (row + col) % 5 === 2;
+                    list.push({
+                        type: "sphere",
+                        x: -6.4 + col * 3.2,
+                        y: -2.4 + row * 2.6,
+                        z: -13.0 - row * 2.5,
+                        r: 1.15,
+                        color: palette[idx % palette.length],
+                        albedo: isGlass
+                            ? { x: 0.0, y: 0.5, z: 0.1, w: 0.85 }
+                            : isMirror
+                                ? { x: 0.0, y: 8.0, z: 0.8, w: 0.0 }
+                                : { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                        specularExponent: isMirror ? 1200.0 : 25.0,
+                        refractiveIndex: isGlass ? 1.5 : 1.0,
+                        roughness: isMirror || isGlass ? 0.03 : 0.95,
+                        emissionIntensity: 0.0
+                    });
+                    idx++;
+                }
+            }
+            list.push(
+                { type: "light", x: -10.0, y: 12.0, z: -8.0, intensity: 1.6, radius: 1.3, color: "#ffffff" },
+                { type: "light", x: 10.0, y: 11.0, z: -9.0, intensity: 1.5, radius: 1.3, color: "#fef3c7" },
+                { type: "light", x: 0.0, y: 14.0, z: -15.0, intensity: 1.2, radius: 1.5, color: "#e0f2fe" }
+            );
+            return list;
+        })()
+    }
+};
