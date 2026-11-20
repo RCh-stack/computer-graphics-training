@@ -91,7 +91,13 @@ namespace PathTracing
             return t0 >= 1e-4f;
         }
 
-        bool scene_occluded(const Vec3f &orig, const Vec3f &dir, float max_dist, const std::vector<Sphere> &spheres, RenderMetrics &metrics)
+        bool scene_occluded(
+            const Vec3f &orig,
+            const Vec3f &dir,
+            float max_dist,
+            const std::vector<Sphere> &spheres,
+            const std::vector<Mesh> &meshes,
+            RenderMetrics &metrics)
         {
             for (size_t i = 0; i < spheres.size(); i++)
             {
@@ -102,6 +108,15 @@ namespace PathTracing
                     return true;
                 }
             }
+
+            for (size_t i = 0; i < meshes.size(); i++)
+            {
+                if (meshes[i].occluded(orig, dir, max_dist, metrics))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -119,6 +134,7 @@ namespace PathTracing
             const Vec3f &orig,
             const Vec3f &dir,
             const std::vector<Sphere> &spheres,
+            const std::vector<Mesh> &meshes,
             const std::vector<Light> &lights,
             RenderMetrics &metrics)
         {
@@ -167,6 +183,21 @@ namespace PathTracing
                 rec.material = spheres[closest_sphere].material;
             }
 
+            for (size_t i = 0; i < meshes.size(); i++)
+            {
+                float mesh_t = 0.f;
+                Vec3f mesh_N;
+                if (meshes[i].intersect(orig, dir, rec.dist, mesh_t, mesh_N, metrics))
+                {
+                    rec.hit = true;
+                    rec.isLight = false;
+                    rec.dist = mesh_t;
+                    rec.point = orig + dir * mesh_t;
+                    rec.normal = mesh_N;
+                    rec.material = meshes[i].material;
+                }
+            }
+
             return rec;
         }
 
@@ -175,6 +206,7 @@ namespace PathTracing
             const Vec3f &N,
             const Vec3f &linear_diffuse,
             const std::vector<Sphere> &spheres,
+            const std::vector<Mesh> &meshes,
             const std::vector<Light> &lights,
             RngState &rng,
             RenderMetrics &metrics)
@@ -202,7 +234,7 @@ namespace PathTracing
                 Vec3f shadow_orig = point + N * 1e-3f;
                 metrics.shadowRays++;
 
-                if (!scene_occluded(shadow_orig, light_dir, shadow_max_dist, spheres, metrics))
+                if (!scene_occluded(shadow_orig, light_dir, shadow_max_dist, spheres, meshes, metrics))
                 {
                     Vec3f light_rad = srgb_to_linear(lights[i].color) * lights[i].depth;
                     direct = direct + cwise_mul(linear_diffuse, light_rad) * ndotl;
@@ -229,6 +261,7 @@ namespace PathTracing
         const Vec3f &dir,
         const Vec3f &backg,
         const std::vector<Sphere> &spheres,
+        const std::vector<Mesh> &meshes,
         const std::vector<Light> &lights,
         int current_step,
         RngState &rng,
@@ -254,18 +287,11 @@ namespace PathTracing
                 metrics.secondaryRays++;
             }
 
-            HitRecord rec = intersect_scene_and_lights(ray_orig, ray_dir, spheres, lights, metrics);
+            HitRecord rec = intersect_scene_and_lights(ray_orig, ray_dir, spheres, meshes, lights, metrics);
 
             if (!rec.hit)
             {
-                if (step == PathTraceStep::EMISSION_AND_ALBEDO || bounce == 0 || !last_bounce_specular)
-                {
-                    radiance = radiance + cwise_mul(throughput, linear_bg);
-                }
-                else
-                {
-                    radiance = radiance + cwise_mul(throughput, linear_bg);
-                }
+                radiance = radiance + cwise_mul(throughput, linear_bg);
                 break;
             }
 
@@ -367,7 +393,7 @@ namespace PathTracing
             else
             {
                 Vec3f direct_light = estimate_direct_area_lights(
-                    rec.point, rec.normal, linear_albedo, spheres, lights, rng, metrics
+                    rec.point, rec.normal, linear_albedo, spheres, meshes, lights, rng, metrics
                 );
                 radiance = radiance + cwise_mul(throughput, direct_light);
 

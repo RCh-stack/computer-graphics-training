@@ -21,6 +21,7 @@ function hexToVec3f(hex) {
 
 function buildWasmSceneVectors() {
     const spheresVector = new Module.VectorSphere();
+    const meshesVector = new Module.VectorMesh();
     const lightsVector = new Module.VectorLight();
 
     ptSceneObjects.forEach(obj => {
@@ -51,6 +52,12 @@ function buildWasmSceneVectors() {
             spheresVector.push_back(sphere);
             sphere.delete();
             material.delete();
+        } else if (obj.type === 'mesh') {
+            const wasmMesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, obj.albedo);
+            if (wasmMesh) {
+                meshesVector.push_back(wasmMesh);
+                wasmMesh.delete();
+            }
         } else if (obj.type === 'light') {
             const lightColor = hexToVec3f(obj.color || '#ffffff');
             const lightRadius = obj.radius !== undefined ? Number(obj.radius) : 1.0;
@@ -67,5 +74,5 @@ function buildWasmSceneVectors() {
         }
     });
 
-    return { spheresVector, lightsVector };
+    return { spheresVector, meshesVector, lightsVector };
 }

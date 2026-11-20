@@ -51,19 +51,30 @@
                     <select id="scene-preset-select" class="ui-select w-full px-2.5 py-1.5 text-xs font-semibold text-amber-500 cursor-pointer">
                         <option value="gi_showcase">Глобальное освещение (GI)</option>
                         <option value="rt_classic">Классическая (как в RT)</option>
+                        <option value="obj_crystal">3D-модели (.obj): Утка и призма</option>
+                        <option value="obj_cornell">3D-модели (.obj): Корнельская комната</option>
                     </select>
                 </div>
 
                 <div class="space-y-2 pt-3 ui-divider-t">
                     <div class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Добавить на сцену</div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button id="btn-add-sphere" type="button" class="ui-btn ui-btn-secondary text-amber-500 py-2 px-3">
+                        <button id="btn-add-sphere" type="button" class="ui-btn ui-btn-secondary text-amber-500 py-1.5 px-2.5 text-xs">
                             <span>+ Сфера</span>
                         </button>
 
-                        <button id="btn-add-light" type="button" class="ui-btn ui-btn-secondary text-emerald-500 py-2 px-3">
+                        <button id="btn-add-light" type="button" class="ui-btn ui-btn-secondary text-emerald-500 py-1.5 px-2.5 text-xs">
                             <span>+ Источник</span>
                         </button>
+
+                        <button id="btn-add-mesh" type="button" class="ui-btn ui-btn-secondary text-cyan-500 py-1.5 px-2.5 text-xs">
+                            <span>+ 3D-модель</span>
+                        </button>
+
+                        <button id="btn-upload-obj" type="button" class="ui-btn ui-btn-secondary text-indigo-400 py-1.5 px-2.5 text-xs">
+                            <span>Загрузить .obj</span>
+                        </button>
+                        <input type="file" id="input-obj-file" accept=".obj" class="hidden">
                     </div>
                 </div>
 
@@ -73,7 +84,7 @@
                         <span id="outliner-count" class="text-amber-500 font-mono">0</span>
                     </div>
 
-                    <div id="outliner-list" class="space-y-1 max-h-[220px] overflow-y-auto pr-1"></div>
+                    <div id="outliner-list" class="space-y-1 max-h-[200px] overflow-y-auto pr-1"></div>
                 </div>
 
                 <div class="space-y-3 pt-3 ui-divider-t">
@@ -102,8 +113,8 @@
                     <div>
                         <label class="text-xs font-mono text-[var(--text-muted)] block mb-1">Цвет фона (окружения):</label>
                         <div class="ui-subcard flex items-center space-x-3 p-1.5">
-                            <input type="color" id="param-bg-color" value="#1e293b" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded">
-                            <span id="val-bg-color" class="text-xs font-mono text-[var(--text-main)] uppercase">#1e293b</span>
+                            <input type="color" id="param-bg-color" value="#141b29" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded">
+                            <span id="val-bg-color" class="text-xs font-mono text-[var(--text-main)] uppercase">#141b29</span>
                         </div>
                     </div>
                 </div>
@@ -154,6 +165,7 @@
         </aside>
     </div>
 
+    <script src="src/mesh-library.js"></script>
     <script src="src/pt-config.js"></script>
     <script src="src/pt-state.js"></script>
     <script src="src/pt-ui.js"></script>

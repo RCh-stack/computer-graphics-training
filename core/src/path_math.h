@@ -6,6 +6,7 @@
 #include "geometry.h"
 #include "material.h"
 #include "sphere.h"
+#include "mesh.h"
 #include "light.h"
 #include "render_metrics.h"
 
@@ -44,11 +45,26 @@ namespace PathTracing
         const Vec3f &dir,
         const Vec3f &backg,
         const std::vector<Sphere> &spheres,
+        const std::vector<Mesh> &meshes,
         const std::vector<Light> &lights,
         int current_step,
         RngState &rng,
         RenderMetrics &metrics
     );
+
+    inline Vec3f trace_path_step_dispatcher(
+        const Vec3f &orig,
+        const Vec3f &dir,
+        const Vec3f &backg,
+        const std::vector<Sphere> &spheres,
+        const std::vector<Light> &lights,
+        int current_step,
+        RngState &rng,
+        RenderMetrics &metrics)
+    {
+        static const std::vector<Mesh> empty_meshes;
+        return trace_path_step_dispatcher(orig, dir, backg, spheres, empty_meshes, lights, current_step, rng, metrics);
+    }
 }
 
 #endif // PATH_MATH_H

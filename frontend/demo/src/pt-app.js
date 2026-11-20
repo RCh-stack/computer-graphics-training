@@ -22,6 +22,7 @@ const sppInput = document.getElementById('param-spp');
 const sppLabel = document.getElementById('val-spp');
 const sppProgressBar = document.getElementById('spp-progress-bar');
 const scenePresetSelect = document.getElementById('scene-preset-select');
+const objFileInput = document.getElementById('input-obj-file');
 const statusDiv = document.getElementById('wasm-status');
 const timerDiv = document.getElementById('render-time');
 
@@ -30,6 +31,7 @@ let progressiveRafId = null;
 let pendingInteractive = false;
 let hasPendingFull = false;
 let activeJobId = 0;
+let addedMeshCounter = 0;
 
 function clampScale(scale) {
     return Math.min(MAX_PREVIEW_SCALE, Math.max(MIN_PREVIEW_SCALE, scale));
@@ -141,14 +143,15 @@ function executeInteractivePreview() {
     bgColorLabel.innerText = bgColorInput.value;
 
     const backgroundColor = hexToVec3f(bgColorInput.value);
-    const { spheresVector, lightsVector } = buildWasmSceneVectors();
+    const { spheresVector, meshesVector, lightsVector } = buildWasmSceneVectors();
 
     const t0 = performance.now();
     preview.tracer.reset();
     preview.tracer.setSeed(42);
-    preview.tracer.renderPass(1, fovValue, backgroundColor, currentStepIndex, spheresVector, lightsVector);
+    preview.tracer.renderPassWithMeshes(1, fovValue, backgroundColor, currentStepIndex, spheresVector, meshesVector, lightsVector);
 
     spheresVector.delete();
+    meshesVector.delete();
     lightsVector.delete();
 
     const bufferPtr = preview.tracer.getBufferPointer();
@@ -200,19 +203,21 @@ function startProgressiveRender() {
         }
 
         const samplesThisPass = Math.min(remaining, batchSize);
-        const { spheresVector, lightsVector } = buildWasmSceneVectors();
+        const { spheresVector, meshesVector, lightsVector } = buildWasmSceneVectors();
 
         const passStart = performance.now();
-        cppPathTracer.renderPass(
+        cppPathTracer.renderPassWithMeshes(
             samplesThisPass,
             fovValue,
             backgroundColor,
             currentStepIndex,
             spheresVector,
+            meshesVector,
             lightsVector
         );
 
         spheresVector.delete();
+        meshesVector.delete();
         lightsVector.delete();
 
         const passMs = performance.now() - passStart;
@@ -300,6 +305,82 @@ document.getElementById('btn-add-light').addEventListener('click', () => {
     renderOutliner();
     renderInspector();
     triggerRender();
+});
+
+document.getElementById('btn-add-mesh')?.addEventListener('click', () => {
+    const keys = Object.keys(MeshLibrary.BUILTIN_GEOMETRIES);
+    const meshKey = keys[addedMeshCounter % keys.length];
+    addedMeshCounter++;
+
+    const newId = "pt_mesh_" + Date.now();
+    const glassPreset = PT_MATERIAL_PRESETS.glass;
+    ptSceneObjects.push({
+        id: newId,
+        name: MeshLibrary.BUILTIN_GEOMETRIES[meshKey].label,
+        type: "mesh",
+        meshKey,
+        x: 0.0, y: -1.2, z: -10.5,
+        rotX: 0, rotY: -25, rotZ: 0,
+        scale: 1.8,
+        smoothShading: meshKey === 'duck',
+        color: "#bae6fd",
+        presetKey: "glass",
+        albedo: { ...glassPreset.albedo },
+        specularExponent: glassPreset.specularExponent,
+        refractiveIndex: glassPreset.refractiveIndex,
+        roughness: glassPreset.roughness,
+        emissionIntensity: glassPreset.emissionIntensity
+    });
+    selectedObjectId = newId;
+    renderOutliner();
+    renderInspector();
+    triggerRender();
+});
+
+document.getElementById('btn-upload-obj')?.addEventListener('click', () => {
+    objFileInput?.click();
+});
+
+objFileInput?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const parsed = MeshLibrary.parseObjText(String(reader.result || ''), { normalize: true });
+        if (parsed.triangleCount === 0) {
+            window.Toast?.error('Ошибка .obj', 'Не удалось прочитать вершины или треугольники из файла');
+            return;
+        }
+
+        const newId = "pt_mesh_obj_" + Date.now();
+        const glassPreset = PT_MATERIAL_PRESETS.glass;
+        ptSceneObjects.push({
+            id: newId,
+            name: file.name,
+            type: "mesh",
+            meshKey: "uploaded",
+            geometry: parsed,
+            x: 0.0, y: -1.2, z: -10.5,
+            rotX: 0, rotY: 0, rotZ: 0,
+            scale: 1.8,
+            smoothShading: true,
+            color: "#e0f2fe",
+            presetKey: "glass",
+            albedo: { ...glassPreset.albedo },
+            specularExponent: glassPreset.specularExponent,
+            refractiveIndex: glassPreset.refractiveIndex,
+            roughness: glassPreset.roughness,
+            emissionIntensity: glassPreset.emissionIntensity
+        });
+        selectedObjectId = newId;
+        renderOutliner();
+        renderInspector();
+        triggerRender();
+        window.Toast?.success('Модель загружена', `${file.name}: ${parsed.triangleCount} треугольников`);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
 });
 
 btnPrev.addEventListener('click', () => {

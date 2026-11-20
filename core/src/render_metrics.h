@@ -11,6 +11,8 @@ struct RenderMetrics
     uint32_t secondaryRays = 0;
     uint32_t totalRays = 0;
     double intersectionTests = 0.0;
+    double aabbTests = 0.0;
+    double triangleTests = 0.0;
     uint32_t spp = 1;
 };
 

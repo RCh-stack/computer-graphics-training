@@ -7,6 +7,7 @@
 
 #include "src/ray_math.h"
 #include "src/path_math.h"
+#include "src/mesh.h"
 #include "src/render_metrics.h"
 
 using namespace RayTracing;
@@ -25,6 +26,18 @@ public:
     }
 
     void renderScene(float fov, Vec3f backg, int current_step, const std::vector<Sphere>& spheres, const std::vector<Light>& lights)
+    {
+        static const std::vector<Mesh> emptyMeshes;
+        renderSceneWithMeshes(fov, backg, current_step, spheres, emptyMeshes, lights);
+    }
+
+    void renderSceneWithMeshes(
+        float fov,
+        Vec3f backg,
+        int current_step,
+        const std::vector<Sphere>& spheres,
+        const std::vector<Mesh>& meshes,
+        const std::vector<Light>& lights)
     {
         auto tStart = std::chrono::high_resolution_clock::now();
 
@@ -45,7 +58,7 @@ public:
                 const float x = (2.f * (i + 0.5f) * invWidth - 1.f) * tanHalfFov * aspectRatio;
 
                 Vec3f dir = Vec3f(x, y, -1.f).normalize();
-                Vec3f pixelColor = cast_ray_step_dispatcher(cameraOrig, dir, backg, spheres, lights, 0, current_step, metrics);
+                Vec3f pixelColor = cast_ray_step_dispatcher(cameraOrig, dir, backg, spheres, meshes, lights, 0, current_step, metrics);
                 size_t rgbaIndex = static_cast<size_t>(i + j * width) * 4;
 
                 rgbaBuffer[rgbaIndex]     = static_cast<unsigned char>(255.f * std::max(0.f, std::min(1.f, pixelColor[0])));
@@ -120,6 +133,19 @@ public:
         const std::vector<Sphere>& spheres,
         const std::vector<Light>& lights)
     {
+        static const std::vector<Mesh> emptyMeshes;
+        renderPassWithMeshes(samplesPerPass, fov, backg, current_step, spheres, emptyMeshes, lights);
+    }
+
+    void renderPassWithMeshes(
+        int samplesPerPass,
+        float fov,
+        Vec3f backg,
+        int current_step,
+        const std::vector<Sphere>& spheres,
+        const std::vector<Mesh>& meshes,
+        const std::vector<Light>& lights)
+    {
         if (samplesPerPass <= 0) return;
 
         auto tStart = std::chrono::high_resolution_clock::now();
@@ -156,7 +182,7 @@ public:
 
                     Vec3f dir = Vec3f(x, y, -1.f).normalize();
                     Vec3f sampleColor = trace_path_step_dispatcher(
-                        cameraOrig, dir, backg, spheres, lights, current_step, rng, passMetrics
+                        cameraOrig, dir, backg, spheres, meshes, lights, current_step, rng, passMetrics
                     );
 
                     sumColor = sumColor + sampleColor;
@@ -183,6 +209,8 @@ public:
         accumulatedMetrics.shadowRays += passMetrics.shadowRays;
         accumulatedMetrics.secondaryRays += passMetrics.secondaryRays;
         accumulatedMetrics.intersectionTests += passMetrics.intersectionTests;
+        accumulatedMetrics.aabbTests += passMetrics.aabbTests;
+        accumulatedMetrics.triangleTests += passMetrics.triangleTests;
         accumulatedMetrics.totalRays =
             accumulatedMetrics.primaryRays +
             accumulatedMetrics.shadowRays +
@@ -199,7 +227,10 @@ public:
 };
 
 EMSCRIPTEN_BINDINGS(raytracing_engine) {
+    emscripten::register_vector<float>("VectorFloat");
+    emscripten::register_vector<int>("VectorInt");
     emscripten::register_vector<Sphere>("VectorSphere");
+    emscripten::register_vector<Mesh>("VectorMesh");
     emscripten::register_vector<Light>("VectorLight");
 
     emscripten::value_object<RenderMetrics>("RenderMetrics")
@@ -209,6 +240,8 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .field("secondaryRays", &RenderMetrics::secondaryRays)
         .field("totalRays", &RenderMetrics::totalRays)
         .field("intersectionTests", &RenderMetrics::intersectionTests)
+        .field("aabbTests", &RenderMetrics::aabbTests)
+        .field("triangleTests", &RenderMetrics::triangleTests)
         .field("spp", &RenderMetrics::spp);
 
     emscripten::class_<Material>("Material")
@@ -232,6 +265,18 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .property("radius", &Sphere::radius)
         .property("material", &Sphere::material);
 
+    emscripten::class_<Mesh>("Mesh")
+        .constructor<>()
+        .constructor<Material>()
+        .function("setGeometry", &Mesh::setGeometry)
+        .function("setTransform", &Mesh::setTransform)
+        .function("triangleCount", &Mesh::triangleCount)
+        .property("material", &Mesh::material)
+        .property("smoothShading", &Mesh::smoothShading)
+        .property("position", &Mesh::position)
+        .property("rotation", &Mesh::rotation)
+        .property("scale", &Mesh::scale);
+
     emscripten::class_<Light>("Light")
         .constructor<>()
         .constructor<Vec3f, float>()
@@ -245,6 +290,7 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
     emscripten::class_<RayTracer>("RayTracer")
         .constructor<int, int>()
         .function("renderScene", &RayTracer::renderScene)
+        .function("renderSceneWithMeshes", &RayTracer::renderSceneWithMeshes)
         .function("getBufferPointer", &RayTracer::getBufferPointer)
         .function("getLastMetrics", &RayTracer::getLastMetrics);
 
@@ -254,6 +300,7 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .function("setSeed", &PathTracer::setSeed)
         .function("getAccumulatedSamples", &PathTracer::getAccumulatedSamples)
         .function("renderPass", &PathTracer::renderPass)
+        .function("renderPassWithMeshes", &PathTracer::renderPassWithMeshes)
         .function("getBufferPointer", &PathTracer::getBufferPointer)
         .function("getLastMetrics", &PathTracer::getLastMetrics);
 
