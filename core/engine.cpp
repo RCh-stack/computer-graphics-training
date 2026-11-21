@@ -271,11 +271,13 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .function("setGeometry", &Mesh::setGeometry)
         .function("setTransform", &Mesh::setTransform)
         .function("triangleCount", &Mesh::triangleCount)
+        .function("bvhNodeCount", &Mesh::bvhNodeCount)
         .property("material", &Mesh::material)
         .property("smoothShading", &Mesh::smoothShading)
         .property("position", &Mesh::position)
         .property("rotation", &Mesh::rotation)
-        .property("scale", &Mesh::scale);
+        .property("scale", &Mesh::scale)
+        .property("useBVH", &Mesh::useBVH);
 
     emscripten::class_<Light>("Light")
         .constructor<>()

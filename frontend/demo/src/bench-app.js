@@ -38,6 +38,12 @@ const ctxDiff = canvasDiff.getContext('2d');
 const chartRaysCanvas = document.getElementById('chart-rays');
 const chartConvCanvas = document.getElementById('chart-convergence');
 
+const bvhModeSelect = document.getElementById('bench-bvh-mode');
+
+function isBvhEnabled() {
+    return !bvhModeSelect || bvhModeSelect.value === 'bvh';
+}
+
 function hexToVec3f(hex) {
     const clean = (hex || '#ffffff').replace('#', '');
     return {
@@ -108,8 +114,10 @@ function buildSceneVectors(sceneKey) {
             sp.delete();
             mat.delete();
         } else if (obj.type === 'mesh') {
-            const wasmMesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, obj.albedo);
+            const meshPayload = { ...obj, useBVH: isBvhEnabled() };
+            const wasmMesh = MeshLibrary.buildWasmMesh(meshPayload, hexToVec3f, obj.albedo);
             if (wasmMesh) {
+                obj._bvhNodeCount = meshPayload._bvhNodeCount || 0;
                 meshesVector.push_back(wasmMesh);
                 wasmMesh.delete();
             }
@@ -223,12 +231,12 @@ function computeAabbStats(metrics, scene) {
         return null;
     }
 
-    const rayMeshQueries = metrics.aabbTests / meshCount;
-    const bruteForceTriangles = rayMeshQueries * totalTriangles;
+    const rayQueries = metrics.totalRays;
+    const bruteForceTriangles = rayQueries * totalTriangles;
     const savedTriangles = Math.max(0, bruteForceTriangles - metrics.triangleTests);
     const cullPct = bruteForceTriangles > 0 ? (savedTriangles / bruteForceTriangles) * 100.0 : 0.0;
-    const actualMeshChecks = metrics.aabbTests + metrics.triangleTests;
-    const speedupFactor = actualMeshChecks > 0 ? bruteForceTriangles / actualMeshChecks : 1.0;
+    const actualChecks = metrics.aabbTests + metrics.triangleTests;
+    const speedupFactor = actualChecks > 0 ? bruteForceTriangles / actualChecks : 1.0;
 
     return {
         aabbTests: Math.round(metrics.aabbTests),
@@ -288,6 +296,7 @@ function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
     const ptAabb = computeAabbStats(pt, currentScene);
 
     if (rtAabb && ptAabb) {
+        const bvhOn = isBvhEnabled();
         rows.push(
             [
                 "Тесты ограничивающих боксов (AABB)",
@@ -302,10 +311,10 @@ function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
                 `×${(ptAabb.triangleTests / Math.max(1, rtAabb.triangleTests)).toFixed(2)}`
             ],
             [
-                "Отсечено треугольников по AABB",
+                bvhOn ? "Отсечено треугольников (BVH)" : "Отсечено треугольников (AABB)",
                 `${rtAabb.cullPct.toFixed(1)}% (${rtAabb.speedupFactor.toFixed(2)}×)`,
                 `${ptAabb.cullPct.toFixed(1)}% (${ptAabb.speedupFactor.toFixed(2)}×)`,
-                "Ускорение против полного перебора Δ"
+                bvhOn ? "Ускорение BVH против перебора Δ" : "Линейный перебор внутри AABB"
             ]
         );
     }
@@ -562,6 +571,7 @@ async function runStandardOrEqualTime(mode) {
         lastQualityStats = quality;
 
         updateSummaryUI(rtMetrics, ptMetrics, quality, false);
+        updateSceneSummary();
         setProgress(100, 'Завершено');
     } finally {
         spheresVector.delete();
@@ -647,6 +657,7 @@ async function runConvergenceSweep() {
         }
 
         document.getElementById('chart-conv-subtitle').innerText = `Эталон: PT ${gtSpp} SPP | Разрешение ${res.width}×${res.height}`;
+        updateSceneSummary();
         setProgress(100, 'Анализ сходимости завершён');
     } finally {
         spheresVector.delete();
@@ -687,8 +698,10 @@ function exportBenchmarkCsv() {
     const rtAabb = computeAabbStats(lastRtMetrics, scene);
     const ptAabb = computeAabbStats(lastPtMetrics, scene);
 
+    const accelLabel = isBvhEnabled() ? 'BVH (Binned SAH)' : 'Без BVH (Линейный перебор)';
+
     const lines = [
-        `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight}`,
+        `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight};Ускорение мешей;${accelLabel}`,
         '',
         'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;Проверок пересечения;MRays/s;AABB тесты;Треугольные тесты;Отсечено AABB (%)',
         `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)};${rtAabb ? rtAabb.aabbTests : 0};${rtAabb ? rtAabb.triangleTests : 0};${rtAabb ? rtAabb.cullPct.toFixed(1) : 0}`,
@@ -724,11 +737,22 @@ function updateSceneSummary() {
         const geom = m.geometry || MeshLibrary.getGeometry(m.meshKey);
         return acc + (geom ? geom.triangleCount : 0);
     }, 0);
+    const bvhNodesTotal = meshes.reduce((acc, m) => acc + (m._bvhNodeCount || 0), 0);
     const lightsCount = scene.objects.filter(o => o.type === 'light').length;
 
-    sceneSummary.innerText = meshes.length > 0
-        ? `Сфер: ${spheresCount} | Мешей: ${meshes.length} (${trianglesCount} Δ) | Света: ${lightsCount} | FOV: ${scene.fov}`
-        : `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}`;
+    const bvhGroup = document.getElementById('group-bvh-mode');
+    if (bvhGroup) {
+        bvhGroup.classList.toggle('opacity-50', meshes.length === 0);
+    }
+
+    if (meshes.length > 0) {
+        const accelTag = isBvhEnabled()
+            ? (bvhNodesTotal > 0 ? `BVH: ${bvhNodesTotal} узлов` : 'BVH (SAH)')
+            : 'Без BVH';
+        sceneSummary.innerText = `Сфер: ${spheresCount} | Мешей: ${meshes.length} (${trianglesCount} Δ) | ${accelTag} | Света: ${lightsCount}`;
+    } else {
+        sceneSummary.innerText = `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}`;
+    }
 }
 
 modeSelect.addEventListener('change', () => {
@@ -740,6 +764,12 @@ modeSelect.addEventListener('change', () => {
 });
 
 sceneSelect.addEventListener('change', updateSceneSummary);
+
+bvhModeSelect?.addEventListener('change', () => {
+    bvhModeSelect.classList.toggle('text-emerald-500', isBvhEnabled());
+    bvhModeSelect.classList.toggle('text-amber-500', !isBvhEnabled());
+    updateSceneSummary();
+});
 
 sppSlider.addEventListener('input', () => {
     sppLabel.innerText = sppSlider.value;

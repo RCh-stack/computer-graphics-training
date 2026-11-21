@@ -80,10 +80,22 @@
                         <option value="stress_many">4. Стресс-тест (18 объектов, 3 источника света)</option>
                         <option value="obj_duck_prism">5. 3D-модели (.obj): Хрустальная утка и призма</option>
                         <option value="obj_cornell">6. 3D-модели (.obj): Корнельская комната</option>
+                        <option value="obj_highpoly_torus">7. Высокополигональный меш (.obj, 2048 Δ)</option>
                     </select>
 
                     <div id="scene-summary" class="ui-subcard p-2.5 text-[11px] font-mono text-[var(--text-muted)] leading-relaxed">
                         Сфер: 4 | Источников: 1
+                    </div>
+
+                    <div id="group-bvh-mode" class="space-y-1.5 pt-2">
+                        <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                            Ускорение мешей (.obj)
+                        </label>
+                        
+                        <select id="bench-bvh-mode" class="ui-select w-full px-3 py-2 text-xs font-semibold text-emerald-500 cursor-pointer">
+                            <option value="bvh" selected>BVH-дерево (Binned SAH)</option>
+                            <option value="linear">Без BVH (Линейный перебор Δ)</option>
+                        </select>
                     </div>
                 </div>
 

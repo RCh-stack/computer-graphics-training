@@ -313,5 +313,82 @@ const BENCH_SCENES = {
                 color: "#fff7ed"
             }
         ]
+    },
+    obj_highpoly_torus: {
+        name: "Высокополигональный меш (.obj, 2048 Δ)",
+        fov: 1.15,
+        bgColor: "#0f172a",
+        objects: [
+            {
+                type: "sphere",
+                x: 0.0, y: -103.5, z: -14.0, r: 100.0,
+                color: "#cbd5e1",
+                albedo: { x: 0.9, y: 0.1, z: 0.0, w: 0.0 },
+                specularExponent: 15.0,
+                refractiveIndex: 1.0,
+                roughness: 1.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "mesh",
+                meshKey: "highpoly_torus",
+                geometry: (() => {
+                    const majorSegs = 32;
+                    const minorSegs = 32;
+                    const R = 0.68;
+                    const r = 0.28;
+                    const flatVerts = [];
+                    const flatIndices = [];
+
+                    for (let i = 0; i < majorSegs; i++) {
+                        const theta = (2.0 * Math.PI * i) / majorSegs;
+                        const cosT = Math.cos(theta);
+                        const sinT = Math.sin(theta);
+
+                        for (let j = 0; j < minorSegs; j++) {
+                            const phi = (2.0 * Math.PI * j) / minorSegs;
+                            const rad = R + r * Math.cos(phi);
+                            flatVerts.push(rad * cosT, r * Math.sin(phi), rad * sinT);
+                        }
+                    }
+
+                    for (let i = 0; i < majorSegs; i++) {
+                        const iNext = (i + 1) % majorSegs;
+                        for (let j = 0; j < minorSegs; j++) {
+                            const jNext = (j + 1) % minorSegs;
+                            const a = i * minorSegs + j;
+                            const b = iNext * minorSegs + j;
+                            const c = iNext * minorSegs + jNext;
+                            const d = i * minorSegs + jNext;
+                            flatIndices.push(a, b, c, a, c, d);
+                        }
+                    }
+
+                    return {
+                        flatVerts,
+                        flatIndices,
+                        vertexCount: majorSegs * minorSegs,
+                        triangleCount: flatIndices.length / 3
+                    };
+                })(),
+                x: 0.0, y: -0.6, z: -11.5,
+                rotX: 38, rotY: -25, rotZ: 12,
+                scale: 2.8,
+                smoothShading: true,
+                color: "#38bdf8",
+                albedo: { x: 0.1, y: 2.5, z: 0.35, w: 0.65 },
+                specularExponent: 250.0,
+                refractiveIndex: 1.5,
+                roughness: 0.04,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -4.5, y: 8.5, z: -8.5,
+                intensity: 2.3,
+                radius: 1.3,
+                color: "#fff7ed"
+            }
+        ]
     }
 };

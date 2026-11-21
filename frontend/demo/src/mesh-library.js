@@ -327,6 +327,8 @@ f 2 3 6
             Number(obj.scale) || 1.0
         );
         mesh.smoothShading = Boolean(obj.smoothShading);
+        mesh.useBVH = obj.useBVH !== false;
+        obj._bvhNodeCount = mesh.bvhNodeCount();
 
         vVec.delete();
         iVec.delete();
