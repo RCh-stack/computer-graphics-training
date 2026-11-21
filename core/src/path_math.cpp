@@ -124,6 +124,8 @@ namespace PathTracing
             bool hit = false;
             bool isLight = false;
             float dist = std::numeric_limits<float>::max();
+            float u = 0.f;
+            float v = 0.f;
             Vec3f point;
             Vec3f normal;
             Material material;
@@ -181,6 +183,8 @@ namespace PathTracing
                 rec.point = orig + dir * rec.dist;
                 rec.normal = (rec.point - spheres[closest_sphere].center).normalize();
                 rec.material = spheres[closest_sphere].material;
+                rec.u = 0.5f + std::atan2(rec.normal.z, rec.normal.x) * (1.0f / (2.0f * PI));
+                rec.v = 0.5f - std::asin(std::max(-1.0f, std::min(1.0f, rec.normal.y))) * (1.0f / PI);
             }
 
             for (size_t i = 0; i < meshes.size(); i++)
@@ -195,6 +199,18 @@ namespace PathTracing
                     rec.point = orig + dir * mesh_t;
                     rec.normal = mesh_N;
                     rec.material = meshes[i].material;
+
+                    const float ax = std::fabs(mesh_N.x), ay = std::fabs(mesh_N.y), az = std::fabs(mesh_N.z);
+                    if (ay >= ax && ay >= az) {
+                        rec.u = rec.point.x * 0.25f + 0.5f;
+                        rec.v = rec.point.z * 0.25f + 0.5f;
+                    } else if (ax >= ay && ax >= az) {
+                        rec.u = rec.point.z * 0.25f + 0.5f;
+                        rec.v = 0.5f - rec.point.y * 0.25f;
+                    } else {
+                        rec.u = rec.point.x * 0.25f + 0.5f;
+                        rec.v = 0.5f - rec.point.y * 0.25f;
+                    }
                 }
             }
 
@@ -265,7 +281,9 @@ namespace PathTracing
         const std::vector<Light> &lights,
         int current_step,
         RngState &rng,
-        RenderMetrics &metrics)
+        RenderMetrics &metrics,
+        const EnvironmentMap &envMap,
+        const std::vector<TextureBuffer> &textures)
     {
         const PathTraceStep step = static_cast<PathTraceStep>(current_step);
         const Vec3f linear_bg = srgb_to_linear(backg);
@@ -291,7 +309,8 @@ namespace PathTracing
 
             if (!rec.hit)
             {
-                radiance = radiance + cwise_mul(throughput, linear_bg);
+                Vec3f env_radiance = envMap.sample(ray_dir, linear_bg, true);
+                radiance = radiance + cwise_mul(throughput, env_radiance);
                 break;
             }
 
@@ -305,7 +324,8 @@ namespace PathTracing
             }
 
             const Material &mat = rec.material;
-            const Vec3f linear_albedo = srgb_to_linear(mat.diffuse_color);
+            Vec3f surface_col = TextureSampling::resolveSurfaceColor(mat, rec.point, rec.u, rec.v, textures, true);
+            const Vec3f linear_albedo = (mat.texture_type == TEX_IMAGE) ? surface_col : srgb_to_linear(surface_col);
             const Vec3f linear_emission = srgb_to_linear(mat.emission);
 
             if (step == PathTraceStep::EMISSION_AND_ALBEDO)

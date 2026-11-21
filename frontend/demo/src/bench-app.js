@@ -40,6 +40,12 @@ const chartConvCanvas = document.getElementById('chart-convergence');
 
 const bvhModeSelect = document.getElementById('bench-bvh-mode');
 
+function syncBenchTracersWithTextures() {
+    if (!window.TextureManager) return;
+    if (benchRtTracer) window.TextureManager.syncTracer(benchRtTracer);
+    if (benchPtTracer) window.TextureManager.syncTracer(benchPtTracer);
+}
+
 function isBvhEnabled() {
     return !bvhModeSelect || bvhModeSelect.value === 'bvh';
 }
@@ -71,6 +77,7 @@ function setRunningState(running) {
 
 function ensureTracers(width, height) {
     if (benchRtTracer && benchPtTracer && activeWidth === width && activeHeight === height) {
+        syncBenchTracersWithTextures();
         return;
     }
 
@@ -89,6 +96,7 @@ function ensureTracers(width, height) {
 
     benchRtTracer = new Module.RayTracer(width, height);
     benchPtTracer = new Module.PathTracer(width, height);
+    syncBenchTracersWithTextures();
 }
 
 function buildSceneVectors(sceneKey) {
@@ -109,6 +117,8 @@ function buildSceneVectors(sceneKey) {
                 { x: baseColor.x * em, y: baseColor.y * em, z: baseColor.z * em },
                 obj.roughness !== undefined ? obj.roughness : 1.0
             );
+            window.TextureManager?.applyMaterialTexture(mat, obj, hexToVec3f);
+
             const sp = new Module.Sphere({ x: obj.x, y: obj.y, z: obj.z }, obj.r, mat);
             spheresVector.push_back(sp);
             sp.delete();
@@ -693,15 +703,18 @@ function exportBenchmarkCsv() {
     }
 
     const sceneName = BENCH_SCENES[sceneSelect.value]?.name || sceneSelect.value;
-
     const scene = BENCH_SCENES[sceneSelect.value];
     const rtAabb = computeAabbStats(lastRtMetrics, scene);
     const ptAabb = computeAabbStats(lastPtMetrics, scene);
 
     const accelLabel = isBvhEnabled() ? 'BVH (Binned SAH)' : 'Без BVH (Линейный перебор)';
+    const envState = window.TextureManager?.getEnvironmentState();
+    const envLabel = envState && envState.mode !== 'color'
+        ? `${envState.label} (поворот ${envState.rotationDeg}°, яркость ${envState.intensity.toFixed(1)})`
+        : 'Сплошной цвет';
 
     const lines = [
-        `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight};Ускорение мешей;${accelLabel}`,
+        `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight};Ускорение мешей;${accelLabel};Окружение;${envLabel}`,
         '',
         'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;Проверок пересечения;MRays/s;AABB тесты;Треугольные тесты;Отсечено AABB (%)',
         `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)};${rtAabb ? rtAabb.aabbTests : 0};${rtAabb ? rtAabb.triangleTests : 0};${rtAabb ? rtAabb.cullPct.toFixed(1) : 0}`,
@@ -739,21 +752,130 @@ function updateSceneSummary() {
     }, 0);
     const bvhNodesTotal = meshes.reduce((acc, m) => acc + (m._bvhNodeCount || 0), 0);
     const lightsCount = scene.objects.filter(o => o.type === 'light').length;
+    const texturedCount = scene.objects.filter(o => (Number(o.textureType) || 0) > 0).length;
 
     const bvhGroup = document.getElementById('group-bvh-mode');
     if (bvhGroup) {
         bvhGroup.classList.toggle('opacity-50', meshes.length === 0);
     }
 
+    const texTag = texturedCount > 0 ? ` | Текстур: ${texturedCount}` : '';
+    const envState = window.TextureManager?.getEnvironmentState();
+    const envTag = envState && envState.mode !== 'color' ? ' | IBL 360°' : '';
+
     if (meshes.length > 0) {
         const accelTag = isBvhEnabled()
             ? (bvhNodesTotal > 0 ? `BVH: ${bvhNodesTotal} узлов` : 'BVH (SAH)')
             : 'Без BVH';
-        sceneSummary.innerText = `Сфер: ${spheresCount} | Мешей: ${meshes.length} (${trianglesCount} Δ) | ${accelTag} | Света: ${lightsCount}`;
+        sceneSummary.innerText = `Сфер: ${spheresCount} | Мешей: ${meshes.length} (${trianglesCount} Δ) | ${accelTag} | Света: ${lightsCount}${texTag}${envTag}`;
     } else {
-        sceneSummary.innerText = `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}`;
+        sceneSummary.innerText = `Сфер: ${spheresCount} | Источников: ${lightsCount} | FOV: ${scene.fov}${texTag}${envTag}`;
     }
 }
+
+function syncEnvironmentSelectWithScene(sceneKey) {
+    const bgModeSelect = document.getElementById('bench-bg-mode');
+    const bgEnvGroup = document.getElementById('bench-env-group');
+    const envPreviewImg = document.getElementById('bench-env-preview-img');
+    const envPreviewLabel = document.getElementById('bench-env-preview-label');
+    if (!bgModeSelect || !window.TextureManager) return;
+
+    const currentState = window.TextureManager.getEnvironmentState();
+    if (currentState.mode === 'custom') return;
+
+    const scene = BENCH_SCENES[sceneKey];
+    if (scene && scene.envPreset) {
+        window.TextureManager.setPresetEnvironment(scene.envPreset);
+        bgModeSelect.value = `preset:${scene.envPreset}`;
+        bgEnvGroup?.classList.remove('hidden');
+        const st = window.TextureManager.getEnvironmentState();
+        if (envPreviewImg && st.previewUrl) envPreviewImg.src = st.previewUrl;
+        if (envPreviewLabel) envPreviewLabel.innerText = st.label;
+    } else {
+        window.TextureManager.setSolidBackground();
+        bgModeSelect.value = 'color';
+        bgEnvGroup?.classList.add('hidden');
+    }
+    syncBenchTracersWithTextures();
+}
+
+function bindBenchmarkEnvironmentControls() {
+    const bgModeSelect = document.getElementById('bench-bg-mode');
+    const bgEnvGroup = document.getElementById('bench-env-group');
+    const btnUploadEnv = document.getElementById('btn-bench-upload-env');
+    const inputEnvFile = document.getElementById('input-bench-env-file');
+    const envPreviewImg = document.getElementById('bench-env-preview-img');
+    const envPreviewLabel = document.getElementById('bench-env-preview-label');
+    const envRotInput = document.getElementById('bench-env-rot');
+    const envRotLabel = document.getElementById('val-bench-env-rot');
+    const envIntInput = document.getElementById('bench-env-int');
+    const envIntLabel = document.getElementById('val-bench-env-int');
+
+    if (!bgModeSelect || !window.TextureManager) return;
+
+    const refreshEnvPreview = () => {
+        const st = window.TextureManager.getEnvironmentState();
+        if (envPreviewImg && st.previewUrl) envPreviewImg.src = st.previewUrl;
+        if (envPreviewLabel) envPreviewLabel.innerText = st.label;
+        updateSceneSummary();
+    };
+
+    bgModeSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'color') {
+            window.TextureManager.setSolidBackground();
+            bgEnvGroup?.classList.add('hidden');
+            syncBenchTracersWithTextures();
+            updateSceneSummary();
+        } else if (val.startsWith('preset:')) {
+            const presetKey = val.split(':')[1];
+            window.TextureManager.setPresetEnvironment(presetKey);
+            bgEnvGroup?.classList.remove('hidden');
+            refreshEnvPreview();
+            syncBenchTracersWithTextures();
+        } else if (val === 'custom') {
+            bgEnvGroup?.classList.remove('hidden');
+            const st = window.TextureManager.getEnvironmentState();
+            if (st.mode !== 'custom') {
+                inputEnvFile?.click();
+            } else {
+                window.TextureManager.updateEnvironmentParams({});
+                refreshEnvPreview();
+                syncBenchTracersWithTextures();
+            }
+        }
+    });
+
+    btnUploadEnv?.addEventListener('click', () => inputEnvFile?.click());
+
+    inputEnvFile?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await window.TextureManager.loadCustomEnvironment(file);
+        bgModeSelect.value = 'custom';
+        bgEnvGroup?.classList.remove('hidden');
+        refreshEnvPreview();
+        syncBenchTracersWithTextures();
+        e.target.value = '';
+    });
+
+    const handleEnvSlider = () => {
+        const rot = envRotInput ? parseFloat(envRotInput.value) : 0;
+        const intensity = envIntInput ? parseFloat(envIntInput.value) : 1.0;
+        if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
+        if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
+        window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
+        syncBenchTracersWithTextures();
+    };
+
+    envRotInput?.addEventListener('input', handleEnvSlider);
+    envRotInput?.addEventListener('change', handleEnvSlider);
+
+    envIntInput?.addEventListener('input', handleEnvSlider);
+    envIntInput?.addEventListener('change', handleEnvSlider);
+}
+
+bindBenchmarkEnvironmentControls();
 
 modeSelect.addEventListener('change', () => {
     const mode = modeSelect.value;
@@ -763,7 +885,10 @@ modeSelect.addEventListener('change', () => {
     document.getElementById('group-convergence').classList.toggle('hidden', mode !== 'convergence');
 });
 
-sceneSelect.addEventListener('change', updateSceneSummary);
+sceneSelect.addEventListener('change', () => {
+    syncEnvironmentSelectWithScene(sceneSelect.value);
+    updateSceneSummary();
+});
 
 bvhModeSelect?.addEventListener('change', () => {
     bvhModeSelect.classList.toggle('text-emerald-500', isBvhEnabled());
@@ -797,6 +922,7 @@ window.Module = {
         try {
             const res = BENCH_RESOLUTIONS[resSelect.value] || BENCH_RESOLUTIONS["640x360"];
             ensureTracers(res.width, res.height);
+            syncEnvironmentSelectWithScene(sceneSelect.value);
             updateSceneSummary();
             drawConvergenceChart([]);
             startBenchmark();

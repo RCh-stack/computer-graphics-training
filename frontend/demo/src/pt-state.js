@@ -42,6 +42,7 @@ function buildWasmSceneVectors() {
                 emission,
                 obj.roughness !== undefined ? Number(obj.roughness) : 1.0
             );
+            window.TextureManager?.applyMaterialTexture(material, obj, hexToVec3f);
 
             const sphere = new Module.Sphere(
                 { x: obj.x, y: obj.y, z: obj.z },

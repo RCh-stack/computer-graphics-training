@@ -33,6 +33,12 @@ let hasPendingFull = false;
 let activeJobId = 0;
 let addedMeshCounter = 0;
 
+function syncAllTracersWithTextures() {
+    if (!window.TextureManager) return;
+    if (cppPathTracer) window.TextureManager.syncTracer(cppPathTracer);
+    if (cppPreviewPathTracer) window.TextureManager.syncTracer(cppPreviewPathTracer);
+}
+
 function clampScale(scale) {
     return Math.min(MAX_PREVIEW_SCALE, Math.max(MIN_PREVIEW_SCALE, scale));
 }
@@ -74,6 +80,8 @@ function ensurePreviewResources(targetScale) {
     activePreviewScale = quantized;
     activePreviewWidth = nextWidth;
     activePreviewHeight = nextHeight;
+
+    syncAllTracersWithTextures();
 
     return {
         tracer: cppPreviewPathTracer,
@@ -140,7 +148,7 @@ function executeInteractivePreview() {
     const preview = ensurePreviewResources(currentPreviewScale);
     const fovValue = parseFloat(fovInput.value);
     fovLabel.innerText = fovValue.toFixed(2);
-    bgColorLabel.innerText = bgColorInput.value;
+    if (bgColorLabel) bgColorLabel.innerText = bgColorInput.value;
 
     const backgroundColor = hexToVec3f(bgColorInput.value);
     const { spheresVector, meshesVector, lightsVector } = buildWasmSceneVectors();
@@ -177,7 +185,7 @@ function startProgressiveRender() {
     const jobId = activeJobId;
     const fovValue = parseFloat(fovInput.value);
     fovLabel.innerText = fovValue.toFixed(2);
-    bgColorLabel.innerText = bgColorInput.value;
+    if (bgColorLabel) bgColorLabel.innerText = bgColorInput.value;
 
     const desiredSpp = parseInt(sppInput.value, 10) || targetSpp;
     targetSpp = desiredSpp;
@@ -413,6 +421,94 @@ fovInput.addEventListener('pointerup', () => triggerRender({ interactive: false 
 bgColorInput.addEventListener('input', () => triggerRender({ interactive: true }));
 bgColorInput.addEventListener('change', () => triggerRender({ interactive: false }));
 
+function bindEnvironmentControls() {
+    const bgModeSelect = document.getElementById('param-bg-mode');
+    const bgColorGroup = document.getElementById('bg-color-group');
+    const bgEnvGroup = document.getElementById('bg-env-group');
+    const btnUploadEnv = document.getElementById('btn-upload-env');
+    const inputEnvFile = document.getElementById('input-env-file');
+    const envPreviewImg = document.getElementById('env-preview-img');
+    const envPreviewLabel = document.getElementById('env-preview-label');
+    const envRotInput = document.getElementById('param-env-rot');
+    const envRotLabel = document.getElementById('val-env-rot');
+    const envIntInput = document.getElementById('param-env-int');
+    const envIntLabel = document.getElementById('val-env-int');
+
+    if (!bgModeSelect || !window.TextureManager) return;
+
+    const refreshEnvPreview = () => {
+        const st = window.TextureManager.getEnvironmentState();
+        if (envPreviewImg && st.previewUrl) envPreviewImg.src = st.previewUrl;
+        if (envPreviewLabel) envPreviewLabel.innerText = st.label;
+    };
+
+    bgModeSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'color') {
+            window.TextureManager.setSolidBackground();
+            bgColorGroup?.classList.remove('hidden');
+            bgEnvGroup?.classList.add('hidden');
+            syncAllTracersWithTextures();
+            triggerRender();
+        } else if (val.startsWith('preset:')) {
+            const presetKey = val.split(':')[1];
+            window.TextureManager.setPresetEnvironment(presetKey);
+            bgColorGroup?.classList.add('hidden');
+            bgEnvGroup?.classList.remove('hidden');
+            refreshEnvPreview();
+            syncAllTracersWithTextures();
+            triggerRender();
+        } else if (val === 'custom') {
+            bgColorGroup?.classList.add('hidden');
+            bgEnvGroup?.classList.remove('hidden');
+            const st = window.TextureManager.getEnvironmentState();
+            if (st.mode !== 'custom') {
+                inputEnvFile?.click();
+            } else {
+                window.TextureManager.updateEnvironmentParams({});
+                refreshEnvPreview();
+                syncAllTracersWithTextures();
+                triggerRender();
+            }
+        }
+    });
+
+    btnUploadEnv?.addEventListener('click', () => inputEnvFile?.click());
+
+    inputEnvFile?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await window.TextureManager.loadCustomEnvironment(file);
+        bgModeSelect.value = 'custom';
+        bgColorGroup?.classList.add('hidden');
+        bgEnvGroup?.classList.remove('hidden');
+        refreshEnvPreview();
+        syncAllTracersWithTextures();
+        triggerRender();
+        e.target.value = '';
+    });
+
+    const handleEnvSlider = (interactive) => {
+        const rot = envRotInput ? parseFloat(envRotInput.value) : 0;
+        const intensity = envIntInput ? parseFloat(envIntInput.value) : 1.0;
+        if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
+        if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
+        window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
+        syncAllTracersWithTextures();
+        triggerRender({ interactive });
+    };
+
+    envRotInput?.addEventListener('input', () => handleEnvSlider(true));
+    envRotInput?.addEventListener('change', () => handleEnvSlider(false));
+    envRotInput?.addEventListener('pointerup', () => handleEnvSlider(false));
+
+    envIntInput?.addEventListener('input', () => handleEnvSlider(true));
+    envIntInput?.addEventListener('change', () => handleEnvSlider(false));
+    envIntInput?.addEventListener('pointerup', () => handleEnvSlider(false));
+}
+
+bindEnvironmentControls();
+
 window.Module = {
     onRuntimeInitialized: function() {
         statusDiv.innerText = "✓ Wasm Готов";
@@ -421,6 +517,7 @@ window.Module = {
         try {
             cppPathTracer = new Module.PathTracer(WIDTH, HEIGHT);
             ensurePreviewResources(DEFAULT_PREVIEW_SCALE);
+            syncAllTracersWithTextures();
             renderOutliner();
             updateStepUI();
             triggerRender();

@@ -1,14 +1,17 @@
 #include <iostream>
 #include <vector>
+#include <cstdint>
 #include <cmath>
 #include <algorithm>
 #include <chrono>
 #include <emscripten/bind.h>
+#include <emscripten/val.h>
 
 #include "src/ray_math.h"
 #include "src/path_math.h"
 #include "src/mesh.h"
 #include "src/render_metrics.h"
+#include "src/texture.h"
 
 using namespace RayTracing;
 using namespace PathTracing;
@@ -19,10 +22,41 @@ private:
     int height;
     std::vector<unsigned char> rgbaBuffer;
     RenderMetrics lastMetrics;
+    EnvironmentMap envMap;
+    std::vector<TextureBuffer> sceneTextures;
 
 public:
     RayTracer(int w, int h) : width(w), height(h) {
         rgbaBuffer.resize(static_cast<size_t>(width) * static_cast<size_t>(height) * 4);
+    }
+
+    void setEnvironmentMap(int w, int h, emscripten::val rgbaUint8) {
+        if (w <= 0 || h <= 0) return;
+        std::vector<uint8_t> pixels = emscripten::vecFromJSArray<uint8_t>(rgbaUint8);
+        if (pixels.size() < static_cast<size_t>(w) * static_cast<size_t>(h) * 4) return;
+        envMap.texture.setPixels(w, h, std::move(pixels));
+        envMap.enabled = true;
+    }
+
+    void setEnvironmentParams(bool enabled, float intensity, float rotationDeg) {
+        envMap.enabled = enabled && envMap.texture.isValid();
+        envMap.intensity = std::max(0.0f, intensity);
+        envMap.rotationRad = rotationDeg * (3.14159265359f / 180.0f);
+    }
+
+    void clearEnvironmentMap() {
+        envMap.enabled = false;
+        envMap.texture.clear();
+    }
+
+    void uploadTexture(int slotId, int w, int h, emscripten::val rgbaUint8) {
+        if (slotId < 0 || slotId > 64 || w <= 0 || h <= 0) return;
+        std::vector<uint8_t> pixels = emscripten::vecFromJSArray<uint8_t>(rgbaUint8);
+        if (pixels.size() < static_cast<size_t>(w) * static_cast<size_t>(h) * 4) return;
+        if (static_cast<size_t>(slotId) >= sceneTextures.size()) {
+            sceneTextures.resize(static_cast<size_t>(slotId) + 1);
+        }
+        sceneTextures[static_cast<size_t>(slotId)].setPixels(w, h, std::move(pixels));
     }
 
     void renderScene(float fov, Vec3f backg, int current_step, const std::vector<Sphere>& spheres, const std::vector<Light>& lights)
@@ -58,7 +92,9 @@ public:
                 const float x = (2.f * (i + 0.5f) * invWidth - 1.f) * tanHalfFov * aspectRatio;
 
                 Vec3f dir = Vec3f(x, y, -1.f).normalize();
-                Vec3f pixelColor = cast_ray_step_dispatcher(cameraOrig, dir, backg, spheres, meshes, lights, 0, current_step, metrics);
+                Vec3f pixelColor = cast_ray_step_dispatcher(
+                    cameraOrig, dir, backg, spheres, meshes, lights, 0, current_step, metrics, envMap, sceneTextures
+                );
                 size_t rgbaIndex = static_cast<size_t>(i + j * width) * 4;
 
                 rgbaBuffer[rgbaIndex]     = static_cast<unsigned char>(255.f * std::max(0.f, std::min(1.f, pixelColor[0])));
@@ -92,6 +128,8 @@ private:
     std::vector<Vec3f> accumBuffer;
     std::vector<unsigned char> rgbaBuffer;
     RenderMetrics accumulatedMetrics;
+    EnvironmentMap envMap;
+    std::vector<TextureBuffer> sceneTextures;
 
     static inline unsigned char linearToSrgbByte(float linearVal) {
         float clamped = std::max(0.0f, linearVal);
@@ -109,6 +147,35 @@ public:
         const size_t pixelCount = static_cast<size_t>(width) * static_cast<size_t>(height);
         accumBuffer.assign(pixelCount, Vec3f(0.f, 0.f, 0.f));
         rgbaBuffer.resize(pixelCount * 4, 0);
+    }
+
+    void setEnvironmentMap(int w, int h, emscripten::val rgbaUint8) {
+        if (w <= 0 || h <= 0) return;
+        std::vector<uint8_t> pixels = emscripten::vecFromJSArray<uint8_t>(rgbaUint8);
+        if (pixels.size() < static_cast<size_t>(w) * static_cast<size_t>(h) * 4) return;
+        envMap.texture.setPixels(w, h, std::move(pixels));
+        envMap.enabled = true;
+    }
+
+    void setEnvironmentParams(bool enabled, float intensity, float rotationDeg) {
+        envMap.enabled = enabled && envMap.texture.isValid();
+        envMap.intensity = std::max(0.0f, intensity);
+        envMap.rotationRad = rotationDeg * (3.14159265359f / 180.0f);
+    }
+
+    void clearEnvironmentMap() {
+        envMap.enabled = false;
+        envMap.texture.clear();
+    }
+
+    void uploadTexture(int slotId, int w, int h, emscripten::val rgbaUint8) {
+        if (slotId < 0 || slotId > 64 || w <= 0 || h <= 0) return;
+        std::vector<uint8_t> pixels = emscripten::vecFromJSArray<uint8_t>(rgbaUint8);
+        if (pixels.size() < static_cast<size_t>(w) * static_cast<size_t>(h) * 4) return;
+        if (static_cast<size_t>(slotId) >= sceneTextures.size()) {
+            sceneTextures.resize(static_cast<size_t>(slotId) + 1);
+        }
+        sceneTextures[static_cast<size_t>(slotId)].setPixels(w, h, std::move(pixels));
     }
 
     void reset() {
@@ -182,7 +249,7 @@ public:
 
                     Vec3f dir = Vec3f(x, y, -1.f).normalize();
                     Vec3f sampleColor = trace_path_step_dispatcher(
-                        cameraOrig, dir, backg, spheres, meshes, lights, current_step, rng, passMetrics
+                        cameraOrig, dir, backg, spheres, meshes, lights, current_step, rng, passMetrics, envMap, sceneTextures
                     );
 
                     sumColor = sumColor + sampleColor;
@@ -255,7 +322,11 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .property("specular_exponent", &Material::specular_exponent)
         .property("refractive_index", &Material::refractive_index)
         .property("emission", &Material::emission)
-        .property("roughness", &Material::roughness);
+        .property("roughness", &Material::roughness)
+        .property("texture_type", &Material::texture_type)
+        .property("secondary_color", &Material::secondary_color)
+        .property("tex_scale", &Material::tex_scale)
+        .property("texture_id", &Material::texture_id);
 
     emscripten::class_<Sphere>("Sphere")
         .constructor<>()
@@ -291,6 +362,10 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
 
     emscripten::class_<RayTracer>("RayTracer")
         .constructor<int, int>()
+        .function("setEnvironmentMap", &RayTracer::setEnvironmentMap)
+        .function("setEnvironmentParams", &RayTracer::setEnvironmentParams)
+        .function("clearEnvironmentMap", &RayTracer::clearEnvironmentMap)
+        .function("uploadTexture", &RayTracer::uploadTexture)
         .function("renderScene", &RayTracer::renderScene)
         .function("renderSceneWithMeshes", &RayTracer::renderSceneWithMeshes)
         .function("getBufferPointer", &RayTracer::getBufferPointer)
@@ -298,6 +373,10 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
 
     emscripten::class_<PathTracer>("PathTracer")
         .constructor<int, int>()
+        .function("setEnvironmentMap", &PathTracer::setEnvironmentMap)
+        .function("setEnvironmentParams", &PathTracer::setEnvironmentParams)
+        .function("clearEnvironmentMap", &PathTracer::clearEnvironmentMap)
+        .function("uploadTexture", &PathTracer::uploadTexture)
         .function("reset", &PathTracer::reset)
         .function("setSeed", &PathTracer::setSeed)
         .function("getAccumulatedSamples", &PathTracer::getAccumulatedSamples)

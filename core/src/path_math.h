@@ -9,6 +9,7 @@
 #include "mesh.h"
 #include "light.h"
 #include "render_metrics.h"
+#include "texture.h"
 
 namespace PathTracing
 {
@@ -49,8 +50,26 @@ namespace PathTracing
         const std::vector<Light> &lights,
         int current_step,
         RngState &rng,
-        RenderMetrics &metrics
+        RenderMetrics &metrics,
+        const EnvironmentMap &envMap,
+        const std::vector<TextureBuffer> &textures
     );
+
+    inline Vec3f trace_path_step_dispatcher(
+        const Vec3f &orig,
+        const Vec3f &dir,
+        const Vec3f &backg,
+        const std::vector<Sphere> &spheres,
+        const std::vector<Mesh> &meshes,
+        const std::vector<Light> &lights,
+        int current_step,
+        RngState &rng,
+        RenderMetrics &metrics)
+    {
+        static const EnvironmentMap default_env;
+        static const std::vector<TextureBuffer> empty_textures;
+        return trace_path_step_dispatcher(orig, dir, backg, spheres, meshes, lights, current_step, rng, metrics, default_env, empty_textures);
+    }
 
     inline Vec3f trace_path_step_dispatcher(
         const Vec3f &orig,

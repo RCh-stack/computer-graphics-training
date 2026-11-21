@@ -390,5 +390,66 @@ const BENCH_SCENES = {
                 color: "#fff7ed"
             }
         ]
+    },
+    textures_ibl: {
+        name: "Текстуры и панорама IBL (Checker & Marble)",
+        fov: 1.20,
+        bgColor: "#141b29",
+        envPreset: "studio",
+        objects: [
+            {
+                type: "sphere",
+                x: 0.0, y: -103.5, z: -16.0, r: 100.0,
+                color: "#f8fafc",
+                secondaryColor: "#1e293b",
+                textureType: 1,
+                texScale: 1.2,
+                albedo: { x: 0.85, y: 0.15, z: 0.0, w: 0.0 },
+                specularExponent: 20.0,
+                refractiveIndex: 1.0,
+                roughness: 0.9,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: -4.0, y: -1.1, z: -14.0, r: 2.4,
+                color: "#f8fafc",
+                secondaryColor: "#0d9488",
+                textureType: 3,
+                texScale: 2.2,
+                albedo: { x: 0.85, y: 0.15, z: 0.0, w: 0.0 },
+                specularExponent: 35.0,
+                refractiveIndex: 1.0,
+                roughness: 0.85,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 0.2, y: -1.2, z: -13.2, r: 2.3,
+                color: "#ffffff",
+                albedo: { x: 0.0, y: 10.0, z: 0.85, w: 0.0 },
+                specularExponent: 1425.0,
+                refractiveIndex: 1.0,
+                roughness: 0.0,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "sphere",
+                x: 4.3, y: -1.4, z: -12.2, r: 2.1,
+                color: "#bae6fd",
+                albedo: { x: 0.0, y: 0.5, z: 0.1, w: 0.85 },
+                specularExponent: 125.0,
+                refractiveIndex: 1.5,
+                roughness: 0.02,
+                emissionIntensity: 0.0
+            },
+            {
+                type: "light",
+                x: -3.5, y: 8.0, z: -9.5,
+                intensity: 2.0,
+                radius: 1.4,
+                color: "#fff7ed"
+            }
+        ]
     }
 };

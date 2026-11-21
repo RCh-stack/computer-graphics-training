@@ -302,6 +302,7 @@ f 2 3 6
             emission,
             obj.roughness !== undefined ? Number(obj.roughness) : 1.0
         );
+        window.TextureManager?.applyMaterialTexture(mat, obj, colorToVec3Fn);
 
         const mesh = new Module.Mesh(mat);
         const vVec = new Module.VectorFloat();

@@ -8,6 +8,120 @@ const stepDesc = document.getElementById('step-desc');
 const btnPrev = document.getElementById('btn-prev-step');
 const btnNext = document.getElementById('btn-next-step');
 
+let nextMaterialTexSlot = 0;
+
+function renderTextureInspectorSection(obj, accentClass = 'pink-500') {
+    const texType = Number(obj.textureType) || 0;
+    const secColor = obj.secondaryColor || '#1e293b';
+    const texScale = obj.texScale !== undefined ? Number(obj.texScale) : 2.0;
+    const slotInfo = (texType === 4 && obj.textureId >= 0)
+        ? window.TextureManager?.getTextureSlot(obj.textureId)
+        : null;
+
+    return `
+        <div class="pt-2.5 ui-divider-t space-y-2.5">
+            <div>
+                <label class="text-[var(--text-muted)] block mb-1 font-semibold">Текстура поверхности:</label>
+                <select id="insp-tex-type" class="ui-select w-full px-3 py-1.5 text-${accentClass} font-semibold cursor-pointer">
+                    <option value="0" ${texType === 0 ? 'selected' : ''}>Сплошной цвет</option>
+                    <option value="1" ${texType === 1 ? 'selected' : ''}>Процедурная: Шахматная доска</option>
+                    <option value="2" ${texType === 2 ? 'selected' : ''}>Процедурная: Полосы / Волны</option>
+                    <option value="3" ${texType === 3 ? 'selected' : ''}>Процедурная: Мрамор (3D-шум)</option>
+                    <option value="4" ${texType === 4 ? 'selected' : ''}>Растровая картинка (UV)</option>
+                </select>
+            </div>
+
+            ${texType >= 1 && texType <= 3 ? `
+                <div>
+                    <label class="text-[var(--text-muted)] block mb-1 font-semibold">Второй цвет узора:</label>
+                    <div class="ui-subcard flex items-center space-x-3 p-1.5">
+                        <input type="color" id="insp-tex-color2" value="${secColor}" class="w-7 h-7 bg-transparent border-0 cursor-pointer rounded">
+                        <span id="insp-val-tex-color2" class="text-xs font-mono text-[var(--text-main)] uppercase">${secColor}</span>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${texType === 4 ? `
+                <div class="space-y-1.5">
+                    <button id="btn-insp-upload-tex" type="button" class="ui-btn ui-btn-secondary w-full py-1.5 px-2.5 text-xs text-cyan-500">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>${slotInfo ? 'Заменить картинку' : 'Выбрать изображение'}</span>
+                    </button>
+                    <input type="file" id="input-insp-tex-file" accept="image/*" class="hidden">
+                    ${slotInfo ? `
+                        <div class="ui-subcard p-1.5 flex items-center space-x-2">
+                            <img src="${slotInfo.previewUrl}" alt="Текстура" class="w-8 h-8 object-cover rounded">
+                            <span class="text-[10px] font-mono text-[var(--text-muted)] truncate">${slotInfo.label}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
+
+            ${texType > 0 ? `
+                <div>
+                    <div class="flex justify-between text-[var(--text-main)] mb-1">
+                        <span>Масштаб / Частота:</span>
+                        <span id="insp-val-tex-scale" class="font-mono text-${accentClass} font-semibold">${texScale.toFixed(1)}</span>
+                    </div>
+                    <input type="range" id="insp-tex-scale" min="0.2" max="12.0" step="0.2" value="${texScale}" class="w-full accent-${accentClass} cursor-pointer">
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function bindTextureInspectorEvents(obj) {
+    const texTypeSelect = document.getElementById('insp-tex-type');
+    if (texTypeSelect) {
+        texTypeSelect.addEventListener('change', (e) => {
+            obj.textureType = parseInt(e.target.value, 10) || 0;
+            if (!obj.secondaryColor) obj.secondaryColor = '#1e293b';
+            if (obj.texScale === undefined) obj.texScale = 2.0;
+            renderInspector();
+            triggerRender();
+        });
+    }
+
+    const color2Input = document.getElementById('insp-tex-color2');
+    const color2Label = document.getElementById('insp-val-tex-color2');
+    if (color2Input) {
+        color2Input.addEventListener('input', (e) => {
+            obj.secondaryColor = e.target.value;
+            if (color2Label) color2Label.innerText = obj.secondaryColor;
+            triggerRender({ interactive: true });
+        });
+        color2Input.addEventListener('change', (e) => {
+            obj.secondaryColor = e.target.value;
+            if (color2Label) color2Label.innerText = obj.secondaryColor;
+            triggerRender({ interactive: false });
+        });
+    }
+
+    bindLiveSlider('insp-tex-scale', obj, 'texScale', 'insp-val-tex-scale', 1);
+
+    const uploadBtn = document.getElementById('btn-insp-upload-tex');
+    const fileInput = document.getElementById('input-insp-tex-file');
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !window.TextureManager) return;
+
+            if (obj.textureId === undefined || obj.textureId < 0) {
+                obj.textureId = nextMaterialTexSlot;
+                nextMaterialTexSlot = (nextMaterialTexSlot + 1) % 64;
+            }
+            await window.TextureManager.loadMaterialTexture(obj.textureId, file);
+            if (typeof syncAllTracersWithTextures === 'function') {
+                syncAllTracersWithTextures();
+            }
+            e.target.value = '';
+            renderInspector();
+            triggerRender();
+        });
+    }
+}
+
 function launchModule(url) {
     window.location.href = url;
 }
@@ -151,6 +265,8 @@ function renderInspector() {
                         <span id="insp-val-color" class="text-xs font-mono text-[var(--text-main)] uppercase">${obj.color}</span>
                     </div>
                 </div>
+
+                ${renderTextureInspectorSection(obj, 'pink-500')}
             </div>
         `;
 
@@ -182,6 +298,8 @@ function renderInspector() {
             if (colorLabel) colorLabel.innerText = obj.color;
             triggerRender({ interactive: false });
         });
+
+        bindTextureInspectorEvents(obj);
 
     } else if (obj.type === 'mesh') {
         const geom = obj.geometry || MeshLibrary.getGeometry(obj.meshKey);
@@ -263,6 +381,8 @@ function renderInspector() {
                         <span id="insp-val-color" class="text-xs font-mono text-[var(--text-main)] uppercase">${obj.color}</span>
                     </div>
                 </div>
+
+                ${renderTextureInspectorSection(obj, 'pink-500')}
             </div>
         `;
 
@@ -314,6 +434,8 @@ function renderInspector() {
             if (colorLabel) colorLabel.innerText = obj.color;
             triggerRender({ interactive: false });
         });
+
+        bindTextureInspectorEvents(obj);
 
     } else if (obj.type === 'light') {
         inspectorContent.innerHTML = `

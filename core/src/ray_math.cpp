@@ -10,11 +10,13 @@ namespace RayTracing
     namespace
     {
         constexpr size_t MAX_RAY_DEPTH = 4;
+        constexpr float PI = 3.14159265358979323846f;
 
         Vec3f shade_direct_lighting(
             const Vec3f &point,
             const Vec3f &N,
             const Vec3f &view_dir,
+            const Vec3f &base_diffuse,
             const Material &material,
             const std::vector<Sphere> &spheres,
             const std::vector<Mesh> &meshes,
@@ -55,7 +57,7 @@ namespace RayTracing
                 }
             }
 
-            return material.diffuse_color * (diffuse_intensity * material.albedo[0]) +
+            return base_diffuse * (diffuse_intensity * material.albedo[0]) +
                    Vec3f(1.f, 1.f, 1.f) * (specular_intensity * material.albedo[1]);
         }
     }
@@ -91,48 +93,53 @@ namespace RayTracing
         const std::vector<Light> &lights,
         size_t depth,
         const int current_step,
-        RenderMetrics &metrics)
+        RenderMetrics &metrics,
+        const EnvironmentMap &envMap,
+        const std::vector<TextureBuffer> &textures)
     {
         switch (static_cast<RayTraceStep>(current_step))
         {
             case RayTraceStep::BACKGROUND:
-                return cast_ray(orig, dir, backg, spheres, meshes, metrics);
+                return cast_ray(orig, dir, backg, spheres, meshes, metrics, envMap, textures);
 
             case RayTraceStep::DIFFUSE:
-                return cast_ray_diffuse(orig, dir, backg, spheres, meshes, lights, metrics);
+                return cast_ray_diffuse(orig, dir, backg, spheres, meshes, lights, metrics, envMap, textures);
 
             case RayTraceStep::SPECULAR:
-                return cast_ray_specular(orig, dir, backg, spheres, meshes, lights, metrics);
+                return cast_ray_specular(orig, dir, backg, spheres, meshes, lights, metrics, envMap, textures);
 
             case RayTraceStep::SHADOWS:
-                return cast_ray_shadows(orig, dir, backg, spheres, meshes, lights, metrics);
+                return cast_ray_shadows(orig, dir, backg, spheres, meshes, lights, metrics, envMap, textures);
 
             case RayTraceStep::REFLECTION:
-                return cast_ray_reflect(orig, dir, backg, spheres, meshes, lights, depth, metrics);
+                return cast_ray_reflect(orig, dir, backg, spheres, meshes, lights, depth, metrics, envMap, textures);
 
             case RayTraceStep::REFRACTION:
             default:
-                return cast_ray_refract(orig, dir, backg, spheres, meshes, lights, depth, metrics);
+                return cast_ray_refract(orig, dir, backg, spheres, meshes, lights, depth, metrics, envMap, textures);
         }
     }
 
-    Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, RenderMetrics &metrics)
+    Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
-        return material.diffuse_color;
+        return TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
     }
 
-    Vec3f cast_ray_diffuse(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics)
+    Vec3f cast_ray_diffuse(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
+        Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
         float diffuse_light_intensity = 0.f;
         for (size_t i = 0; i < lights.size(); i++)
         {
@@ -140,16 +147,18 @@ namespace RayTracing
             diffuse_light_intensity += lights[i].depth * std::max(0.f, light_dir * N);
         }
 
-        return material.diffuse_color * diffuse_light_intensity;
+        return base_diffuse * diffuse_light_intensity;
     }
 
-    Vec3f cast_ray_specular(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics)
+    Vec3f cast_ray_specular(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
+        Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
         float diffuse_light_intensity = 0.f, specular_light_intensity = 0.f;
         for (size_t i = 0; i < lights.size(); i++)
         {
@@ -158,26 +167,29 @@ namespace RayTracing
             specular_light_intensity += std::pow(std::max(0.f, -reflect(-light_dir, N) * dir), material.specular_exponent) * lights[i].depth;
         }
 
-        return material.diffuse_color * (diffuse_light_intensity * material.albedo[0]) +
+        return base_diffuse * (diffuse_light_intensity * material.albedo[0]) +
                Vec3f(1.f, 1.f, 1.f) * (specular_light_intensity * material.albedo[1]);
     }
 
-    Vec3f cast_ray_shadows(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics)
+    Vec3f cast_ray_shadows(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
-        return shade_direct_lighting(point, N, dir, material, spheres, meshes, lights, metrics);
+        Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
+        return shade_direct_lighting(point, N, dir, base_diffuse, material, spheres, meshes, lights, metrics);
     }
 
-    Vec3f cast_ray_reflect(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, size_t depth, RenderMetrics &metrics)
+    Vec3f cast_ray_reflect(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, size_t depth, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
         Vec3f reflect_color(0.f, 0.f, 0.f);
         if (material.albedo[2] > 1e-4f)
@@ -185,19 +197,21 @@ namespace RayTracing
             metrics.secondaryRays++;
             Vec3f reflect_dir = reflect(dir, N).normalize();
             Vec3f reflect_orig = reflect_dir * N < 0.f ? point - N * 1e-3f : point + N * 1e-3f;
-            reflect_color = cast_ray_reflect(reflect_orig, reflect_dir, backg, spheres, meshes, lights, depth + 1, metrics);
+            reflect_color = cast_ray_reflect(reflect_orig, reflect_dir, backg, spheres, meshes, lights, depth + 1, metrics, envMap, textures);
         }
 
-        Vec3f direct_color = shade_direct_lighting(point, N, dir, material, spheres, meshes, lights, metrics);
+        Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
+        Vec3f direct_color = shade_direct_lighting(point, N, dir, base_diffuse, material, spheres, meshes, lights, metrics);
         return direct_color + reflect_color * material.albedo[2];
     }
 
-    Vec3f cast_ray_refract(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, size_t depth, RenderMetrics &metrics)
+    Vec3f cast_ray_refract(const Vec3f &orig, const Vec3f &dir, const Vec3f &backg, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, const std::vector<Light> &lights, size_t depth, RenderMetrics &metrics, const EnvironmentMap &envMap, const std::vector<TextureBuffer> &textures)
     {
         Vec3f point, N;
         Material material;
-        if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, false, metrics))
-            return backg;
+        float hit_u = 0.f, hit_v = 0.f;
+        if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
+            return envMap.sample(dir, backg, false);
 
         Vec3f reflect_color(0.f, 0.f, 0.f);
         if (material.albedo[2] > 1e-4f)
@@ -205,7 +219,7 @@ namespace RayTracing
             metrics.secondaryRays++;
             Vec3f reflect_dir = reflect(dir, N).normalize();
             Vec3f reflect_orig = reflect_dir * N < 0.f ? point - N * 1e-3f : point + N * 1e-3f;
-            reflect_color = cast_ray_refract(reflect_orig, reflect_dir, backg, spheres, meshes, lights, depth + 1, metrics);
+            reflect_color = cast_ray_refract(reflect_orig, reflect_dir, backg, spheres, meshes, lights, depth + 1, metrics, envMap, textures);
         }
 
         Vec3f refract_color(0.f, 0.f, 0.f);
@@ -217,11 +231,12 @@ namespace RayTracing
                 metrics.secondaryRays++;
                 Vec3f refract_dir = raw_refract.normalize();
                 Vec3f refract_orig = refract_dir * N < 0.f ? point - N * 1e-3f : point + N * 1e-3f;
-                refract_color = cast_ray_refract(refract_orig, refract_dir, backg, spheres, meshes, lights, depth + 1, metrics);
+                refract_color = cast_ray_refract(refract_orig, refract_dir, backg, spheres, meshes, lights, depth + 1, metrics, envMap, textures);
             }
         }
 
-        Vec3f direct_color = shade_direct_lighting(point, N, dir, material, spheres, meshes, lights, metrics);
+        Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
+        Vec3f direct_color = shade_direct_lighting(point, N, dir, base_diffuse, material, spheres, meshes, lights, metrics);
         return direct_color + reflect_color * material.albedo[2] + refract_color * material.albedo[3];
     }
 
@@ -248,10 +263,12 @@ namespace RayTracing
         return false;
     }
 
-    bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, Vec3f &hit, Vec3f &N, Material &material, bool out_scene, RenderMetrics &metrics)
+    bool scene_intersect(const Vec3f &orig, const Vec3f &dir, const std::vector<Sphere> &spheres, const std::vector<Mesh> &meshes, Vec3f &hit, Vec3f &N, Material &material, float &hit_u, float &hit_v, bool out_scene, RenderMetrics &metrics)
     {
         float closest_dist = std::numeric_limits<float>::max();
         int closest_sphere = -1;
+        hit_u = 0.f;
+        hit_v = 0.f;
 
         for (size_t i = 0; i < spheres.size(); i++)
         {
@@ -269,6 +286,8 @@ namespace RayTracing
             hit = orig + dir * closest_dist;
             N = (hit - spheres[closest_sphere].center).normalize();
             material = spheres[closest_sphere].material;
+            hit_u = 0.5f + std::atan2(N.z, N.x) * (1.0f / (2.0f * PI));
+            hit_v = 0.5f - std::asin(std::max(-1.0f, std::min(1.0f, N.y))) * (1.0f / PI);
         }
 
         for (size_t i = 0; i < meshes.size(); i++)
@@ -281,6 +300,18 @@ namespace RayTracing
                 hit = orig + dir * mesh_t;
                 N = mesh_N;
                 material = meshes[i].material;
+
+                const float ax = std::fabs(mesh_N.x), ay = std::fabs(mesh_N.y), az = std::fabs(mesh_N.z);
+                if (ay >= ax && ay >= az) {
+                    hit_u = hit.x * 0.25f + 0.5f;
+                    hit_v = hit.z * 0.25f + 0.5f;
+                } else if (ax >= ay && ax >= az) {
+                    hit_u = hit.z * 0.25f + 0.5f;
+                    hit_v = 0.5f - hit.y * 0.25f;
+                } else {
+                    hit_u = hit.x * 0.25f + 0.5f;
+                    hit_v = 0.5f - hit.y * 0.25f;
+                }
             }
         }
 

@@ -81,6 +81,7 @@
                         <option value="obj_duck_prism">5. 3D-модели (.obj): Хрустальная утка и призма</option>
                         <option value="obj_cornell">6. 3D-модели (.obj): Корнельская комната</option>
                         <option value="obj_highpoly_torus">7. Высокополигональный меш (.obj, 2048 Δ)</option>
+                        <option value="textures_ibl">8. Текстуры и панорама IBL (Checker & Marble)</option>
                     </select>
 
                     <div id="scene-summary" class="ui-subcard p-2.5 text-[11px] font-mono text-[var(--text-muted)] leading-relaxed">
@@ -109,6 +110,51 @@
                         <option value="800x450">800 × 450 (Стандартный)</option>
                         <option value="1168x638">1168 × 638 (Full HD)</option>
                     </select>
+                </div>
+
+                <div class="space-y-2 pt-3 ui-divider-t">
+                    <label class="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                        Фон и окружение (IBL)
+                    </label>
+
+                    <select id="bench-bg-mode" class="ui-select w-full px-3 py-2 text-xs font-semibold text-blue-500 cursor-pointer">
+                        <option value="color" selected>Сплошной цвет сцены</option>
+                        <option value="preset:studio">Панорама: Студийный софтбокс</option>
+                        <option value="preset:horizon">Панорама: Солнечный горизонт</option>
+                        <option value="preset:grid">Панорама: Координатная сфера 360°</option>
+                        <option value="custom">Своё фото (360° / Пейзаж)</option>
+                    </select>
+
+                    <div id="bench-env-group" class="hidden space-y-2.5 pt-1">
+                        <button id="btn-bench-upload-env" type="button" class="ui-btn ui-btn-secondary w-full py-1.5 px-2.5 text-xs text-cyan-500">
+                            <i class="fa-solid fa-image"></i>
+                            <span>Загрузить изображение фона</span>
+                        </button>
+                        <input type="file" id="input-bench-env-file" accept="image/*" class="hidden">
+
+                        <div class="ui-subcard p-1.5 space-y-1">
+                            <img id="bench-env-preview-img" src="" alt="Превью фона" class="w-full h-14 object-cover rounded">
+                            <div id="bench-env-preview-label" class="text-[10px] font-mono text-[var(--text-muted)] truncate">
+                                Студийный софтбокс
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-mono text-[var(--text-main)] mb-1">
+                                <span>Поворот панорамы:</span>
+                                <span id="val-bench-env-rot" class="text-blue-500 font-bold">0°</span>
+                            </div>
+                            <input type="range" id="bench-env-rot" min="0" max="360" step="5" value="0" class="w-full accent-blue-500 cursor-pointer">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-mono text-[var(--text-main)] mb-1">
+                                <span>Яркость фона:</span>
+                                <span id="val-bench-env-int" class="text-blue-500 font-bold">1.0</span>
+                            </div>
+                            <input type="range" id="bench-env-int" min="0.1" max="3.0" step="0.1" value="1.0" class="w-full accent-blue-500 cursor-pointer">
+                        </div>
+                    </div>
                 </div>
 
                 <div id="group-standard-spp" class="space-y-2 pt-3 ui-divider-t">
@@ -285,6 +331,7 @@
     </div>
 
     <script src="src/mesh-library.js"></script>
+    <script src="src/texture-manager.js"></script>
     <script src="src/bench-config.js"></script>
     <script src="src/bench-app.js"></script>
     <script src="../src/theme.js"></script>

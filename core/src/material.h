@@ -11,6 +11,11 @@ struct Material
     float refractive_index;
     Vec3f emission;
     float roughness;
+    
+    int texture_type = 0;
+    Vec3f secondary_color{0.12f, 0.14f, 0.18f};
+    float tex_scale = 2.0f;
+    int texture_id = -1;
 
     Material()
         : albedo(1, 0, 0, 0), diffuse_color(), specular_exponent(0.f),
