@@ -18,12 +18,192 @@ const fovInput = document.getElementById('param-fov');
 const fovLabel = document.getElementById('val-fov');
 const bgColorInput = document.getElementById('param-bg-color');
 const bgColorLabel = document.getElementById('val-bg-color');
+const scenePresetSelect = document.getElementById('scene-preset-select');
+const objFileInput = document.getElementById('input-obj-file');
 const statusDiv = document.getElementById('wasm-status');
 const timerDiv = document.getElementById('render-time');
 
 let renderRafId = null;
+let settleTimerId = null;
 let pendingInteractive = false;
 let hasPendingFull = false;
+let addedMeshCounter = 0;
+
+const wasmMeshCache = new Map();
+const wasmSphereCache = new Map();
+
+function getTextureSlotVersion(textureId) {
+    if (textureId === undefined || textureId === null || Number(textureId) < 0) return 0;
+    return window.TextureManager?.getTextureSlot(Number(textureId))?.version || 0;
+}
+
+function buildMaterialSignature(obj, albedo) {
+    const a = albedo || {};
+    const texVer = getTextureSlotVersion(obj.textureId);
+    return `${a.x}|${a.y}|${a.z}|${a.w}|${obj.color}|${obj.specularExponent}|${obj.refractiveIndex}|${obj.roughness}|${obj.emissionIntensity}|${obj.textureType}|${obj.texScale}|${obj.textureId}|${obj.secondaryColor}|${texVer}`;
+}
+
+function clearWasmMeshCache() {
+    wasmMeshCache.forEach(entry => {
+        if (entry && entry.mesh) {
+            entry.mesh.delete();
+        }
+    });
+    wasmMeshCache.clear();
+}
+
+function clearWasmSphereCache() {
+    wasmSphereCache.forEach(entry => {
+        if (entry && entry.sphere) {
+            entry.sphere.delete();
+        }
+    });
+    wasmSphereCache.clear();
+}
+
+function pruneWasmSphereCache() {
+    if (wasmSphereCache.size === 0) return;
+    const activeIds = new Set(sceneObjects.filter(o => o.type === 'sphere').map(o => o.id));
+    wasmSphereCache.forEach((entry, id) => {
+        if (!activeIds.has(id)) {
+            if (entry && entry.sphere) entry.sphere.delete();
+            wasmSphereCache.delete(id);
+        }
+    });
+}
+
+function getCachedWasmSphere(obj, stepIndex) {
+    const albedo = getStepAdaptedAlbedo(obj.albedo, stepIndex);
+    const sig = `${obj.x}|${obj.y}|${obj.z}|${obj.r}|${buildMaterialSignature(obj, albedo)}`;
+    const cached = wasmSphereCache.get(obj.id);
+    if (cached && cached.sig === sig) {
+        return cached.sphere;
+    }
+
+    if (cached && cached.sphere) {
+        cached.sphere.delete();
+    }
+
+    const material = new Module.Material(
+        albedo,
+        hexToVec3f(obj.color),
+        obj.specularExponent,
+        obj.refractiveIndex
+    );
+    window.TextureManager?.applyMaterialTexture(material, obj, hexToVec3f);
+
+    const sphere = new Module.Sphere({ x: obj.x, y: obj.y, z: obj.z }, obj.r, material);
+    material.delete();
+
+    wasmSphereCache.set(obj.id, { sig, sphere });
+    return sphere;
+}
+
+function getCachedWasmMesh(obj, albedo) {
+    const geomKey = obj.geometry ? 'custom' : (obj.meshKey || '');
+    const geomRef = obj.geometry || null;
+    const useBVH = obj.useBVH !== false;
+    const smooth = Boolean(obj.smoothShading);
+    const matSig = buildMaterialSignature(obj, albedo);
+
+    const tx = obj.x || 0;
+    const ty = obj.y || 0;
+    const tz = obj.z || 0;
+    const rx = obj.rotX || 0;
+    const ry = obj.rotY || 0;
+    const rz = obj.rotZ || 0;
+    const scale = obj.scale !== undefined ? obj.scale : 1.0;
+
+    let cached = wasmMeshCache.get(obj.id);
+    if (
+        !cached ||
+        cached.geomKey !== geomKey ||
+        cached.geomRef !== geomRef ||
+        cached.useBVH !== useBVH ||
+        cached.smooth !== smooth
+    ) {
+        if (cached && cached.mesh) {
+            cached.mesh.delete();
+        }
+        const mesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, albedo);
+        if (!mesh) return null;
+
+        cached = {
+            mesh,
+            geomKey,
+            geomRef,
+            useBVH,
+            smooth,
+            matSig,
+            tx, ty, tz,
+            rx, ry, rz,
+            scale
+        };
+        wasmMeshCache.set(obj.id, cached);
+        return mesh;
+    }
+
+    if (
+        cached.tx !== tx || cached.ty !== ty || cached.tz !== tz ||
+        cached.rx !== rx || cached.ry !== ry || cached.rz !== rz ||
+        cached.scale !== scale
+    ) {
+        cached.mesh.setTransform(
+            { x: tx, y: ty, z: tz },
+            { x: rx, y: ry, z: rz },
+            scale
+        );
+        cached.tx = tx;
+        cached.ty = ty;
+        cached.tz = tz;
+        cached.rx = rx;
+        cached.ry = ry;
+        cached.rz = rz;
+        cached.scale = scale;
+    }
+
+    if (cached.matSig !== matSig) {
+        const baseColor = hexToVec3f(obj.color);
+        const em = Number(obj.emissionIntensity) || 0.0;
+        const mat = new Module.Material(
+            albedo,
+            baseColor,
+            obj.specularExponent,
+            obj.refractiveIndex,
+            { x: baseColor.x * em, y: baseColor.y * em, z: baseColor.z * em },
+            obj.roughness !== undefined ? obj.roughness : 1.0
+        );
+        window.TextureManager?.applyMaterialTexture(mat, obj, hexToVec3f);
+        cached.mesh.material = mat;
+        mat.delete();
+        cached.matSig = matSig;
+    }
+
+    return cached.mesh;
+}
+
+function pruneWasmMeshCache() {
+    if (wasmMeshCache.size === 0) return;
+    const activeIds = new Set(sceneObjects.filter(o => o.type === 'mesh').map(o => o.id));
+    wasmMeshCache.forEach((entry, id) => {
+        if (!activeIds.has(id)) {
+            if (entry && entry.mesh) entry.mesh.delete();
+            wasmMeshCache.delete(id);
+        }
+    });
+}
+
+function syncAllTracersWithTextures() {
+    if (!window.TextureManager) return;
+    if (cppRayTracer) window.TextureManager.syncTracer(cppRayTracer);
+    if (cppPreviewTracer) window.TextureManager.syncTracer(cppPreviewTracer);
+}
+
+function syncAllTracersEnvParamsOnly() {
+    if (!window.TextureManager) return;
+    if (cppRayTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppRayTracer);
+    if (cppPreviewTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppPreviewTracer);
+}
 
 function clampScale(scale) {
     return Math.min(MAX_PREVIEW_SCALE, Math.max(MIN_PREVIEW_SCALE, scale));
@@ -67,6 +247,8 @@ function ensurePreviewResources(targetScale) {
     activePreviewWidth = nextWidth;
     activePreviewHeight = nextHeight;
 
+    syncAllTracersWithTextures();
+
     return {
         tracer: cppPreviewTracer,
         width: nextWidth,
@@ -79,13 +261,8 @@ function updateAdaptivePreviewScale(renderedScale, elapsedMs) {
     const safeMs = Math.max(1, elapsedMs);
     const idealScale = renderedScale * Math.sqrt(TARGET_PREVIEW_MS / safeMs);
 
-    if (renderedScale === 1.0) {
+    if (renderedScale === 1.0 || safeMs > TARGET_PREVIEW_MS * 1.15) {
         currentPreviewScale = clampScale(idealScale);
-        return;
-    }
-
-    if (safeMs > TARGET_PREVIEW_MS * 1.15) {
-        currentPreviewScale = clampScale(currentPreviewScale * 0.35 + idealScale * 0.65);
     } else if (safeMs < TARGET_PREVIEW_MS * 0.65) {
         currentPreviewScale = clampScale(currentPreviewScale * 0.75 + idealScale * 0.25);
     }
@@ -97,7 +274,16 @@ function triggerRender(options = {}) {
     const interactive = Boolean(options.interactive);
     if (interactive) {
         pendingInteractive = true;
+        if (settleTimerId !== null) clearTimeout(settleTimerId);
+        settleTimerId = setTimeout(() => {
+            settleTimerId = null;
+            triggerRender({ interactive: false });
+        }, 150);
     } else {
+        if (settleTimerId !== null) {
+            clearTimeout(settleTimerId);
+            settleTimerId = null;
+        }
         hasPendingFull = true;
     }
 
@@ -123,36 +309,44 @@ function executeRender(usePreview = false) {
 
     const fovValue = parseFloat(fovInput.value);
     fovLabel.innerText = fovValue.toFixed(2);
-    bgColorLabel.innerText = bgColorInput.value;
+    if (bgColorLabel) bgColorLabel.innerText = bgColorInput.value;
 
     const background_color = hexToVec3f(bgColorInput.value);
 
+    pruneWasmMeshCache();
+    pruneWasmSphereCache();
+
     const spheresVector = new Module.VectorSphere();
+    const meshesVector = new Module.VectorMesh();
     const lightsVector = new Module.VectorLight();
 
     sceneObjects.forEach(obj => {
         if (obj.type === 'sphere') {
+            const wasmSphere = getCachedWasmSphere(obj, currentStepIndex);
+            if (wasmSphere) {
+                spheresVector.push_back(wasmSphere);
+            }
+        } else if (obj.type === 'mesh') {
             const albedo = getStepAdaptedAlbedo(obj.albedo, currentStepIndex);
-            const material = new Module.Material(
-                albedo,
-                hexToVec3f(obj.color),
-                obj.specularExponent,
-                obj.refractiveIndex
-            );
-
-            const sphere = new Module.Sphere({ x: obj.x, y: obj.y, z: obj.z }, obj.r, material);
-            spheresVector.push_back(sphere);
+            const wasmMesh = getCachedWasmMesh(obj, albedo);
+            if (wasmMesh) {
+                meshesVector.push_back(wasmMesh);
+            }
         } else if (obj.type === 'light') {
             const light = new Module.Light({ x: obj.x, y: obj.y, z: obj.z }, obj.intensity);
             lightsVector.push_back(light);
+            light.delete();
         }
     });
 
     const t0 = performance.now();
 
-    tracer.renderScene(fovValue, background_color, currentStepIndex, spheresVector, lightsVector);
+    tracer.renderSceneWithMeshes(fovValue, background_color, currentStepIndex, spheresVector, meshesVector, lightsVector);
+
+    const metrics = tracer.getLastMetrics();
 
     spheresVector.delete();
+    meshesVector.delete();
     lightsVector.delete();
 
     const bufferPtr = tracer.getBufferPointer();
@@ -172,10 +366,30 @@ function executeRender(usePreview = false) {
     const elapsedMs = performance.now() - t0;
     updateAdaptivePreviewScale(usedScale, elapsedMs);
 
-    timerDiv.innerText = preview
-        ? `Превью ${Math.round(usedScale * 100)}% (${targetWidth}×${targetHeight}): ${elapsedMs.toFixed(1)} ms`
-        : `Время рендера: ${elapsedMs.toFixed(1)} ms`;
+    if (preview) {
+        timerDiv.innerText = `Превью ${Math.round(usedScale * 100)}% (${targetWidth}×${targetHeight}): ${elapsedMs.toFixed(1)} ms`;
+    } else {
+        window.lastRtMetrics = metrics;
+        const triInfo = metrics.triangleTests > 0 ? ` | Δ-тестов: ${Math.round(metrics.triangleTests).toLocaleString()}` : '';
+        timerDiv.innerText = `Время: ${elapsedMs.toFixed(1)} ms | Лучей: ${metrics.totalRays.toLocaleString()}${triInfo}`;
+    }
 }
+
+scenePresetSelect?.addEventListener('change', (e) => {
+    const preset = RT_SCENE_PRESETS[e.target.value];
+    if (!preset) return;
+
+    clearWasmMeshCache();
+    clearWasmSphereCache();
+    sceneObjects = cloneRtSceneObjects(preset.objects);
+    selectedObjectId = null;
+    fovInput.value = preset.fov.toFixed(2);
+    bgColorInput.value = preset.bgColor;
+
+    renderOutliner();
+    renderInspector();
+    triggerRender();
+});
 
 document.getElementById('btn-add-sphere').addEventListener('click', () => {
     const newId = "sp_" + Date.now();
@@ -187,7 +401,7 @@ document.getElementById('btn-add-sphere').addEventListener('click', () => {
         x: 0.0, y: 0.0, z: -8.0, r: 1.5,
         color: "#ff8800",
         presetKey: "matte",
-        albedo: defaultPreset.albedo,
+        albedo: { ...defaultPreset.albedo },
         specularExponent: defaultPreset.specularExponent,
         refractiveIndex: defaultPreset.refractiveIndex
     });
@@ -210,6 +424,78 @@ document.getElementById('btn-add-light').addEventListener('click', () => {
     renderOutliner();
     renderInspector();
     triggerRender();
+});
+
+document.getElementById('btn-add-mesh')?.addEventListener('click', () => {
+    const keys = Object.keys(MeshLibrary.BUILTIN_GEOMETRIES);
+    const meshKey = keys[addedMeshCounter % keys.length];
+    addedMeshCounter++;
+
+    const newId = "mesh_" + Date.now();
+    const glassPreset = MATERIAL_PRESETS.glass;
+    sceneObjects.push({
+        id: newId,
+        name: MeshLibrary.BUILTIN_GEOMETRIES[meshKey].label,
+        type: "mesh",
+        meshKey,
+        x: 0.0, y: -0.5, z: -9.5,
+        rotX: 0, rotY: -25, rotZ: 0,
+        scale: 1.8,
+        smoothShading: meshKey === 'duck',
+        color: "#bae6fd",
+        presetKey: "glass",
+        albedo: { ...glassPreset.albedo },
+        specularExponent: glassPreset.specularExponent,
+        refractiveIndex: glassPreset.refractiveIndex
+    });
+    selectedObjectId = newId;
+    renderOutliner();
+    renderInspector();
+    triggerRender();
+});
+
+document.getElementById('btn-upload-obj')?.addEventListener('click', () => {
+    objFileInput?.click();
+});
+
+objFileInput?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const parsed = MeshLibrary.parseObjText(String(reader.result || ''), { normalize: true });
+        if (parsed.triangleCount === 0) {
+            window.Toast?.error('Ошибка .obj', 'Не удалось прочитать вершины или треугольники из файла');
+            return;
+        }
+
+        const newId = "mesh_obj_" + Date.now();
+        const glassPreset = MATERIAL_PRESETS.glass;
+        sceneObjects.push({
+            id: newId,
+            name: file.name,
+            type: "mesh",
+            meshKey: "uploaded",
+            geometry: parsed,
+            x: 0.0, y: -0.5, z: -9.5,
+            rotX: 0, rotY: 0, rotZ: 0,
+            scale: 1.8,
+            smoothShading: true,
+            color: "#e0f2fe",
+            presetKey: "glass",
+            albedo: { ...glassPreset.albedo },
+            specularExponent: glassPreset.specularExponent,
+            refractiveIndex: glassPreset.refractiveIndex
+        });
+        selectedObjectId = newId;
+        renderOutliner();
+        renderInspector();
+        triggerRender();
+        window.Toast?.success('Модель загружена', `${file.name}: ${parsed.triangleCount} треугольников`);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
 });
 
 btnPrev.addEventListener('click', () => {
@@ -236,6 +522,95 @@ fovInput.addEventListener('pointerup', () => triggerRender({ interactive: false 
 
 bgColorInput.addEventListener('input', () => triggerRender({ interactive: true }));
 bgColorInput.addEventListener('change', () => triggerRender({ interactive: false }));
+bgColorInput.addEventListener('pointerup', () => triggerRender({ interactive: false }));
+
+function bindEnvironmentControls() {
+    const bgModeSelect = document.getElementById('param-bg-mode');
+    const bgColorGroup = document.getElementById('bg-color-group');
+    const bgEnvGroup = document.getElementById('bg-env-group');
+    const btnUploadEnv = document.getElementById('btn-upload-env');
+    const inputEnvFile = document.getElementById('input-env-file');
+    const envPreviewImg = document.getElementById('env-preview-img');
+    const envPreviewLabel = document.getElementById('env-preview-label');
+    const envRotInput = document.getElementById('param-env-rot');
+    const envRotLabel = document.getElementById('val-env-rot');
+    const envIntInput = document.getElementById('param-env-int');
+    const envIntLabel = document.getElementById('val-env-int');
+
+    if (!bgModeSelect || !window.TextureManager) return;
+
+    const refreshEnvPreview = () => {
+        const st = window.TextureManager.getEnvironmentState();
+        if (envPreviewImg && st.previewUrl) envPreviewImg.src = st.previewUrl;
+        if (envPreviewLabel) envPreviewLabel.innerText = st.label;
+    };
+
+    bgModeSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'color') {
+            window.TextureManager.setSolidBackground();
+            bgColorGroup?.classList.remove('hidden');
+            bgEnvGroup?.classList.add('hidden');
+            syncAllTracersWithTextures();
+            triggerRender();
+        } else if (val.startsWith('preset:')) {
+            const presetKey = val.split(':')[1];
+            window.TextureManager.setPresetEnvironment(presetKey);
+            bgColorGroup?.classList.add('hidden');
+            bgEnvGroup?.classList.remove('hidden');
+            refreshEnvPreview();
+            syncAllTracersWithTextures();
+            triggerRender();
+        } else if (val === 'custom') {
+            bgColorGroup?.classList.add('hidden');
+            bgEnvGroup?.classList.remove('hidden');
+            const st = window.TextureManager.getEnvironmentState();
+            if (st.mode !== 'custom') {
+                inputEnvFile?.click();
+            } else {
+                window.TextureManager.updateEnvironmentParams({});
+                refreshEnvPreview();
+                syncAllTracersWithTextures();
+                triggerRender();
+            }
+        }
+    });
+
+    btnUploadEnv?.addEventListener('click', () => inputEnvFile?.click());
+
+    inputEnvFile?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await window.TextureManager.loadCustomEnvironment(file);
+        bgModeSelect.value = 'custom';
+        bgColorGroup?.classList.add('hidden');
+        bgEnvGroup?.classList.remove('hidden');
+        refreshEnvPreview();
+        syncAllTracersWithTextures();
+        triggerRender();
+        e.target.value = '';
+    });
+
+    const handleEnvSlider = (interactive) => {
+        const rot = envRotInput ? parseFloat(envRotInput.value) : 0;
+        const intensity = envIntInput ? parseFloat(envIntInput.value) : 1.0;
+        if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
+        if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
+        window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
+        syncAllTracersEnvParamsOnly();
+        triggerRender({ interactive });
+    };
+
+    envRotInput?.addEventListener('input', () => handleEnvSlider(true));
+    envRotInput?.addEventListener('change', () => handleEnvSlider(false));
+    envRotInput?.addEventListener('pointerup', () => handleEnvSlider(false));
+
+    envIntInput?.addEventListener('input', () => handleEnvSlider(true));
+    envIntInput?.addEventListener('change', () => handleEnvSlider(false));
+    envIntInput?.addEventListener('pointerup', () => handleEnvSlider(false));
+}
+
+bindEnvironmentControls();
 
 window.Module = {
     onRuntimeInitialized: function() {
@@ -245,11 +620,12 @@ window.Module = {
         try {
             cppRayTracer = new Module.RayTracer(WIDTH, HEIGHT);
             ensurePreviewResources(DEFAULT_PREVIEW_SCALE);
+            syncAllTracersWithTextures();
             renderOutliner();
             updateStepUI();
             triggerRender();
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             statusDiv.innerText = "Ошибка Wasm Build";
             statusDiv.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20";
         }
