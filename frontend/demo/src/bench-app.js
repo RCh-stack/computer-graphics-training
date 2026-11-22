@@ -9,6 +9,7 @@ let cancelRequested = false;
 let lastRtMetrics = null;
 let lastPtMetrics = null;
 let lastQualityStats = null;
+let lastEnvImpact = null;
 let convergenceHistory = [];
 
 const statusDiv = document.getElementById('wasm-status');
@@ -287,6 +288,11 @@ function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
         ? `RMSE vs GT: ${quality.rmse.toFixed(4)}`
         : `RMSE (PT vs RT): ${quality.rmse.toFixed(4)}`;
 
+    const rtEnvLookups = rt.envLookups || 0;
+    const ptEnvLookups = pt.envLookups || 0;
+    const rtEnvPct = rt.totalRays > 0 ? (rtEnvLookups / rt.totalRays) * 100.0 : 0.0;
+    const ptEnvPct = pt.totalRays > 0 ? (ptEnvLookups / pt.totalRays) * 100.0 : 0.0;
+
     const tbody = document.getElementById('metrics-table-body');
     const rows = [
         ["Время рендера в Wasm (мс)", `${rtMs.toFixed(2)} мс`, `${ptMs.toFixed(2)} мс`, `×${slowdown.toFixed(2)}`],
@@ -296,10 +302,28 @@ function updateSummaryUI(rt, pt, quality, isConvergenceRef = false) {
         ["Теневые лучи (Shadow / NEE)", rt.shadowRays.toLocaleString(), pt.shadowRays.toLocaleString(), `×${(pt.shadowRays / Math.max(1, rt.shadowRays)).toFixed(2)}`],
         ["Вторичные лучи (Bounces)", rt.secondaryRays.toLocaleString(), pt.secondaryRays.toLocaleString(), `×${(pt.secondaryRays / Math.max(1, rt.secondaryRays)).toFixed(2)}`],
         ["Всего выпущено лучей", rt.totalRays.toLocaleString(), pt.totalRays.toLocaleString(), `×${(pt.totalRays / rt.totalRays).toFixed(2)}`],
+        ["Выборки карты окружения (IBL)", `${rtEnvLookups.toLocaleString()} (${rtEnvPct.toFixed(0)}%)`, `${ptEnvLookups.toLocaleString()} (${ptEnvPct.toFixed(0)}%)`, rtEnvLookups > 0 ? `×${(ptEnvLookups / rtEnvLookups).toFixed(2)}` : "Отключен"],
         ["Проверок пересечения «луч–сфера»", Math.round(rt.intersectionTests).toLocaleString(), Math.round(pt.intersectionTests).toLocaleString(), `×${(pt.intersectionTests / Math.max(1, rt.intersectionTests)).toFixed(2)}`],
         ["Пропускная способность (MRays/s)", `${rtMRays.toFixed(2)}`, `${ptMRays.toFixed(2)}`, `${((ptMRays / rtMRays) * 100).toFixed(0)}% от RT`],
         ["Разница световой энергии ΔE (GI)", "Базовый (0%)", `${quality.globalEnergyDiffPct >= 0 ? '+' : ''}${quality.globalEnergyDiffPct.toFixed(2)}%`, "Вклад непрямого света"]
     ];
+
+    if (lastEnvImpact) {
+        rows.push(
+            [
+                "Накладные расходы IBL (ΔT к Solid)",
+                `${lastEnvImpact.rtDeltaMs >= 0 ? '+' : ''}${lastEnvImpact.rtDeltaMs.toFixed(2)} мс (${lastEnvImpact.rtDeltaPct >= 0 ? '+' : ''}${lastEnvImpact.rtDeltaPct.toFixed(1)}%)`,
+                `${lastEnvImpact.ptDeltaMs >= 0 ? '+' : ''}${lastEnvImpact.ptDeltaMs.toFixed(2)} мс (${lastEnvImpact.ptDeltaPct >= 0 ? '+' : ''}${lastEnvImpact.ptDeltaPct.toFixed(1)}%)`,
+                `ΔMRays PT: ${lastEnvImpact.ptThroughputPct >= 0 ? '+' : ''}${lastEnvImpact.ptThroughputPct.toFixed(1)}%`
+            ],
+            [
+                "Световой вклад панорамы ΔE_IBL",
+                "Фон 360°",
+                `${lastEnvImpact.ptEnergyGainPct >= 0 ? '+' : ''}${lastEnvImpact.ptEnergyGainPct.toFixed(2)}%`,
+                "Прирост освещённости от IBL"
+            ]
+        );
+    }
 
     const currentScene = BENCH_SCENES[sceneSelect.value];
     const rtAabb = computeAabbStats(rt, currentScene);
@@ -516,71 +540,133 @@ function drawConvergenceChart(history) {
     });
 }
 
+async function runSinglePassPair(mode, scene, bg, spheresVector, meshesVector, lightsVector, width, height, progressOffset = 0, progressSpan = 100, labelPrefix = '') {
+    benchRtTracer.renderSceneWithMeshes(scene.fov, bg, 5, spheresVector, meshesVector, lightsVector);
+    const rtMetrics = benchRtTracer.getLastMetrics();
+    const rtRgba = readTracerRgbaCopy(benchRtTracer, width, height);
+
+    benchPtTracer.reset();
+    benchPtTracer.setSeed(42);
+
+    if (mode === 'standard') {
+        const goalSpp = parseInt(sppSlider.value, 10) || 32;
+        const batch = 4;
+
+        while (benchPtTracer.getAccumulatedSamples() < goalSpp && !cancelRequested) {
+            const rem = goalSpp - benchPtTracer.getAccumulatedSamples();
+            const stepSpp = Math.min(rem, batch);
+
+            benchPtTracer.renderPassWithMeshes(stepSpp, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
+            const cur = benchPtTracer.getAccumulatedSamples();
+            setProgress(progressOffset + (cur / goalSpp) * progressSpan, `${labelPrefix}PT: ${cur} / ${goalSpp} SPP`);
+
+            if (progressOffset > 0 || progressSpan === 100) {
+                const ptRgbaLive = readTracerRgbaCopy(benchPtTracer, width, height);
+                putRgbaToCanvas(ctxPt, ptRgbaLive, width, height);
+            }
+            await nextFrame();
+        }
+    } else {
+        const budgetChoice = timeBudgetSelect.value;
+        const budgetMs = budgetChoice === 'auto' ? rtMetrics.renderTimeMs : parseFloat(budgetChoice);
+
+        let elapsedBudget = 0;
+        do {
+            benchPtTracer.renderPassWithMeshes(1, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
+            const m = benchPtTracer.getLastMetrics();
+            elapsedBudget = m.renderTimeMs;
+
+            if (progressOffset > 0 || progressSpan === 100) {
+                const ptRgbaLive = readTracerRgbaCopy(benchPtTracer, width, height);
+                putRgbaToCanvas(ctxPt, ptRgbaLive, width, height);
+            }
+            setProgress(
+                progressOffset + Math.min(0.95, elapsedBudget / Math.max(1, budgetMs)) * progressSpan,
+                `${labelPrefix}Бюджет: ${elapsedBudget.toFixed(1)} / ${budgetMs.toFixed(1)} мс`
+            );
+            await nextFrame();
+        } while (elapsedBudget < budgetMs && !cancelRequested);
+    }
+
+    const ptMetrics = benchPtTracer.getLastMetrics();
+    const ptRgba = readTracerRgbaCopy(benchPtTracer, width, height);
+    return { rtMetrics, rtRgba, ptMetrics, ptRgba };
+}
+
 async function runStandardOrEqualTime(mode) {
     const res = BENCH_RESOLUTIONS[resSelect.value] || BENCH_RESOLUTIONS["640x360"];
     ensureTracers(res.width, res.height);
 
     const { spheresVector, meshesVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
     const bg = hexToVec3f(scene.bgColor);
+    lastEnvImpact = null;
+
+    const envState = window.TextureManager?.getEnvironmentState();
+    const envAbCheck = document.getElementById('bench-env-ab');
+    const measureEnvAb = Boolean(envState && envState.enabled && envAbCheck && envAbCheck.checked);
 
     try {
-        setProgress(10, 'Рендер Ray Tracing...');
-        await nextFrame();
+        let solidRun = null;
 
-        benchRtTracer.renderSceneWithMeshes(scene.fov, bg, 5, spheresVector, meshesVector, lightsVector);
-        const rtMetrics = benchRtTracer.getLastMetrics();
-        const rtRgba = readTracerRgbaCopy(benchRtTracer, res.width, res.height);
-        putRgbaToCanvas(ctxRt, rtRgba, res.width, res.height);
+        if (measureEnvAb) {
+            setProgress(5, 'Базовый прогон (сплошной фон)...');
+            benchRtTracer.setEnvironmentParams(false, envState.intensity, envState.rotationDeg);
+            benchPtTracer.setEnvironmentParams(false, envState.intensity, envState.rotationDeg);
+            await nextFrame();
 
-        benchPtTracer.reset();
-        benchPtTracer.setSeed(42);
+            solidRun = await runSinglePassPair(
+                mode, scene, bg, spheresVector, meshesVector, lightsVector,
+                res.width, res.height, 5, 42, '[Solid] '
+            );
 
-        if (mode === 'standard') {
-            const goalSpp = parseInt(sppSlider.value, 10) || 32;
-            let batch = 2;
-
-            while (benchPtTracer.getAccumulatedSamples() < goalSpp && !cancelRequested) {
-                const rem = goalSpp - benchPtTracer.getAccumulatedSamples();
-                const stepSpp = Math.min(rem, batch);
-
-                benchPtTracer.renderPassWithMeshes(stepSpp, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
-                const cur = benchPtTracer.getAccumulatedSamples();
-                setProgress(15 + (cur / goalSpp) * 80, `PT: ${cur} / ${goalSpp} SPP`);
-
-                const ptRgbaLive = readTracerRgbaCopy(benchPtTracer, res.width, res.height);
-                putRgbaToCanvas(ctxPt, ptRgbaLive, res.width, res.height);
-                await nextFrame();
-            }
-        } else {
-            const budgetChoice = timeBudgetSelect.value;
-            const budgetMs = budgetChoice === 'auto' ? rtMetrics.renderTimeMs : parseFloat(budgetChoice);
-
-            let elapsedBudget = 0;
-            do {
-                benchPtTracer.renderPassWithMeshes(1, scene.fov, bg, 3, spheresVector, meshesVector, lightsVector);
-                const m = benchPtTracer.getLastMetrics();
-                elapsedBudget = m.renderTimeMs;
-
-                const ptRgbaLive = readTracerRgbaCopy(benchPtTracer, res.width, res.height);
-                putRgbaToCanvas(ctxPt, ptRgbaLive, res.width, res.height);
-                setProgress(Math.min(95, (elapsedBudget / Math.max(1, budgetMs)) * 90), `Бюджет: ${elapsedBudget.toFixed(1)} / ${budgetMs.toFixed(1)} мс`);
-                await nextFrame();
-            } while (elapsedBudget < budgetMs && !cancelRequested);
+            benchRtTracer.setEnvironmentParams(true, envState.intensity, envState.rotationDeg);
+            benchPtTracer.setEnvironmentParams(true, envState.intensity, envState.rotationDeg);
         }
 
-        const ptMetrics = benchPtTracer.getLastMetrics();
-        const ptRgba = readTracerRgbaCopy(benchPtTracer, res.width, res.height);
-        const quality = computeImageComparison(rtRgba, ptRgba, res.width, res.height, true);
+        const startPct = measureEnvAb ? 50 : 10;
+        const spanPct = measureEnvAb ? 48 : 88;
+        setProgress(startPct, 'Рендер Ray Tracing...');
+        await nextFrame();
 
+        const mainRun = await runSinglePassPair(
+            mode, scene, bg, spheresVector, meshesVector, lightsVector,
+            res.width, res.height, startPct, spanPct, measureEnvAb ? '[IBL] ' : ''
+        );
+
+        putRgbaToCanvas(ctxRt, mainRun.rtRgba, res.width, res.height);
+        putRgbaToCanvas(ctxPt, mainRun.ptRgba, res.width, res.height);
+
+        const quality = computeImageComparison(mainRun.rtRgba, mainRun.ptRgba, res.width, res.height, true);
         if (quality.diffRgba) {
             putRgbaToCanvas(ctxDiff, quality.diffRgba, res.width, res.height);
         }
 
-        lastRtMetrics = rtMetrics;
-        lastPtMetrics = ptMetrics;
+        if (solidRun && !cancelRequested) {
+            const rtDeltaMs = mainRun.rtMetrics.renderTimeMs - solidRun.rtMetrics.renderTimeMs;
+            const rtDeltaPct = (rtDeltaMs / Math.max(0.01, solidRun.rtMetrics.renderTimeMs)) * 100.0;
+            const ptDeltaMs = mainRun.ptMetrics.renderTimeMs - solidRun.ptMetrics.renderTimeMs;
+            const ptDeltaPct = (ptDeltaMs / Math.max(0.01, solidRun.ptMetrics.renderTimeMs)) * 100.0;
+
+            const ptMRaysSolid = solidRun.ptMetrics.totalRays / (Math.max(0.01, solidRun.ptMetrics.renderTimeMs) * 1000.0);
+            const ptMRaysIbl = mainRun.ptMetrics.totalRays / (Math.max(0.01, mainRun.ptMetrics.renderTimeMs) * 1000.0);
+            const ptThroughputPct = ((ptMRaysIbl - ptMRaysSolid) / Math.max(0.001, ptMRaysSolid)) * 100.0;
+
+            const envEnergyCmp = computeImageComparison(solidRun.ptRgba, mainRun.ptRgba, res.width, res.height, false);
+            lastEnvImpact = {
+                rtDeltaMs,
+                rtDeltaPct,
+                ptDeltaMs,
+                ptDeltaPct,
+                ptThroughputPct,
+                ptEnergyGainPct: envEnergyCmp.globalEnergyDiffPct
+            };
+        }
+
+        lastRtMetrics = mainRun.rtMetrics;
+        lastPtMetrics = mainRun.ptMetrics;
         lastQualityStats = quality;
 
-        updateSummaryUI(rtMetrics, ptMetrics, quality, false);
+        updateSummaryUI(mainRun.rtMetrics, mainRun.ptMetrics, quality, false);
         updateSceneSummary();
         setProgress(100, 'Завершено');
     } finally {
@@ -597,6 +683,7 @@ async function runConvergenceSweep() {
     const { spheresVector, meshesVector, lightsVector, scene } = buildSceneVectors(sceneSelect.value);
     const bg = hexToVec3f(scene.bgColor);
     const gtSpp = parseInt(gtSppSelect.value, 10) || 512;
+    lastEnvImpact = null;
 
     try {
         setProgress(5, 'Этап 1/3: Базовый Ray Tracing...');
@@ -716,10 +803,19 @@ function exportBenchmarkCsv() {
     const lines = [
         `Сцена;${sceneName};Разрешение;${activeWidth}x${activeHeight};Ускорение мешей;${accelLabel};Окружение;${envLabel}`,
         '',
-        'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;Проверок пересечения;MRays/s;AABB тесты;Треугольные тесты;Отсечено AABB (%)',
-        `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)};${rtAabb ? rtAabb.aabbTests : 0};${rtAabb ? rtAabb.triangleTests : 0};${rtAabb ? rtAabb.cullPct.toFixed(1) : 0}`,
-        `Path Tracing;${lastPtMetrics.spp};${lastPtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastPtMetrics.renderTimeMs).toFixed(2)};${lastPtMetrics.primaryRays};${lastPtMetrics.shadowRays};${lastPtMetrics.secondaryRays};${lastPtMetrics.totalRays};${Math.round(lastPtMetrics.intersectionTests)};${(lastPtMetrics.totalRays / (lastPtMetrics.renderTimeMs * 1000)).toFixed(2)};${ptAabb ? ptAabb.aabbTests : 0};${ptAabb ? ptAabb.triangleTests : 0};${ptAabb ? ptAabb.cullPct.toFixed(1) : 0}`
+        'Алгоритм;SPP;Время (мс);FPS;Primary лучи;Shadow лучи;Secondary лучи;Всего лучей;IBL выборки;Проверок пересечения;MRays/s;AABB тесты;Треугольные тесты;Отсечено AABB (%)',
+        `Ray Tracing;${lastRtMetrics.spp};${lastRtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastRtMetrics.renderTimeMs).toFixed(2)};${lastRtMetrics.primaryRays};${lastRtMetrics.shadowRays};${lastRtMetrics.secondaryRays};${lastRtMetrics.totalRays};${lastRtMetrics.envLookups || 0};${Math.round(lastRtMetrics.intersectionTests)};${(lastRtMetrics.totalRays / (lastRtMetrics.renderTimeMs * 1000)).toFixed(2)};${rtAabb ? rtAabb.aabbTests : 0};${rtAabb ? rtAabb.triangleTests : 0};${rtAabb ? rtAabb.cullPct.toFixed(1) : 0}`,
+        `Path Tracing;${lastPtMetrics.spp};${lastPtMetrics.renderTimeMs.toFixed(2)};${(1000 / lastPtMetrics.renderTimeMs).toFixed(2)};${lastPtMetrics.primaryRays};${lastPtMetrics.shadowRays};${lastPtMetrics.secondaryRays};${lastPtMetrics.totalRays};${lastPtMetrics.envLookups || 0};${Math.round(lastPtMetrics.intersectionTests)};${(lastPtMetrics.totalRays / (lastPtMetrics.renderTimeMs * 1000)).toFixed(2)};${ptAabb ? ptAabb.aabbTests : 0};${ptAabb ? ptAabb.triangleTests : 0};${ptAabb ? ptAabb.cullPct.toFixed(1) : 0}`
     ];
+
+    if (lastEnvImpact) {
+        lines.push(
+            '',
+            'Влияние карты окружения IBL (сравнение со сплошным фоном)',
+            'Накладные расходы RT (мс);Накладные расходы RT (%);Накладные расходы PT (мс);Накладные расходы PT (%);Изменение MRays/s PT (%);Световой вклад IBL ΔE (%)',
+            `${lastEnvImpact.rtDeltaMs.toFixed(2)};${lastEnvImpact.rtDeltaPct.toFixed(2)};${lastEnvImpact.ptDeltaMs.toFixed(2)};${lastEnvImpact.ptDeltaPct.toFixed(2)};${lastEnvImpact.ptThroughputPct.toFixed(2)};${lastEnvImpact.ptEnergyGainPct.toFixed(2)}`
+        );
+    }
 
     if (convergenceHistory.length > 0) {
         lines.push('', 'Кривая сходимости Monte Carlo (Path Tracing vs Ground Truth)');
@@ -865,7 +961,8 @@ function bindBenchmarkEnvironmentControls() {
         if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
         if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
         window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
-        syncBenchTracersWithTextures();
+        if (benchRtTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(benchRtTracer);
+        if (benchPtTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(benchPtTracer);
     };
 
     envRotInput?.addEventListener('input', handleEnvSlider);

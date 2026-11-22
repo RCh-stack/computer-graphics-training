@@ -24,14 +24,185 @@ const statusDiv = document.getElementById('wasm-status');
 const timerDiv = document.getElementById('render-time');
 
 let renderRafId = null;
+let settleTimerId = null;
 let pendingInteractive = false;
 let hasPendingFull = false;
 let addedMeshCounter = 0;
+
+const wasmMeshCache = new Map();
+const wasmSphereCache = new Map();
+
+function getTextureSlotVersion(textureId) {
+    if (textureId === undefined || textureId === null || Number(textureId) < 0) return 0;
+    return window.TextureManager?.getTextureSlot(Number(textureId))?.version || 0;
+}
+
+function buildMaterialSignature(obj, albedo) {
+    const a = albedo || {};
+    const texVer = getTextureSlotVersion(obj.textureId);
+    return `${a.x}|${a.y}|${a.z}|${a.w}|${obj.color}|${obj.specularExponent}|${obj.refractiveIndex}|${obj.roughness}|${obj.emissionIntensity}|${obj.textureType}|${obj.texScale}|${obj.textureId}|${obj.secondaryColor}|${texVer}`;
+}
+
+function clearWasmMeshCache() {
+    wasmMeshCache.forEach(entry => {
+        if (entry && entry.mesh) {
+            entry.mesh.delete();
+        }
+    });
+    wasmMeshCache.clear();
+}
+
+function clearWasmSphereCache() {
+    wasmSphereCache.forEach(entry => {
+        if (entry && entry.sphere) {
+            entry.sphere.delete();
+        }
+    });
+    wasmSphereCache.clear();
+}
+
+function pruneWasmSphereCache() {
+    if (wasmSphereCache.size === 0) return;
+    const activeIds = new Set(sceneObjects.filter(o => o.type === 'sphere').map(o => o.id));
+    wasmSphereCache.forEach((entry, id) => {
+        if (!activeIds.has(id)) {
+            if (entry && entry.sphere) entry.sphere.delete();
+            wasmSphereCache.delete(id);
+        }
+    });
+}
+
+function getCachedWasmSphere(obj, stepIndex) {
+    const albedo = getStepAdaptedAlbedo(obj.albedo, stepIndex);
+    const sig = `${obj.x}|${obj.y}|${obj.z}|${obj.r}|${buildMaterialSignature(obj, albedo)}`;
+    const cached = wasmSphereCache.get(obj.id);
+    if (cached && cached.sig === sig) {
+        return cached.sphere;
+    }
+
+    if (cached && cached.sphere) {
+        cached.sphere.delete();
+    }
+
+    const material = new Module.Material(
+        albedo,
+        hexToVec3f(obj.color),
+        obj.specularExponent,
+        obj.refractiveIndex
+    );
+    window.TextureManager?.applyMaterialTexture(material, obj, hexToVec3f);
+
+    const sphere = new Module.Sphere({ x: obj.x, y: obj.y, z: obj.z }, obj.r, material);
+    material.delete();
+
+    wasmSphereCache.set(obj.id, { sig, sphere });
+    return sphere;
+}
+
+function getCachedWasmMesh(obj, albedo) {
+    const geomKey = obj.geometry ? 'custom' : (obj.meshKey || '');
+    const geomRef = obj.geometry || null;
+    const useBVH = obj.useBVH !== false;
+    const smooth = Boolean(obj.smoothShading);
+    const matSig = buildMaterialSignature(obj, albedo);
+
+    const tx = obj.x || 0;
+    const ty = obj.y || 0;
+    const tz = obj.z || 0;
+    const rx = obj.rotX || 0;
+    const ry = obj.rotY || 0;
+    const rz = obj.rotZ || 0;
+    const scale = obj.scale !== undefined ? obj.scale : 1.0;
+
+    let cached = wasmMeshCache.get(obj.id);
+    if (
+        !cached ||
+        cached.geomKey !== geomKey ||
+        cached.geomRef !== geomRef ||
+        cached.useBVH !== useBVH ||
+        cached.smooth !== smooth
+    ) {
+        if (cached && cached.mesh) {
+            cached.mesh.delete();
+        }
+        const mesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, albedo);
+        if (!mesh) return null;
+
+        cached = {
+            mesh,
+            geomKey,
+            geomRef,
+            useBVH,
+            smooth,
+            matSig,
+            tx, ty, tz,
+            rx, ry, rz,
+            scale
+        };
+        wasmMeshCache.set(obj.id, cached);
+        return mesh;
+    }
+
+    if (
+        cached.tx !== tx || cached.ty !== ty || cached.tz !== tz ||
+        cached.rx !== rx || cached.ry !== ry || cached.rz !== rz ||
+        cached.scale !== scale
+    ) {
+        cached.mesh.setTransform(
+            { x: tx, y: ty, z: tz },
+            { x: rx, y: ry, z: rz },
+            scale
+        );
+        cached.tx = tx;
+        cached.ty = ty;
+        cached.tz = tz;
+        cached.rx = rx;
+        cached.ry = ry;
+        cached.rz = rz;
+        cached.scale = scale;
+    }
+
+    if (cached.matSig !== matSig) {
+        const baseColor = hexToVec3f(obj.color);
+        const em = Number(obj.emissionIntensity) || 0.0;
+        const mat = new Module.Material(
+            albedo,
+            baseColor,
+            obj.specularExponent,
+            obj.refractiveIndex,
+            { x: baseColor.x * em, y: baseColor.y * em, z: baseColor.z * em },
+            obj.roughness !== undefined ? obj.roughness : 1.0
+        );
+        window.TextureManager?.applyMaterialTexture(mat, obj, hexToVec3f);
+        cached.mesh.material = mat;
+        mat.delete();
+        cached.matSig = matSig;
+    }
+
+    return cached.mesh;
+}
+
+function pruneWasmMeshCache() {
+    if (wasmMeshCache.size === 0) return;
+    const activeIds = new Set(sceneObjects.filter(o => o.type === 'mesh').map(o => o.id));
+    wasmMeshCache.forEach((entry, id) => {
+        if (!activeIds.has(id)) {
+            if (entry && entry.mesh) entry.mesh.delete();
+            wasmMeshCache.delete(id);
+        }
+    });
+}
 
 function syncAllTracersWithTextures() {
     if (!window.TextureManager) return;
     if (cppRayTracer) window.TextureManager.syncTracer(cppRayTracer);
     if (cppPreviewTracer) window.TextureManager.syncTracer(cppPreviewTracer);
+}
+
+function syncAllTracersEnvParamsOnly() {
+    if (!window.TextureManager) return;
+    if (cppRayTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppRayTracer);
+    if (cppPreviewTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppPreviewTracer);
 }
 
 function clampScale(scale) {
@@ -90,13 +261,8 @@ function updateAdaptivePreviewScale(renderedScale, elapsedMs) {
     const safeMs = Math.max(1, elapsedMs);
     const idealScale = renderedScale * Math.sqrt(TARGET_PREVIEW_MS / safeMs);
 
-    if (renderedScale === 1.0) {
+    if (renderedScale === 1.0 || safeMs > TARGET_PREVIEW_MS * 1.15) {
         currentPreviewScale = clampScale(idealScale);
-        return;
-    }
-
-    if (safeMs > TARGET_PREVIEW_MS * 1.15) {
-        currentPreviewScale = clampScale(currentPreviewScale * 0.35 + idealScale * 0.65);
     } else if (safeMs < TARGET_PREVIEW_MS * 0.65) {
         currentPreviewScale = clampScale(currentPreviewScale * 0.75 + idealScale * 0.25);
     }
@@ -108,7 +274,16 @@ function triggerRender(options = {}) {
     const interactive = Boolean(options.interactive);
     if (interactive) {
         pendingInteractive = true;
+        if (settleTimerId !== null) clearTimeout(settleTimerId);
+        settleTimerId = setTimeout(() => {
+            settleTimerId = null;
+            triggerRender({ interactive: false });
+        }, 150);
     } else {
+        if (settleTimerId !== null) {
+            clearTimeout(settleTimerId);
+            settleTimerId = null;
+        }
         hasPendingFull = true;
     }
 
@@ -138,31 +313,24 @@ function executeRender(usePreview = false) {
 
     const background_color = hexToVec3f(bgColorInput.value);
 
+    pruneWasmMeshCache();
+    pruneWasmSphereCache();
+
     const spheresVector = new Module.VectorSphere();
     const meshesVector = new Module.VectorMesh();
     const lightsVector = new Module.VectorLight();
 
     sceneObjects.forEach(obj => {
         if (obj.type === 'sphere') {
-            const albedo = getStepAdaptedAlbedo(obj.albedo, currentStepIndex);
-            const material = new Module.Material(
-                albedo,
-                hexToVec3f(obj.color),
-                obj.specularExponent,
-                obj.refractiveIndex
-            );
-            window.TextureManager?.applyMaterialTexture(material, obj, hexToVec3f);
-
-            const sphere = new Module.Sphere({ x: obj.x, y: obj.y, z: obj.z }, obj.r, material);
-            spheresVector.push_back(sphere);
-            sphere.delete();
-            material.delete();
+            const wasmSphere = getCachedWasmSphere(obj, currentStepIndex);
+            if (wasmSphere) {
+                spheresVector.push_back(wasmSphere);
+            }
         } else if (obj.type === 'mesh') {
             const albedo = getStepAdaptedAlbedo(obj.albedo, currentStepIndex);
-            const wasmMesh = MeshLibrary.buildWasmMesh(obj, hexToVec3f, albedo);
+            const wasmMesh = getCachedWasmMesh(obj, albedo);
             if (wasmMesh) {
                 meshesVector.push_back(wasmMesh);
-                wasmMesh.delete();
             }
         } else if (obj.type === 'light') {
             const light = new Module.Light({ x: obj.x, y: obj.y, z: obj.z }, obj.intensity);
@@ -211,6 +379,8 @@ scenePresetSelect?.addEventListener('change', (e) => {
     const preset = RT_SCENE_PRESETS[e.target.value];
     if (!preset) return;
 
+    clearWasmMeshCache();
+    clearWasmSphereCache();
     sceneObjects = cloneRtSceneObjects(preset.objects);
     selectedObjectId = null;
     fovInput.value = preset.fov.toFixed(2);
@@ -352,6 +522,7 @@ fovInput.addEventListener('pointerup', () => triggerRender({ interactive: false 
 
 bgColorInput.addEventListener('input', () => triggerRender({ interactive: true }));
 bgColorInput.addEventListener('change', () => triggerRender({ interactive: false }));
+bgColorInput.addEventListener('pointerup', () => triggerRender({ interactive: false }));
 
 function bindEnvironmentControls() {
     const bgModeSelect = document.getElementById('param-bg-mode');
@@ -426,7 +597,7 @@ function bindEnvironmentControls() {
         if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
         if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
         window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
-        syncAllTracersWithTextures();
+        syncAllTracersEnvParamsOnly();
         triggerRender({ interactive });
     };
 

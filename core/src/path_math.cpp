@@ -309,7 +309,7 @@ namespace PathTracing
 
             if (!rec.hit)
             {
-                Vec3f env_radiance = envMap.sample(ray_dir, linear_bg, true);
+                Vec3f env_radiance = envMap.sample(ray_dir, linear_bg, true, metrics);
                 radiance = radiance + cwise_mul(throughput, env_radiance);
                 break;
             }

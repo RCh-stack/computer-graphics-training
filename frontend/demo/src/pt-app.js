@@ -27,16 +27,32 @@ const statusDiv = document.getElementById('wasm-status');
 const timerDiv = document.getElementById('render-time');
 
 let renderRafId = null;
+let settleTimerId = null;
 let progressiveRafId = null;
 let pendingInteractive = false;
 let hasPendingFull = false;
 let activeJobId = 0;
+let activeJobVectors = null;
 let addedMeshCounter = 0;
+
+function freeActiveJobVectors() {
+    if (!activeJobVectors) return;
+    activeJobVectors.spheresVector.delete();
+    activeJobVectors.meshesVector.delete();
+    activeJobVectors.lightsVector.delete();
+    activeJobVectors = null;
+}
 
 function syncAllTracersWithTextures() {
     if (!window.TextureManager) return;
     if (cppPathTracer) window.TextureManager.syncTracer(cppPathTracer);
     if (cppPreviewPathTracer) window.TextureManager.syncTracer(cppPreviewPathTracer);
+}
+
+function syncAllTracersEnvParamsOnly() {
+    if (!window.TextureManager) return;
+    if (cppPathTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppPathTracer);
+    if (cppPreviewPathTracer) window.TextureManager.syncTracerEnvironmentParamsOnly(cppPreviewPathTracer);
 }
 
 function clampScale(scale) {
@@ -95,13 +111,8 @@ function updateAdaptivePreviewScale(renderedScale, elapsedMs) {
     const safeMs = Math.max(1, elapsedMs);
     const idealScale = renderedScale * Math.sqrt(TARGET_PREVIEW_MS / safeMs);
 
-    if (renderedScale === 1.0) {
+    if (renderedScale === 1.0 || safeMs > TARGET_PREVIEW_MS * 1.15) {
         currentPreviewScale = clampScale(idealScale);
-        return;
-    }
-
-    if (safeMs > TARGET_PREVIEW_MS * 1.15) {
-        currentPreviewScale = clampScale(currentPreviewScale * 0.35 + idealScale * 0.65);
     } else if (safeMs < TARGET_PREVIEW_MS * 0.65) {
         currentPreviewScale = clampScale(currentPreviewScale * 0.75 + idealScale * 0.25);
     }
@@ -113,6 +124,7 @@ function stopProgressiveRender() {
         cancelAnimationFrame(progressiveRafId);
         progressiveRafId = null;
     }
+    freeActiveJobVectors();
 }
 
 function triggerRender(options = {}) {
@@ -121,7 +133,16 @@ function triggerRender(options = {}) {
     const interactive = Boolean(options.interactive);
     if (interactive) {
         pendingInteractive = true;
+        if (settleTimerId !== null) clearTimeout(settleTimerId);
+        settleTimerId = setTimeout(() => {
+            settleTimerId = null;
+            triggerRender({ interactive: false });
+        }, 160);
     } else {
+        if (settleTimerId !== null) {
+            clearTimeout(settleTimerId);
+            settleTimerId = null;
+        }
         hasPendingFull = true;
     }
 
@@ -152,11 +173,12 @@ function executeInteractivePreview() {
 
     const backgroundColor = hexToVec3f(bgColorInput.value);
     const { spheresVector, meshesVector, lightsVector } = buildWasmSceneVectors();
+    const previewStep = Math.min(currentStepIndex, 1);
 
     const t0 = performance.now();
     preview.tracer.reset();
     preview.tracer.setSeed(42);
-    preview.tracer.renderPassWithMeshes(1, fovValue, backgroundColor, currentStepIndex, spheresVector, meshesVector, lightsVector);
+    preview.tracer.renderPassWithMeshes(1, fovValue, backgroundColor, previewStep, spheresVector, meshesVector, lightsVector);
 
     spheresVector.delete();
     meshesVector.delete();
@@ -197,21 +219,23 @@ function startProgressiveRender() {
     cppPathTracer.reset();
     cppPathTracer.setSeed(42);
 
+    activeJobVectors = buildWasmSceneVectors();
     let batchSize = 1;
 
     function runNextBatch() {
-        if (jobId !== activeJobId || !cppPathTracer) return;
+        if (jobId !== activeJobId || !cppPathTracer || !activeJobVectors) return;
 
         const currentSpp = cppPathTracer.getAccumulatedSamples();
         const remaining = effectiveGoalSpp - currentSpp;
 
         if (remaining <= 0) {
             progressiveRafId = null;
+            freeActiveJobVectors();
             return;
         }
 
         const samplesThisPass = Math.min(remaining, batchSize);
-        const { spheresVector, meshesVector, lightsVector } = buildWasmSceneVectors();
+        const { spheresVector, meshesVector, lightsVector } = activeJobVectors;
 
         const passStart = performance.now();
         cppPathTracer.renderPassWithMeshes(
@@ -223,10 +247,6 @@ function startProgressiveRender() {
             meshesVector,
             lightsVector
         );
-
-        spheresVector.delete();
-        meshesVector.delete();
-        lightsVector.delete();
 
         const passMs = performance.now() - passStart;
         const updatedSpp = cppPathTracer.getAccumulatedSamples();
@@ -255,6 +275,7 @@ function startProgressiveRender() {
             progressiveRafId = requestAnimationFrame(runNextBatch);
         } else {
             progressiveRafId = null;
+            freeActiveJobVectors();
         }
     }
 
@@ -266,6 +287,8 @@ scenePresetSelect?.addEventListener('change', (e) => {
     const preset = PT_SCENE_PRESETS[presetKey];
     if (!preset) return;
 
+    clearPtWasmMeshCache();
+    clearPtWasmSphereCache();
     ptSceneObjects = cloneSceneObjects(preset.objects);
     selectedObjectId = null;
     fovInput.value = preset.fov.toFixed(2);
@@ -420,6 +443,7 @@ fovInput.addEventListener('pointerup', () => triggerRender({ interactive: false 
 
 bgColorInput.addEventListener('input', () => triggerRender({ interactive: true }));
 bgColorInput.addEventListener('change', () => triggerRender({ interactive: false }));
+bgColorInput.addEventListener('pointerup', () => triggerRender({ interactive: false }));
 
 function bindEnvironmentControls() {
     const bgModeSelect = document.getElementById('param-bg-mode');
@@ -494,7 +518,7 @@ function bindEnvironmentControls() {
         if (envRotLabel) envRotLabel.innerText = `${Math.round(rot)}°`;
         if (envIntLabel) envIntLabel.innerText = intensity.toFixed(1);
         window.TextureManager.updateEnvironmentParams({ rotationDeg: rot, intensity });
-        syncAllTracersWithTextures();
+        syncAllTracersEnvParamsOnly();
         triggerRender({ interactive });
     };
 

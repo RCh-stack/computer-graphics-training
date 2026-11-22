@@ -22,15 +22,22 @@ struct Mesh
 {
     std::vector<Vec3f> localVerts;
     std::vector<Vec3i> faces;
-    std::vector<Vec3f> worldVerts;
-    std::vector<Vec3f> faceNormals;
-    std::vector<Vec3f> worldVertNormals;
+    std::vector<Vec3f> localFaceNormals;
+    std::vector<Vec3f> localVertNormals;
 
     std::vector<BVHNode> bvhNodes;
     std::vector<uint32_t> bvhTriIndices;
 
-    Vec3f bboxMin;
-    Vec3f bboxMax;
+    Vec3f localBboxMin;
+    Vec3f localBboxMax;
+    Vec3f worldBboxMin;
+    Vec3f worldBboxMax;
+
+    Vec3f rotRow0;
+    Vec3f rotRow1;
+    Vec3f rotRow2;
+    float safeScale;
+    float invScale;
 
     Vec3f position;
     Vec3f rotation;
@@ -40,12 +47,18 @@ struct Mesh
     Material material;
 
     Mesh()
-        : bboxMin(), bboxMax(), position(0.f, 0.f, 0.f),
-          rotation(0.f, 0.f, 0.f), scale(1.0f), smoothShading(false), useBVH(true), material() {}
+        : localBboxMin(), localBboxMax(), worldBboxMin(), worldBboxMax(),
+          rotRow0(1.f, 0.f, 0.f), rotRow1(0.f, 1.f, 0.f), rotRow2(0.f, 0.f, 1.f),
+          safeScale(1.0f), invScale(1.0f),
+          position(0.f, 0.f, 0.f), rotation(0.f, 0.f, 0.f), scale(1.0f),
+          smoothShading(false), useBVH(true), material() {}
 
     explicit Mesh(const Material &m)
-        : bboxMin(), bboxMax(), position(0.f, 0.f, 0.f),
-          rotation(0.f, 0.f, 0.f), scale(1.0f), smoothShading(false), useBVH(true), material(m) {}
+        : localBboxMin(), localBboxMax(), worldBboxMin(), worldBboxMax(),
+          rotRow0(1.f, 0.f, 0.f), rotRow1(0.f, 1.f, 0.f), rotRow2(0.f, 0.f, 1.f),
+          safeScale(1.0f), invScale(1.0f),
+          position(0.f, 0.f, 0.f), rotation(0.f, 0.f, 0.f), scale(1.0f),
+          smoothShading(false), useBVH(true), material(m) {}
 
     size_t triangleCount() const {
         return faces.size();
@@ -82,7 +95,8 @@ struct Mesh
             }
         }
 
-        rebuildWorldData();
+        rebuildLocalData();
+        updateTransformCache();
     }
 
     void setTransform(const Vec3f &pos, const Vec3f &rotEuler, float sc)
@@ -90,97 +104,139 @@ struct Mesh
         position = pos;
         rotation = rotEuler;
         scale = sc;
-        rebuildWorldData();
+        updateTransformCache();
     }
 
-    static inline Vec3f rotateEuler(const Vec3f &v, const Vec3f &rot)
+    inline Vec3f rotateLocalToWorld(const Vec3f &v) const
     {
-        const float cx = std::cos(rot.x), sx = std::sin(rot.x);
-        const float cy = std::cos(rot.y), sy = std::sin(rot.y);
-        const float cz = std::cos(rot.z), sz = std::sin(rot.z);
-
-        const float y1 = v.y * cx - v.z * sx;
-        const float z1 = v.y * sx + v.z * cx;
-
-        const float x2 = v.x * cy + z1 * sy;
-        const float z2 = -v.x * sy + z1 * cy;
-
-        const float x3 = x2 * cz - y1 * sz;
-        const float y3 = x2 * sz + y1 * cz;
-
-        return Vec3f(x3, y3, z2);
+        return Vec3f(
+            rotRow0 * v,
+            rotRow1 * v,
+            rotRow2 * v
+        );
     }
 
-    void rebuildWorldData()
+    inline Vec3f rotateWorldToLocal(const Vec3f &w) const
+    {
+        return Vec3f(
+            rotRow0.x * w.x + rotRow1.x * w.y + rotRow2.x * w.z,
+            rotRow0.y * w.x + rotRow1.y * w.y + rotRow2.y * w.z,
+            rotRow0.z * w.x + rotRow1.z * w.y + rotRow2.z * w.z
+        );
+    }
+
+    void updateTransformCache()
+    {
+        safeScale = std::max(1e-4f, std::fabs(scale));
+        invScale = 1.0f / safeScale;
+
+        const float cx = std::cos(rotation.x), sx = std::sin(rotation.x);
+        const float cy = std::cos(rotation.y), sy = std::sin(rotation.y);
+        const float cz = std::cos(rotation.z), sz = std::sin(rotation.z);
+
+        rotRow0 = Vec3f(
+            cy * cz,
+            sx * sy * cz - cx * sz,
+            cx * sy * cz + sx * sz
+        );
+        rotRow1 = Vec3f(
+            cy * sz,
+            sx * sy * sz + cx * cz,
+            cx * sy * sz - sx * cz
+        );
+        rotRow2 = Vec3f(
+            -sy,
+            sx * cy,
+            cx * cy
+        );
+
+        if (faces.empty()) {
+            worldBboxMin = position;
+            worldBboxMax = position;
+            return;
+        }
+
+        const Vec3f rows[3] = { rotRow0, rotRow1, rotRow2 };
+        for (int axis = 0; axis < 3; axis++) {
+            float minAcc = position[axis];
+            float maxAcc = position[axis];
+            for (int j = 0; j < 3; j++) {
+                const float a = rows[axis][j] * localBboxMin[j] * safeScale;
+                const float b = rows[axis][j] * localBboxMax[j] * safeScale;
+                minAcc += std::min(a, b);
+                maxAcc += std::max(a, b);
+            }
+            worldBboxMin[axis] = minAcc - 1e-3f;
+            worldBboxMax[axis] = maxAcc + 1e-3f;
+        }
+    }
+
+    void rebuildLocalData()
     {
         const size_t vCount = localVerts.size();
         const size_t fCount = faces.size();
 
-        worldVerts.resize(vCount);
-        worldVertNormals.assign(vCount, Vec3f(0.f, 0.f, 0.f));
-        faceNormals.resize(fCount);
+        localVertNormals.assign(vCount, Vec3f(0.f, 0.f, 0.f));
+        localFaceNormals.resize(fCount);
         bvhNodes.clear();
         bvhTriIndices.clear();
 
         if (vCount == 0 || fCount == 0) {
-            bboxMin = position;
-            bboxMax = position;
+            localBboxMin = Vec3f(0.f, 0.f, 0.f);
+            localBboxMax = Vec3f(0.f, 0.f, 0.f);
             return;
         }
 
-        bboxMin = Vec3f(
+        localBboxMin = Vec3f(
             std::numeric_limits<float>::max(),
             std::numeric_limits<float>::max(),
             std::numeric_limits<float>::max()
         );
-        bboxMax = Vec3f(
+        localBboxMax = Vec3f(
             std::numeric_limits<float>::lowest(),
             std::numeric_limits<float>::lowest(),
             std::numeric_limits<float>::lowest()
         );
 
         for (size_t i = 0; i < vCount; i++) {
-            Vec3f scaled = localVerts[i] * scale;
-            Vec3f wv = rotateEuler(scaled, rotation) + position;
-            worldVerts[i] = wv;
+            const Vec3f &lv = localVerts[i];
+            localBboxMin.x = std::min(localBboxMin.x, lv.x);
+            localBboxMin.y = std::min(localBboxMin.y, lv.y);
+            localBboxMin.z = std::min(localBboxMin.z, lv.z);
 
-            bboxMin.x = std::min(bboxMin.x, wv.x);
-            bboxMin.y = std::min(bboxMin.y, wv.y);
-            bboxMin.z = std::min(bboxMin.z, wv.z);
-
-            bboxMax.x = std::max(bboxMax.x, wv.x);
-            bboxMax.y = std::max(bboxMax.y, wv.y);
-            bboxMax.z = std::max(bboxMax.z, wv.z);
+            localBboxMax.x = std::max(localBboxMax.x, lv.x);
+            localBboxMax.y = std::max(localBboxMax.y, lv.y);
+            localBboxMax.z = std::max(localBboxMax.z, lv.z);
         }
 
-        bboxMin = bboxMin - Vec3f(1e-3f, 1e-3f, 1e-3f);
-        bboxMax = bboxMax + Vec3f(1e-3f, 1e-3f, 1e-3f);
+        localBboxMin = localBboxMin - Vec3f(1e-4f, 1e-4f, 1e-4f);
+        localBboxMax = localBboxMax + Vec3f(1e-4f, 1e-4f, 1e-4f);
 
         for (size_t f = 0; f < fCount; f++) {
             const int i0 = faces[f].x;
             const int i1 = faces[f].y;
             const int i2 = faces[f].z;
 
-            const Vec3f e1 = worldVerts[i1] - worldVerts[i0];
-            const Vec3f e2 = worldVerts[i2] - worldVerts[i0];
+            const Vec3f e1 = localVerts[i1] - localVerts[i0];
+            const Vec3f e2 = localVerts[i2] - localVerts[i0];
             Vec3f rawN = cross(e1, e2);
 
-            worldVertNormals[i0] = worldVertNormals[i0] + rawN;
-            worldVertNormals[i1] = worldVertNormals[i1] + rawN;
-            worldVertNormals[i2] = worldVertNormals[i2] + rawN;
+            localVertNormals[i0] = localVertNormals[i0] + rawN;
+            localVertNormals[i1] = localVertNormals[i1] + rawN;
+            localVertNormals[i2] = localVertNormals[i2] + rawN;
 
             if (norm2(rawN) > 1e-12f) {
-                faceNormals[f] = rawN.normalize();
+                localFaceNormals[f] = rawN.normalize();
             } else {
-                faceNormals[f] = Vec3f(0.f, 1.f, 0.f);
+                localFaceNormals[f] = Vec3f(0.f, 1.f, 0.f);
             }
         }
 
         for (size_t i = 0; i < vCount; i++) {
-            if (norm2(worldVertNormals[i]) > 1e-12f) {
-                worldVertNormals[i].normalize();
+            if (norm2(localVertNormals[i]) > 1e-12f) {
+                localVertNormals[i].normalize();
             } else {
-                worldVertNormals[i] = Vec3f(0.f, 1.f, 0.f);
+                localVertNormals[i] = Vec3f(0.f, 1.f, 0.f);
             }
         }
 
@@ -201,10 +257,11 @@ struct Mesh
         const Vec3f &invDir,
         const Vec3f &bmin,
         const Vec3f &bmax,
+        float minDist,
         float maxDist,
         float &outTNear)
     {
-        float tmin = 1e-4f;
+        float tmin = minDist;
         float tmax = maxDist;
 
         for (int axis = 0; axis < 3; axis++) {
@@ -219,37 +276,38 @@ struct Mesh
         return true;
     }
 
-    inline bool intersectTriangle(
-        const Vec3f &orig,
-        const Vec3f &dir,
+    inline bool intersectLocalTriangle(
+        const Vec3f &localOrig,
+        const Vec3f &localDir,
         size_t f,
+        float minDist,
         float maxDist,
         float &outT,
         float &outU,
         float &outV) const
     {
-        const Vec3f &v0 = worldVerts[faces[f].x];
-        const Vec3f &v1 = worldVerts[faces[f].y];
-        const Vec3f &v2 = worldVerts[faces[f].z];
+        const Vec3f &v0 = localVerts[faces[f].x];
+        const Vec3f &v1 = localVerts[faces[f].y];
+        const Vec3f &v2 = localVerts[faces[f].z];
 
         const Vec3f e1 = v1 - v0;
         const Vec3f e2 = v2 - v0;
-        const Vec3f pvec = cross(dir, e2);
+        const Vec3f pvec = cross(localDir, e2);
         const float det = e1 * pvec;
 
         if (std::fabs(det) < 1e-7f) return false;
 
         const float invDet = 1.0f / det;
-        const Vec3f tvec = orig - v0;
+        const Vec3f tvec = localOrig - v0;
         const float u = (tvec * pvec) * invDet;
         if (u < 0.0f || u > 1.0f) return false;
 
         const Vec3f qvec = cross(tvec, e1);
-        const float v = (dir * qvec) * invDet;
+        const float v = (localDir * qvec) * invDet;
         if (v < 0.0f || u + v > 1.0f) return false;
 
         const float t = (e2 * qvec) * invDet;
-        if (t > 1e-4f && t < maxDist) {
+        if (t > minDist && t < maxDist) {
             outT = t;
             outU = u;
             outV = v;
@@ -268,16 +326,21 @@ struct Mesh
     {
         if (faces.empty()) return false;
 
-        const Vec3f invDir = computeInvDir(dir);
+        const Vec3f worldInvDir = computeInvDir(dir);
         float rootNear = 0.f;
 
         metrics.intersectionTests += 1.0;
         metrics.aabbTests += 1.0;
-        if (!intersectBox(orig, invDir, bboxMin, bboxMax, maxDist, rootNear)) {
+        if (!intersectBox(orig, worldInvDir, worldBboxMin, worldBboxMax, 1e-4f, maxDist, rootNear)) {
             return false;
         }
 
-        float bestT = maxDist;
+        const Vec3f localOrig = rotateWorldToLocal(orig - position) * invScale;
+        const Vec3f localDir = rotateWorldToLocal(dir);
+        const Vec3f localInvDir = computeInvDir(localDir);
+        const float localMinDist = 1e-4f * invScale;
+        float bestLocalT = maxDist * invScale;
+
         int bestFace = -1;
         float bestU = 0.f;
         float bestV = 0.f;
@@ -288,8 +351,8 @@ struct Mesh
                 metrics.triangleTests += 1.0;
 
                 float t = 0.f, u = 0.f, v = 0.f;
-                if (intersectTriangle(orig, dir, f, bestT, t, u, v)) {
-                    bestT = t;
+                if (intersectLocalTriangle(localOrig, localDir, f, localMinDist, bestLocalT, t, u, v)) {
+                    bestLocalT = t;
                     bestFace = static_cast<int>(f);
                     bestU = u;
                     bestV = v;
@@ -310,8 +373,8 @@ struct Mesh
                         metrics.triangleTests += 1.0;
 
                         float t = 0.f, u = 0.f, v = 0.f;
-                        if (intersectTriangle(orig, dir, f, bestT, t, u, v)) {
-                            bestT = t;
+                        if (intersectLocalTriangle(localOrig, localDir, f, localMinDist, bestLocalT, t, u, v)) {
+                            bestLocalT = t;
                             bestFace = static_cast<int>(f);
                             bestU = u;
                             bestV = v;
@@ -325,8 +388,8 @@ struct Mesh
                     metrics.aabbTests += 2.0;
 
                     float tNearL = 0.f, tNearR = 0.f;
-                    const bool hitL = intersectBox(orig, invDir, bvhNodes[leftIdx].bboxMin, bvhNodes[leftIdx].bboxMax, bestT, tNearL);
-                    const bool hitR = intersectBox(orig, invDir, bvhNodes[rightIdx].bboxMin, bvhNodes[rightIdx].bboxMax, bestT, tNearR);
+                    const bool hitL = intersectBox(localOrig, localInvDir, bvhNodes[leftIdx].bboxMin, bvhNodes[leftIdx].bboxMax, localMinDist, bestLocalT, tNearL);
+                    const bool hitR = intersectBox(localOrig, localInvDir, bvhNodes[rightIdx].bboxMin, bvhNodes[rightIdx].bboxMax, localMinDist, bestLocalT, tNearR);
 
                     if (hitL && hitR) {
                         if (tNearL < tNearR) {
@@ -347,17 +410,21 @@ struct Mesh
 
         if (bestFace < 0) return false;
 
-        outT = bestT;
+        outT = bestLocalT * safeScale;
+
+        Vec3f localNormal;
         if (smoothShading) {
             const float w = 1.0f - bestU - bestV;
-            Vec3f interpN = worldVertNormals[faces[bestFace].x] * w
-                          + worldVertNormals[faces[bestFace].y] * bestU
-                          + worldVertNormals[faces[bestFace].z] * bestV;
-            outNormal = norm2(interpN) > 1e-10f ? interpN.normalize() : faceNormals[bestFace];
+            Vec3f interpN = localVertNormals[faces[bestFace].x] * w
+                          + localVertNormals[faces[bestFace].y] * bestU
+                          + localVertNormals[faces[bestFace].z] * bestV;
+            localNormal = norm2(interpN) > 1e-10f ? interpN.normalize() : localFaceNormals[bestFace];
         } else {
-            outNormal = faceNormals[bestFace];
+            localNormal = localFaceNormals[bestFace];
         }
 
+        Vec3f worldN = rotateLocalToWorld(localNormal);
+        outNormal = norm2(worldN) > 1e-10f ? worldN.normalize() : Vec3f(0.f, 1.f, 0.f);
         return true;
     }
 
@@ -365,14 +432,20 @@ struct Mesh
     {
         if (faces.empty()) return false;
 
-        const Vec3f invDir = computeInvDir(dir);
+        const Vec3f worldInvDir = computeInvDir(dir);
         float rootNear = 0.f;
 
         metrics.intersectionTests += 1.0;
         metrics.aabbTests += 1.0;
-        if (!intersectBox(orig, invDir, bboxMin, bboxMax, maxDist, rootNear)) {
+        if (!intersectBox(orig, worldInvDir, worldBboxMin, worldBboxMax, 1e-4f, maxDist, rootNear)) {
             return false;
         }
+
+        const Vec3f localOrig = rotateWorldToLocal(orig - position) * invScale;
+        const Vec3f localDir = rotateWorldToLocal(dir);
+        const Vec3f localInvDir = computeInvDir(localDir);
+        const float localMinDist = 1e-4f * invScale;
+        const float localMaxDist = maxDist * invScale;
 
         if (!useBVH || bvhNodes.empty()) {
             for (size_t f = 0; f < faces.size(); f++) {
@@ -380,7 +453,7 @@ struct Mesh
                 metrics.triangleTests += 1.0;
 
                 float t = 0.f, u = 0.f, v = 0.f;
-                if (intersectTriangle(orig, dir, f, maxDist, t, u, v)) {
+                if (intersectLocalTriangle(localOrig, localDir, f, localMinDist, localMaxDist, t, u, v)) {
                     return true;
                 }
             }
@@ -401,7 +474,7 @@ struct Mesh
                     metrics.triangleTests += 1.0;
 
                     float t = 0.f, u = 0.f, v = 0.f;
-                    if (intersectTriangle(orig, dir, f, maxDist, t, u, v)) {
+                    if (intersectLocalTriangle(localOrig, localDir, f, localMinDist, localMaxDist, t, u, v)) {
                         return true;
                     }
                 }
@@ -413,10 +486,10 @@ struct Mesh
                 metrics.aabbTests += 2.0;
 
                 float tNearL = 0.f, tNearR = 0.f;
-                if (intersectBox(orig, invDir, bvhNodes[leftIdx].bboxMin, bvhNodes[leftIdx].bboxMax, maxDist, tNearL)) {
+                if (intersectBox(localOrig, localInvDir, bvhNodes[leftIdx].bboxMin, bvhNodes[leftIdx].bboxMax, localMinDist, localMaxDist, tNearL)) {
                     stack[stackPtr++] = leftIdx;
                 }
-                if (intersectBox(orig, invDir, bvhNodes[rightIdx].bboxMin, bvhNodes[rightIdx].bboxMax, maxDist, tNearR)) {
+                if (intersectBox(localOrig, localInvDir, bvhNodes[rightIdx].bboxMin, bvhNodes[rightIdx].bboxMax, localMinDist, localMaxDist, tNearR)) {
                     stack[stackPtr++] = rightIdx;
                 }
             }
@@ -450,9 +523,9 @@ private:
 
         for (uint32_t f = 0; f < fCount; f++) {
             bvhTriIndices[f] = f;
-            const Vec3f &v0 = worldVerts[faces[f].x];
-            const Vec3f &v1 = worldVerts[faces[f].y];
-            const Vec3f &v2 = worldVerts[faces[f].z];
+            const Vec3f &v0 = localVerts[faces[f].x];
+            const Vec3f &v1 = localVerts[faces[f].y];
+            const Vec3f &v2 = localVerts[faces[f].z];
 
             triInfo[f].bmin = Vec3f(
                 std::min({v0.x, v1.x, v2.x}),

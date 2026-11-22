@@ -126,7 +126,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         return TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
     }
@@ -137,7 +137,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
         float diffuse_light_intensity = 0.f;
@@ -156,7 +156,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
         float diffuse_light_intensity = 0.f, specular_light_intensity = 0.f;
@@ -177,7 +177,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (!scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         Vec3f base_diffuse = TextureSampling::resolveSurfaceColor(material, point, hit_u, hit_v, textures, false);
         return shade_direct_lighting(point, N, dir, base_diffuse, material, spheres, meshes, lights, metrics);
@@ -189,7 +189,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         Vec3f reflect_color(0.f, 0.f, 0.f);
         if (material.albedo[2] > 1e-4f)
@@ -211,7 +211,7 @@ namespace RayTracing
         Material material;
         float hit_u = 0.f, hit_v = 0.f;
         if (depth > MAX_RAY_DEPTH || !scene_intersect(orig, dir, spheres, meshes, point, N, material, hit_u, hit_v, false, metrics))
-            return envMap.sample(dir, backg, false);
+            return envMap.sample(dir, backg, false, metrics);
 
         Vec3f reflect_color(0.f, 0.f, 0.f);
         if (material.albedo[2] > 1e-4f)

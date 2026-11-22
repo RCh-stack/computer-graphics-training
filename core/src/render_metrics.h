@@ -13,6 +13,7 @@ struct RenderMetrics
     double intersectionTests = 0.0;
     double aabbTests = 0.0;
     double triangleTests = 0.0;
+    uint32_t envLookups = 0;
     uint32_t spp = 1;
 };
 

@@ -278,6 +278,7 @@ public:
         accumulatedMetrics.intersectionTests += passMetrics.intersectionTests;
         accumulatedMetrics.aabbTests += passMetrics.aabbTests;
         accumulatedMetrics.triangleTests += passMetrics.triangleTests;
+        accumulatedMetrics.envLookups += passMetrics.envLookups;
         accumulatedMetrics.totalRays =
             accumulatedMetrics.primaryRays +
             accumulatedMetrics.shadowRays +
@@ -309,6 +310,7 @@ EMSCRIPTEN_BINDINGS(raytracing_engine) {
         .field("intersectionTests", &RenderMetrics::intersectionTests)
         .field("aabbTests", &RenderMetrics::aabbTests)
         .field("triangleTests", &RenderMetrics::triangleTests)
+        .field("envLookups", &RenderMetrics::envLookups)
         .field("spp", &RenderMetrics::spp);
 
     emscripten::class_<Material>("Material")

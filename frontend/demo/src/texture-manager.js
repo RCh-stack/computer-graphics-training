@@ -11,12 +11,14 @@ window.TextureManager = (() => {
         width: 0,
         height: 0,
         pixels: null,
+        version: 0,
         label: 'Сплошной цвет',
         previewUrl: ''
     };
 
     const textureSlots = new Map();
     const presetCache = new Map();
+    const tracerSyncCache = new WeakMap();
 
     function createCanvas(w, h) {
         const canvas = document.createElement('canvas');
@@ -210,6 +212,8 @@ window.TextureManager = (() => {
             grid: 'Координатная сфера 360°'
         };
         const data = buildPresetPanorama(presetKey);
+        const changedBuffer = (envState.pixels !== data.pixels);
+
         envState.mode = 'preset';
         envState.presetKey = presetKey;
         envState.enabled = true;
@@ -218,6 +222,10 @@ window.TextureManager = (() => {
         envState.pixels = data.pixels;
         envState.previewUrl = data.previewUrl;
         envState.label = names[presetKey] || presetKey;
+
+        if (changedBuffer) {
+            envState.version++;
+        }
         return envState;
     }
 
@@ -230,6 +238,7 @@ window.TextureManager = (() => {
         envState.pixels = decoded.pixels;
         envState.previewUrl = decoded.previewUrl;
         envState.label = file.name;
+        envState.version++;
         return envState;
     }
 
@@ -243,6 +252,8 @@ window.TextureManager = (() => {
     }
 
     async function loadMaterialTexture(slotId, file) {
+        const prev = textureSlots.get(slotId);
+        const nextVersion = prev ? prev.version + 1 : 1;
         const decoded = await decodeFileToRgba(file, MAX_TEX_SIZE);
         const entry = {
             slotId,
@@ -250,27 +261,59 @@ window.TextureManager = (() => {
             height: decoded.height,
             pixels: decoded.pixels,
             previewUrl: decoded.previewUrl,
-            label: file.name
+            label: file.name,
+            version: nextVersion
         };
         textureSlots.set(slotId, entry);
         return entry;
     }
 
+    function getTracerCache(tracer) {
+        let cache = tracerSyncCache.get(tracer);
+        if (!cache) {
+            cache = {
+                envVersion: 0,
+                slotVersions: new Map()
+            };
+            tracerSyncCache.set(tracer, cache);
+        }
+        return cache;
+    }
+
     function syncTracer(tracer) {
         if (!tracer) return;
+        const cache = getTracerCache(tracer);
 
         if (envState.enabled && envState.pixels && envState.width > 0 && envState.height > 0) {
-            tracer.setEnvironmentMap(envState.width, envState.height, envState.pixels);
+            if (cache.envVersion !== envState.version) {
+                tracer.setEnvironmentMap(envState.width, envState.height, envState.pixels);
+                cache.envVersion = envState.version;
+            }
             tracer.setEnvironmentParams(true, envState.intensity, envState.rotationDeg);
         } else {
-            tracer.clearEnvironmentMap();
+            if (cache.envVersion > 0) {
+                tracer.setEnvironmentParams(false, envState.intensity, envState.rotationDeg);
+            } else {
+                tracer.clearEnvironmentMap();
+            }
         }
 
         textureSlots.forEach((tex, slotId) => {
-            if (tex && tex.pixels) {
+            if (tex && tex.pixels && cache.slotVersions.get(slotId) !== tex.version) {
                 tracer.uploadTexture(slotId, tex.width, tex.height, tex.pixels);
+                cache.slotVersions.set(slotId, tex.version);
             }
         });
+    }
+
+    function syncTracerEnvironmentParamsOnly(tracer) {
+        if (!tracer) return;
+        const cache = getTracerCache(tracer);
+        if (envState.enabled && cache.envVersion === envState.version && cache.envVersion > 0) {
+            tracer.setEnvironmentParams(true, envState.intensity, envState.rotationDeg);
+        } else {
+            syncTracer(tracer);
+        }
     }
 
     function applyMaterialTexture(wasmMaterial, objConfig, hexToVec3fFn) {
@@ -283,6 +326,41 @@ window.TextureManager = (() => {
         if (objConfig.secondaryColor && typeof hexToVec3fFn === 'function') {
             wasmMaterial.secondary_color = hexToVec3fFn(objConfig.secondaryColor);
         }
+    }
+
+    function createInteractiveScheduler({ onPreviewRender, onFinalRender, settleMs = 140 } = {}) {
+        let rafPending = false;
+        let settleTimer = null;
+
+        const runFinal = () => {
+            if (settleTimer) {
+                clearTimeout(settleTimer);
+                settleTimer = null;
+            }
+            rafPending = false;
+            if (typeof onFinalRender === 'function') {
+                onFinalRender();
+            }
+        };
+
+        const triggerPreview = () => {
+            if (settleTimer) clearTimeout(settleTimer);
+            settleTimer = setTimeout(runFinal, settleMs);
+
+            if (rafPending) return;
+            rafPending = true;
+            requestAnimationFrame(() => {
+                rafPending = false;
+                if (typeof onPreviewRender === 'function') {
+                    onPreviewRender();
+                }
+            });
+        };
+
+        return {
+            triggerPreview,
+            triggerFinal: runFinal
+        };
     }
 
     function getEnvironmentState() {
@@ -300,7 +378,9 @@ window.TextureManager = (() => {
         updateEnvironmentParams,
         loadMaterialTexture,
         syncTracer,
+        syncTracerEnvironmentParamsOnly,
         applyMaterialTexture,
+        createInteractiveScheduler,
         getEnvironmentState,
         getTextureSlot
     };
