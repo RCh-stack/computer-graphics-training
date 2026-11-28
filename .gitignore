@@ -13,3 +13,5 @@ eslint.config.js
 progressApi.test.js
 
 uploads
+
+build.bat
